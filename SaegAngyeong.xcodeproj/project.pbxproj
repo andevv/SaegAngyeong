@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		FEE0341B2EE9379D008B74AB /* .gitignore in Resources */ = {isa = PBXBuildFile; fileRef = FEE0341A2EE9379D008B74AB /* .gitignore */; };
+		FEE034212EE94600008B74AB /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = FEE034202EE94600008B74AB /* FirebaseAnalytics */; };
+		FEE034232EE94600008B74AB /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = FEE034222EE94600008B74AB /* FirebaseMessaging */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -41,6 +43,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FEE034232EE94600008B74AB /* FirebaseMessaging in Frameworks */,
+				FEE034212EE94600008B74AB /* FirebaseAnalytics in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -84,6 +88,8 @@
 			);
 			name = SaegAngyeong;
 			packageProductDependencies = (
+				FEE034202EE94600008B74AB /* FirebaseAnalytics */,
+				FEE034222EE94600008B74AB /* FirebaseMessaging */,
 			);
 			productName = SaegAngyeong;
 			productReference = FEE034022EE9330E008B74AB /* SaegAngyeong.app */;
@@ -113,6 +119,9 @@
 			);
 			mainGroup = FEE033F92EE9330E008B74AB;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				FEE0341F2EE94600008B74AB /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = FEE034032EE9330E008B74AB /* Products */;
 			projectDirPath = "";
@@ -364,6 +373,30 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		FEE0341F2EE94600008B74AB /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.6.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		FEE034202EE94600008B74AB /* FirebaseAnalytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FEE0341F2EE94600008B74AB /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalytics;
+		};
+		FEE034222EE94600008B74AB /* FirebaseMessaging */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FEE0341F2EE94600008B74AB /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseMessaging;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = FEE033FA2EE9330E008B74AB /* Project object */;
 }
