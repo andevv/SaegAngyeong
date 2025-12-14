@@ -139,3 +139,4 @@ xcuserdata
 ### SaegAngyeong ###
 GoogleService-Info.plist
 **/GoogleService-Info.plist
+**/Secret.xcconfig
