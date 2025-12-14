@@ -12,6 +12,9 @@ class ViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .darkGray
+        
+        print(AppConfig.baseURL)
+        print(AppConfig.apiKey)
     }
 
 

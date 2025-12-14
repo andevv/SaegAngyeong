@@ -24,6 +24,14 @@
 		FEE034142EE9330F008B74AB /* Exceptions for "SaegAngyeong" folder in "SaegAngyeong" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				Common/Extensions/.gitkeep,
+				Common/UI/Component/.gitkeep,
+				Common/UI/Style/.gitkeep,
+				Common/Utils/.gitkeep,
+				Domain/Model/.gitkeep,
+				Domain/Repository/.gitkeep,
+				Features/.gitkeep,
+				Network/.gitkeep,
 				Resources/InfoPlist/Info.plist,
 			);
 			target = FEE034012EE9330E008B74AB /* SaegAngyeong */;
@@ -242,6 +250,8 @@
 		};
 		FEE034182EE9330F008B74AB /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = FEE034042EE9330E008B74AB /* SaegAngyeong */;
+			baseConfigurationReferenceRelativePath = App/Config/Secret.xcconfig;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -306,6 +316,8 @@
 		};
 		FEE034192EE9330F008B74AB /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = FEE034042EE9330E008B74AB /* SaegAngyeong */;
+			baseConfigurationReferenceRelativePath = App/Config/Secret.xcconfig;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
