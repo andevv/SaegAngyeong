@@ -6,33 +6,83 @@
 //
 
 import Foundation
+import Security
 
-/// 간단한 토큰 저장소 (UserDefaults 기반)
+/// 키체인 기반 토큰 저장소
 final class TokenStore {
-    private let defaults = UserDefaults.standard
-    private enum Key {
-        static let accessToken = "accessToken"
-        static let refreshToken = "refreshToken"
-        static let deviceToken = "deviceToken"
+    private enum Key: String {
+        case accessToken = "com.saegangyeong.token.access"
+        case refreshToken = "com.saegangyeong.token.refresh"
+        case deviceToken = "com.saegangyeong.token.device"
     }
 
     var accessToken: String? {
-        get { defaults.string(forKey: Key.accessToken) }
-        set { defaults.setValue(newValue, forKey: Key.accessToken) }
+        get { read(.accessToken) }
+        set { write(newValue, for: .accessToken) }
     }
 
     var refreshToken: String? {
-        get { defaults.string(forKey: Key.refreshToken) }
-        set { defaults.setValue(newValue, forKey: Key.refreshToken) }
+        get { read(.refreshToken) }
+        set { write(newValue, for: .refreshToken) }
     }
 
     var deviceToken: String? {
-        get { defaults.string(forKey: Key.deviceToken) }
-        set { defaults.setValue(newValue, forKey: Key.deviceToken) }
+        get { read(.deviceToken) }
+        set { write(newValue, for: .deviceToken) }
     }
 
     func clear() {
-        defaults.removeObject(forKey: Key.accessToken)
-        defaults.removeObject(forKey: Key.refreshToken)
+        delete(.accessToken)
+        delete(.refreshToken)
+    }
+
+    // MARK: - Keychain Helpers
+
+    private func write(_ value: String?, for key: Key) {
+        guard let value else {
+            delete(key)
+            return
+        }
+
+        let data = Data(value.utf8)
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: key.rawValue
+        ]
+
+        let attributes: [String: Any] = [
+            kSecValueData as String: data
+        ]
+
+        let status = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
+        if status == errSecItemNotFound {
+            var addQuery = query
+            addQuery[kSecValueData as String] = data
+            SecItemAdd(addQuery as CFDictionary, nil)
+        }
+    }
+
+    private func read(_ key: Key) -> String? {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: key.rawValue,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne
+        ]
+
+        var item: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &item)
+        guard status == errSecSuccess,
+              let data = item as? Data,
+              let value = String(data: data, encoding: .utf8) else { return nil }
+        return value
+    }
+
+    private func delete(_ key: Key) {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: key.rawValue
+        ]
+        SecItemDelete(query as CFDictionary)
     }
 }
