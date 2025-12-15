@@ -20,7 +20,11 @@ final class MainTabBarController: UITabBarController {
     }
 
     private func setupTabs(dependency: AppDependency) {
-        let homeVM = HomeViewModel()
+        let homeVM = HomeViewModel(
+            filterRepository: dependency.filterRepository,
+            accessTokenProvider: { dependency.tokenStore.accessToken },
+            sesacKey: AppConfig.apiKey
+        )
         let homeVC = HomeViewController(viewModel: homeVM)
 
         let dummy1 = DummyViewController(titleText: "", named: "Feed_Fill", tag: 1, color: .systemGray6)

@@ -1,0 +1,113 @@
+//
+//  FilterRepositoryImpl.swift
+//  SaegAngyeong
+//
+//  Created by andev on 12/15/25.
+//
+
+import Foundation
+import Combine
+
+final class FilterRepositoryImpl: FilterRepository {
+
+    private let network: NetworkProviding
+
+    init(network: NetworkProviding) {
+        self.network = network
+    }
+
+    func uploadFiles(_ files: [UploadFileData]) -> AnyPublisher<[URL], DomainError> {
+        Fail(error: DomainError.unknown(message: "Not implemented")).eraseToAnyPublisher()
+    }
+
+    func create(_ draft: FilterDraft) -> AnyPublisher<Filter, DomainError> {
+        Fail(error: DomainError.unknown(message: "Not implemented")).eraseToAnyPublisher()
+    }
+
+    func list(next: String?, limit: Int?, category: String?, orderBy: String?) -> AnyPublisher<Paginated<Filter>, DomainError> {
+        Fail(error: DomainError.unknown(message: "Not implemented")).eraseToAnyPublisher()
+    }
+
+    func detail(id: String) -> AnyPublisher<Filter, DomainError> {
+        Fail(error: DomainError.unknown(message: "Not implemented")).eraseToAnyPublisher()
+    }
+
+    func update(id: String, draft: FilterDraft) -> AnyPublisher<Filter, DomainError> {
+        Fail(error: DomainError.unknown(message: "Not implemented")).eraseToAnyPublisher()
+    }
+
+    func delete(id: String) -> AnyPublisher<Void, DomainError> {
+        Fail(error: DomainError.unknown(message: "Not implemented")).eraseToAnyPublisher()
+    }
+
+    func like(id: String, status: Bool) -> AnyPublisher<Void, DomainError> {
+        Fail(error: DomainError.unknown(message: "Not implemented")).eraseToAnyPublisher()
+    }
+
+    func userFilters(userID: String, next: String?, limit: Int?, category: String?) -> AnyPublisher<Paginated<Filter>, DomainError> {
+        Fail(error: DomainError.unknown(message: "Not implemented")).eraseToAnyPublisher()
+    }
+
+    func likedFilters(category: String?, next: String?, limit: Int?) -> AnyPublisher<Paginated<Filter>, DomainError> {
+        Fail(error: DomainError.unknown(message: "Not implemented")).eraseToAnyPublisher()
+    }
+
+    func hotTrend() -> AnyPublisher<[Filter], DomainError> {
+        Fail(error: DomainError.unknown(message: "Not implemented")).eraseToAnyPublisher()
+    }
+
+    func todayFilter() -> AnyPublisher<Filter, DomainError> {
+        network.request(TodayFilterResponseDTO.self, endpoint: FilterAPI.todayFilter)
+            .mapError { _ in DomainError.network }
+            .map { dto -> Filter in
+                let base = URL(string: AppConfig.baseURL)
+                let urls = dto.files.compactMap { path -> URL? in
+                    guard let base else { return nil }
+                    let normalized = path.hasPrefix("/v1") ? path : "/v1" + path
+                    return URL(string: normalized, relativeTo: base)
+                }
+                let creator = UserSummary(id: "", nick: "", profileImageURL: nil)
+                let filterValues = FilterValues(
+                    brightness: nil, exposure: nil, contrast: nil, saturation: nil,
+                    sharpness: nil, temperature: nil, highlight: nil, shadow: nil,
+                    vignette: nil, grain: nil, blur: nil, fade: nil
+                )
+                let dateFormatter = ISO8601DateFormatter()
+                let created = dateFormatter.date(from: dto.createdAt) ?? Date()
+                let updated = dateFormatter.date(from: dto.updatedAt) ?? Date()
+
+                return Filter(
+                    id: dto.filterID,
+                    category: "",
+                    title: dto.title,
+                    introduction: dto.introduction,
+                    description: dto.description,
+                    files: urls,
+                    price: 0,
+                    filterValues: filterValues,
+                    photoMetadata: nil,
+                    creator: creator,
+                    createdAt: created,
+                    updatedAt: updated,
+                    comments: [],
+                    isLiked: false,
+                    likeCount: 0,
+                    buyerCount: 0,
+                    isDownloaded: false
+                )
+            }
+            .eraseToAnyPublisher()
+    }
+
+    func addComment(filterID: String, draft: CommentDraft) -> AnyPublisher<Comment, DomainError> {
+        Fail(error: DomainError.unknown(message: "Not implemented")).eraseToAnyPublisher()
+    }
+
+    func updateComment(filterID: String, commentID: String, content: String) -> AnyPublisher<Comment, DomainError> {
+        Fail(error: DomainError.unknown(message: "Not implemented")).eraseToAnyPublisher()
+    }
+
+    func deleteComment(filterID: String, commentID: String) -> AnyPublisher<Void, DomainError> {
+        Fail(error: DomainError.unknown(message: "Not implemented")).eraseToAnyPublisher()
+    }
+}

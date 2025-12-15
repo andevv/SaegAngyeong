@@ -13,6 +13,7 @@ struct AppDependency {
     let tokenStore: TokenStore
     let networkProvider: NetworkProviding
     let authRepository: AuthRepository
+    let filterRepository: FilterRepository
 
     static func make() -> AppDependency {
         let tokenStore = TokenStore()
@@ -23,7 +24,8 @@ struct AppDependency {
                 NotificationCenter.default.post(name: .tokenInvalidated, object: nil)
             }
         )
-        let session = Session(interceptor: interceptor)
+        let logger = NetworkLogger()
+        let session = Session(interceptor: interceptor, eventMonitors: [logger])
         let provider = NetworkProvider(
             session: session,
             accessTokenProvider: { tokenStore.accessToken },
@@ -33,10 +35,12 @@ struct AppDependency {
             network: provider,
             tokenStore: tokenStore
         )
+        let filterRepository = FilterRepositoryImpl(network: provider)
         return AppDependency(
             tokenStore: tokenStore,
             networkProvider: provider,
-            authRepository: authRepository
+            authRepository: authRepository,
+            filterRepository: filterRepository
         )
     }
 }
