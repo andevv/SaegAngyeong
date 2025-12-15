@@ -101,6 +101,7 @@ struct APIRouter: URLRequestConvertible {
 /// Combine 기반 네트워크 추상화 계층
 protocol NetworkProviding {
     func request<T: Decodable>(_ endpoint: APIEndpoint) -> AnyPublisher<T, NetworkError>
+    func request<T: Decodable>(_ type: T.Type, endpoint: APIEndpoint) -> AnyPublisher<T, NetworkError>
     func requestVoid(_ endpoint: APIEndpoint) -> AnyPublisher<Void, NetworkError>
 }
 
@@ -121,6 +122,10 @@ final class NetworkProvider: NetworkProviding {
     }
 
     func request<T: Decodable>(_ endpoint: APIEndpoint) -> AnyPublisher<T, NetworkError> {
+        request(T.self, endpoint: endpoint)
+    }
+
+    func request<T: Decodable>(_ type: T.Type, endpoint: APIEndpoint) -> AnyPublisher<T, NetworkError> {
         let router = APIRouter(
             endpoint: endpoint,
             accessTokenProvider: accessTokenProvider,
