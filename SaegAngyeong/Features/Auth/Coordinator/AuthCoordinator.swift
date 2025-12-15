@@ -13,7 +13,7 @@ final class AuthCoordinator {
     // MARK: - Properties
     private let dependency: AppDependency
     let navigationController: UINavigationController
-    private weak var window: UIWindow?
+    private var window: UIWindow?
     private var cancellables = Set<AnyCancellable>()
 
     init(window: UIWindow?, dependency: AppDependency) {
@@ -70,11 +70,12 @@ final class AuthCoordinator {
             self?.showHome(animated: true)
         }
         navigationController.setViewControllers([loginVC], animated: animated)
+        setRootViewController(navigationController, animated: animated)
     }
 
     private func showHome(animated: Bool) {
-        let homeVC = HomeViewController()
-        navigationController.setViewControllers([homeVC], animated: animated)
+        let tabBar = MainTabBarController(dependency: dependency)
+        setRootViewController(tabBar, animated: animated)
     }
 
     private func bindTokenInvalidation() {
@@ -85,5 +86,17 @@ final class AuthCoordinator {
                 self?.showLogin(animated: true)
             }
             .store(in: &cancellables)
+    }
+
+    private func setRootViewController(_ viewController: UIViewController, animated: Bool) {
+        guard let window else { return }
+        if animated {
+            UIView.transition(with: window, duration: 0.3, options: .transitionCrossDissolve, animations: {
+                window.rootViewController = viewController
+            }, completion: nil)
+        } else {
+            window.rootViewController = viewController
+        }
+        window.makeKeyAndVisible()
     }
 }

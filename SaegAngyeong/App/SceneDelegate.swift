@@ -21,9 +21,6 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         let coordinator = AuthCoordinator(window: window, dependency: dependency)
         coordinator.start()
 
-        window.rootViewController = coordinator.navigationController
-        window.makeKeyAndVisible()
-
         self.authCoordinator = coordinator
         self.window = window
     }
