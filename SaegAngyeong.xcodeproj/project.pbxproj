@@ -28,8 +28,6 @@
 				Common/UI/Component/.gitkeep,
 				Common/UI/Style/.gitkeep,
 				Common/Utils/.gitkeep,
-				Domain/Model/.gitkeep,
-				Domain/Repository/.gitkeep,
 				Features/.gitkeep,
 				Resources/InfoPlist/Info.plist,
 			);
