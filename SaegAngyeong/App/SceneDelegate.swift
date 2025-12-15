@@ -10,21 +10,21 @@ import UIKit
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     var window: UIWindow?
+    var authCoordinator: AuthCoordinator?
 
 
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
         guard let windowScene = (scene as? UIWindowScene) else { return }
 
-        let dependency = AppDependency.make()
-        let viewModel = LoginViewModel(
-            authRepository: dependency.authRepository,
-            deviceTokenProvider: { dependency.tokenStore.deviceToken }
-        )
-
         let window = UIWindow(windowScene: windowScene)
-        window.rootViewController = UINavigationController(rootViewController: LoginViewController(viewModel: viewModel))
+        let dependency = AppDependency.make()
+        let coordinator = AuthCoordinator(window: window, dependency: dependency)
+        coordinator.start()
+
+        window.rootViewController = coordinator.navigationController
         window.makeKeyAndVisible()
 
+        self.authCoordinator = coordinator
         self.window = window
     }
 

@@ -64,7 +64,7 @@ struct LoginResponseDTO: Decodable {
     }
 }
 
-struct RefreshTokenResponseDTO: Decodable {
+struct RefreshTokenResponseDTO: Decodable, Sendable {
     let accessToken: String
     let refreshToken: String
 }

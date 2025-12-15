@@ -16,8 +16,16 @@ struct AppDependency {
 
     static func make() -> AppDependency {
         let tokenStore = TokenStore()
+        let interceptor = TokenRefreshInterceptor(
+            tokenStore: tokenStore,
+            apiKey: AppConfig.apiKey,
+            onForceLogout: {
+                NotificationCenter.default.post(name: .tokenInvalidated, object: nil)
+            }
+        )
+        let session = Session(interceptor: interceptor)
         let provider = NetworkProvider(
-            session: .default,
+            session: session,
             accessTokenProvider: { tokenStore.accessToken },
             sesacKey: AppConfig.apiKey
         )

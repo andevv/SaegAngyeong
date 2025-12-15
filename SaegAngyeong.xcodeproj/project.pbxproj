@@ -26,7 +26,6 @@
 			membershipExceptions = (
 				Common/Extensions/.gitkeep,
 				Common/UI/Component/.gitkeep,
-				Common/UI/Style/.gitkeep,
 				Resources/InfoPlist/Info.plist,
 			);
 			target = FEE034012EE9330E008B74AB /* SaegAngyeong */;
