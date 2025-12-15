@@ -29,6 +29,22 @@ final class TokenRefreshInterceptor: RequestInterceptor {
         self.session = Session()
     }
 
+    // MARK: - Adapt
+
+    func adapt(_ urlRequest: URLRequest, for session: Session, completion: @escaping (Result<URLRequest, Error>) -> Void) {
+        var request = urlRequest
+
+        // SeSACKey 항상 갱신
+        request.setValue(apiKey, forHTTPHeaderField: "SeSACKey")
+
+        // 최신 accessToken 붙이기
+        if let accessToken = tokenStore.accessToken, !accessToken.isEmpty {
+            request.setValue(accessToken, forHTTPHeaderField: "Authorization")
+        }
+
+        completion(.success(request))
+    }
+
     func retry(_ request: Request, for session: Session, dueTo error: Error, completion: @escaping (RetryResult) -> Void) {
         guard
             let response = request.response,
