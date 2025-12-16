@@ -14,17 +14,20 @@ final class HomeViewModel: BaseViewModel, ViewModelType {
     private let bannerRepository: BannerRepository
     private let accessTokenProvider: () -> String?
     private let sesacKey: String
+    private let useMockBanner: Bool
 
     init(
         filterRepository: FilterRepository,
         bannerRepository: BannerRepository,
         accessTokenProvider: @escaping () -> String?,
-        sesacKey: String
+        sesacKey: String,
+        useMockBanner: Bool = false
     ) {
         self.filterRepository = filterRepository
         self.bannerRepository = bannerRepository
         self.accessTokenProvider = accessTokenProvider
         self.sesacKey = sesacKey
+        self.useMockBanner = useMockBanner
         super.init()
     }
 
@@ -77,18 +80,23 @@ final class HomeViewModel: BaseViewModel, ViewModelType {
             .sink { [weak self] completion in
                 if case let .failure(error) = completion {
                     self?.error.send(error)
-                    self?.emitFallbackBanners(to: bannerSubject)
+                    if self?.useMockBanner == true {
+                        self?.emitMockBanners(to: bannerSubject)
+                    } else {
+                        self?.emitFallbackBanners(to: bannerSubject)
+                    }
                 }
             } receiveValue: { [weak self] banners in
-                guard !banners.isEmpty else {
-                    self?.emitFallbackBanners(to: bannerSubject)
+                guard let self else { return }
+                if self.useMockBanner || banners.isEmpty {
+                    self.emitMockBanners(to: bannerSubject)
                     return
                 }
                 let viewData = banners.map { banner in
                     BannerViewData(
                         title: banner.title ?? "",
                         imageURL: banner.imageURL,
-                        headers: self?.imageHeaders ?? [:]
+                        headers: self.imageHeaders
                     )
                 }
                 bannerSubject.send(viewData)
@@ -120,6 +128,17 @@ final class HomeViewModel: BaseViewModel, ViewModelType {
             headers: [:]
         )
         subject.send([fallback])
+    }
+
+    private func emitMockBanners(to subject: PassthroughSubject<[BannerViewData], Never>) {
+        let urls = [
+            "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee",
+            "https://images.unsplash.com/photo-1469474968028-56623f02e42e",
+            "https://images.unsplash.com/photo-1433838552652-f9a46b332c40"
+        ].compactMap { URL(string: $0) }
+
+        let banners = urls.map { BannerViewData(title: "Mock Banner", imageURL: $0, headers: [:]) }
+        subject.send(banners)
     }
 }
 

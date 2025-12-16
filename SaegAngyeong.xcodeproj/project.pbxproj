@@ -25,7 +25,6 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Common/Extensions/.gitkeep,
-				Common/UI/Component/.gitkeep,
 				Resources/InfoPlist/Info.plist,
 			);
 			target = FEE034012EE9330E008B74AB /* SaegAngyeong */;

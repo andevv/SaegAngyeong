@@ -89,14 +89,11 @@ final class HomeViewController: BaseViewController<HomeViewModel> {
     }()
 
     private lazy var bannerCollectionView: UICollectionView = {
-        let layout = UICollectionViewFlowLayout()
-        layout.scrollDirection = .horizontal
-        layout.minimumLineSpacing = 12
-        layout.sectionInset = UIEdgeInsets(top: 0, left: 16, bottom: 0, right: 16)
-        layout.itemSize = CGSize(width: view.bounds.width - 32, height: 140)
+        let layout = HomeViewController.makeBannerLayout()
         let collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
         collectionView.showsHorizontalScrollIndicator = false
-        collectionView.isPagingEnabled = true
+        collectionView.isPagingEnabled = false
+        collectionView.decelerationRate = .fast
         collectionView.backgroundColor = .clear
         collectionView.register(BannerCell.self, forCellWithReuseIdentifier: BannerCell.reuseID)
         collectionView.dataSource = self
@@ -104,12 +101,17 @@ final class HomeViewController: BaseViewController<HomeViewModel> {
         return collectionView
     }()
 
-    private let pageControl: UIPageControl = {
-        let control = UIPageControl()
-        control.currentPage = 0
-        control.currentPageIndicatorTintColor = .white
-        control.pageIndicatorTintColor = UIColor.white.withAlphaComponent(0.4)
-        return control
+    private let pageLabel: PaddingLabel = {
+        let label = PaddingLabel(padding: UIEdgeInsets(top: 4, left: 8, bottom: 4, right: 8))
+        label.backgroundColor = .gray60.withAlphaComponent(0.2)
+        label.textColor = .gray45
+        label.font = .pretendard(.medium, size: 10)
+        label.layer.borderWidth = 0.5
+        label.layer.borderColor = UIColor.gray60.cgColor
+        label.layer.cornerRadius = 10
+        label.clipsToBounds = true
+        label.text = "0/0"
+        return label
     }()
 
     private let viewDidLoadSubject = PassthroughSubject<Void, Never>()
@@ -150,10 +152,15 @@ final class HomeViewController: BaseViewController<HomeViewModel> {
                 layout.invalidateLayout()
             }
         }
+
+        // 배너가 좌우 패딩을 포함한 한 페이지에 한 개씩 보이도록 사이즈 재계산
         if let layout = bannerCollectionView.collectionViewLayout as? UICollectionViewFlowLayout {
-            let inset = layout.sectionInset.left + layout.sectionInset.right
-            layout.itemSize = CGSize(width: view.bounds.width - inset, height: 140)
-            layout.invalidateLayout()
+            let horizontalInset = layout.sectionInset.left + layout.sectionInset.right
+            let width = bannerCollectionView.bounds.width - horizontalInset
+            if width > 0 {
+                layout.itemSize = CGSize(width: width, height: 100)
+                layout.invalidateLayout()
+            }
         }
     }
 
@@ -164,7 +171,7 @@ final class HomeViewController: BaseViewController<HomeViewModel> {
         contentView.addSubview(backgroundImageView)
         backgroundImageView.layer.addSublayer(overlayGradient)
 
-        [subtitleLabel, titleLabel, descriptionLabel, useButton, categoryCollectionView, bannerCollectionView, pageControl].forEach { contentView.addSubview($0) }
+        [subtitleLabel, titleLabel, descriptionLabel, useButton, categoryCollectionView, bannerCollectionView, pageLabel].forEach { contentView.addSubview($0) }
     }
 
     override func configureLayout() {
@@ -209,15 +216,15 @@ final class HomeViewController: BaseViewController<HomeViewModel> {
         }
 
         bannerCollectionView.snp.makeConstraints { make in
-            make.top.equalTo(backgroundImageView.snp.bottom).offset(24)
+            make.top.equalTo(backgroundImageView.snp.bottom)
             make.leading.trailing.equalToSuperview()
-            make.height.equalTo(160)
+            make.height.equalTo(100)
             make.bottom.equalToSuperview().offset(-24)
         }
 
-        pageControl.snp.makeConstraints { make in
-            make.trailing.equalTo(bannerCollectionView.snp.trailing).inset(12)
-            make.bottom.equalTo(bannerCollectionView.snp.bottom).inset(8)
+        pageLabel.snp.makeConstraints { make in
+            make.trailing.equalTo(bannerCollectionView.snp.trailing).inset(24)
+            make.bottom.equalTo(bannerCollectionView.snp.bottom).inset(12)
         }
     }
 
@@ -249,7 +256,7 @@ final class HomeViewController: BaseViewController<HomeViewModel> {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] banners in
                 self?.banners = banners
-                self?.pageControl.numberOfPages = banners.count
+                self?.updatePageLabel(current: 0, total: banners.count)
                 self?.bannerCollectionView.reloadData()
             }
             .store(in: &cancellables)
@@ -286,6 +293,36 @@ final class HomeViewController: BaseViewController<HomeViewModel> {
         alert.addAction(UIAlertAction(title: "확인", style: .default))
         present(alert, animated: true)
     }
+
+    private func updatePageLabel(current: Int, total: Int) {
+        guard total > 0 else {
+            pageLabel.text = "0/0"
+            return
+        }
+        pageLabel.text = "\(current + 1) / \(total)"
+    }
+
+    private func currentBannerPage() -> Int {
+        guard
+            let layout = bannerCollectionView.collectionViewLayout as? UICollectionViewFlowLayout,
+            banners.count > 0
+        else { return 0 }
+
+        let pageWidth = layout.itemSize.width + layout.minimumLineSpacing
+        let offsetX = bannerCollectionView.contentOffset.x
+        let page = max(0, min(CGFloat(banners.count - 1), round(offsetX / pageWidth)))
+        return Int(page)
+    }
+
+    private static func makeBannerLayout() -> UICollectionViewFlowLayout {
+        let layout = UICollectionViewFlowLayout()
+        layout.scrollDirection = .horizontal
+        layout.minimumLineSpacing = 12
+        layout.sectionInset = UIEdgeInsets(top: 0, left: 12, bottom: 0, right: 12)
+        let width = UIScreen.main.bounds.width - layout.sectionInset.left - layout.sectionInset.right
+        layout.itemSize = CGSize(width: width, height: 100)
+        return layout
+    }
 }
 
 // MARK: - CollectionView
@@ -321,8 +358,40 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
 
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
         guard scrollView == bannerCollectionView else { return }
-        let page = Int(scrollView.contentOffset.x / scrollView.bounds.width)
-        pageControl.currentPage = page
+        updatePageLabel(current: currentBannerPage(), total: banners.count)
+    }
+
+    func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+        guard scrollView == bannerCollectionView, decelerate == false else { return }
+        updatePageLabel(current: currentBannerPage(), total: banners.count)
+    }
+
+    func scrollViewWillEndDragging(_ scrollView: UIScrollView, withVelocity velocity: CGPoint, targetContentOffset: UnsafeMutablePointer<CGPoint>) {
+        guard
+            scrollView == bannerCollectionView,
+            let layout = bannerCollectionView.collectionViewLayout as? UICollectionViewFlowLayout,
+            banners.count > 0
+        else { return }
+
+        let pageWidth = layout.itemSize.width + layout.minimumLineSpacing
+        let rawPage = scrollView.contentOffset.x / pageWidth
+
+        let targetPage: CGFloat
+        if velocity.x > 0 {
+            targetPage = floor(rawPage + 1)
+        } else if velocity.x < 0 {
+            targetPage = ceil(rawPage - 1)
+        } else {
+            targetPage = round(rawPage)
+        }
+
+        let clampedPage = max(0, min(CGFloat(banners.count - 1), targetPage))
+        let targetX = clampedPage * pageWidth
+        targetContentOffset.pointee = CGPoint(x: targetX, y: 0)
+
+        DispatchQueue.main.async { [weak self] in
+            self?.updatePageLabel(current: Int(clampedPage), total: self?.banners.count ?? 0)
+        }
     }
 }
 
@@ -378,14 +447,23 @@ private final class CategoryCell: UICollectionViewCell {
 private final class BannerCell: UICollectionViewCell {
     static let reuseID = "BannerCell"
 
+    private let containerView = UIView()
     private let imageView = UIImageView()
 
     override init(frame: CGRect) {
         super.init(frame: frame)
-        contentView.clipsToBounds = true
-        contentView.layer.cornerRadius = 12
+        contentView.backgroundColor = .clear
+
+        containerView.clipsToBounds = true
+        containerView.layer.cornerRadius = 25
+        containerView.backgroundColor = UIColor.white.withAlphaComponent(0.1)
+        contentView.addSubview(containerView)
+        containerView.snp.makeConstraints { make in
+            make.edges.equalToSuperview()
+        }
+
         imageView.contentMode = .scaleAspectFill
-        contentView.addSubview(imageView)
+        containerView.addSubview(imageView)
         imageView.snp.makeConstraints { make in
             make.edges.equalToSuperview()
         }
