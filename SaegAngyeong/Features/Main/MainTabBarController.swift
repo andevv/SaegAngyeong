@@ -22,6 +22,7 @@ final class MainTabBarController: UITabBarController {
     private func setupTabs(dependency: AppDependency) {
         let homeVM = HomeViewModel(
             filterRepository: dependency.filterRepository,
+            bannerRepository: dependency.bannerRepository,
             accessTokenProvider: { dependency.tokenStore.accessToken },
             sesacKey: AppConfig.apiKey
         )
