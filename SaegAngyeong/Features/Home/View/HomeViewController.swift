@@ -194,6 +194,7 @@ final class HomeViewController: BaseViewController<HomeViewModel> {
         scrollView.contentInsetAdjustmentBehavior = .never
         scrollView.showsVerticalScrollIndicator = false
         scrollView.showsHorizontalScrollIndicator = false
+        scrollView.delegate = self
 
         view.addSubview(scrollView)
         scrollView.addSubview(contentView)
@@ -459,6 +460,12 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
     func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
         guard scrollView == bannerCollectionView, decelerate == false else { return }
         updatePageLabel(current: currentBannerPage(), total: banners.count)
+    }
+
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        if scrollView == self.scrollView, scrollView.contentOffset.y < 0 {
+            scrollView.contentOffset.y = 0 // 상단 바운스 제거
+        }
     }
 
     func scrollViewWillEndDragging(_ scrollView: UIScrollView, withVelocity velocity: CGPoint, targetContentOffset: UnsafeMutablePointer<CGPoint>) {
