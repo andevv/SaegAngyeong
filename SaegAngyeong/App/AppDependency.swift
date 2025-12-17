@@ -19,6 +19,8 @@ struct AppDependency {
 
     static func make() -> AppDependency {
         let tokenStore = TokenStore()
+        let etagStore = ETagStore()
+        KingfisherETagConfigurator.configure(store: etagStore)
         let interceptor = TokenRefreshInterceptor(
             tokenStore: tokenStore,
             apiKey: AppConfig.apiKey,

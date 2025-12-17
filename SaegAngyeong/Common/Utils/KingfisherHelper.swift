@@ -24,7 +24,8 @@ enum KingfisherHelper {
         _ imageView: UIImageView,
         url: URL?,
         headers: [String: String],
-        placeholder: UIImage? = nil
+        placeholder: UIImage? = nil,
+        logLabel: String? = nil
     ) {
         guard let url else {
             imageView.image = placeholder
@@ -34,6 +35,22 @@ enum KingfisherHelper {
             with: url,
             placeholder: placeholder,
             options: [.requestModifier(modifier(headers: headers))]
-        )
+        ) { result in
+            #if DEBUG
+            switch result {
+            case .success(let value):
+                let source: String
+                switch value.cacheType {
+                case .memory: source = "memory-cache"
+                case .disk: source = "disk-cache"
+                case .none: source = "network"
+                @unknown default: source = "unknown"
+                }
+                print("[KF] \(logLabel ?? "") \(url.absoluteString) -> \(source)")
+            case .failure(let error):
+                print("[KF][Error] \(logLabel ?? "") \(url.absoluteString) -> \(error)")
+            }
+            #endif
+        }
     }
 }

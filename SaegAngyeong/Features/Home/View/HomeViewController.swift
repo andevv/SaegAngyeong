@@ -421,7 +421,7 @@ final class HomeViewController: BaseViewController<HomeViewModel> {
                 self?.titleLabel.text = viewData.title
                 self?.descriptionLabel.text = viewData.description
                 self?.subtitleLabel.text = "오늘의 필터 소개"
-                KingfisherHelper.setImage(self?.backgroundImageView ?? UIImageView(), url: viewData.imageURL, headers: viewData.headers)
+                KingfisherHelper.setImage(self?.backgroundImageView ?? UIImageView(), url: viewData.imageURL, headers: viewData.headers, logLabel: "highlight")
             }
             .store(in: &cancellables)
 
@@ -489,7 +489,7 @@ final class HomeViewController: BaseViewController<HomeViewModel> {
 
         // profile image
         if let url = author.profileImageURL {
-            KingfisherHelper.setImage(authorProfileImageView, url: url, headers: author.headers)
+            KingfisherHelper.setImage(authorProfileImageView, url: url, headers: author.headers, logLabel: "author-profile")
         } else {
             authorProfileImageView.image = nil
         }

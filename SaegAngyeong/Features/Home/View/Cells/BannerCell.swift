@@ -40,7 +40,7 @@ final class BannerCell: UICollectionViewCell {
 
     func configure(with data: BannerViewData) {
         if let url = data.imageURL {
-            KingfisherHelper.setImage(imageView, url: url, headers: data.headers)
+            KingfisherHelper.setImage(imageView, url: url, headers: data.headers, logLabel: "banner")
         } else {
             imageView.image = nil
             contentView.backgroundColor = UIColor.white.withAlphaComponent(0.1)

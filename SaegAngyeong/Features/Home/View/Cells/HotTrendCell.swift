@@ -71,7 +71,7 @@ final class HotTrendCell: UICollectionViewCell {
         likeLabel.text = "\(data.likeCount)"
 
         if let url = data.imageURL {
-            KingfisherHelper.setImage(imageView, url: url, headers: data.headers)
+            KingfisherHelper.setImage(imageView, url: url, headers: data.headers, logLabel: "hot-trend")
         } else {
             imageView.image = nil
         }

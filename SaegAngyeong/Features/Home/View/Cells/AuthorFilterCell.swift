@@ -32,7 +32,7 @@ final class AuthorFilterCell: UICollectionViewCell {
 
     func configure(with data: AuthorFilterViewData) {
         if let url = data.imageURL {
-            KingfisherHelper.setImage(imageView, url: url, headers: data.headers)
+            KingfisherHelper.setImage(imageView, url: url, headers: data.headers, logLabel: "author-filter")
         } else {
             imageView.image = nil
         }
