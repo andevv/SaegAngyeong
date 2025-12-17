@@ -421,7 +421,7 @@ final class HomeViewController: BaseViewController<HomeViewModel> {
                 self?.titleLabel.text = viewData.title
                 self?.descriptionLabel.text = viewData.description
                 self?.subtitleLabel.text = "오늘의 필터 소개"
-                self?.loadImage(from: viewData.imageURL, headers: viewData.headers)
+                KingfisherHelper.setImage(self?.backgroundImageView ?? UIImageView(), url: viewData.imageURL, headers: viewData.headers)
             }
             .store(in: &cancellables)
 
@@ -466,25 +466,6 @@ final class HomeViewController: BaseViewController<HomeViewModel> {
             .store(in: &cancellables)
     }
 
-    private func loadImage(from url: URL?, headers: [String: String]) {
-        guard let url else {
-            backgroundImageView.image = nil
-            return
-        }
-        let modifier = AnyModifier { request in
-            var r = request
-            headers.forEach { key, value in
-                r.setValue(value, forHTTPHeaderField: key)
-            }
-            return r
-        }
-        backgroundImageView.kf.setImage(with: url, options: [.requestModifier(modifier)]) { result in
-            if case let .failure(error) = result {
-                print("[Home] image load failed:", error)
-            }
-        }
-    }
-
     private func apply(author: TodayAuthorViewData) {
         authorNameLabel.text = author.name
         authorNickLabel.text = author.nick
@@ -508,12 +489,7 @@ final class HomeViewController: BaseViewController<HomeViewModel> {
 
         // profile image
         if let url = author.profileImageURL {
-            let modifier = AnyModifier { request in
-                var r = request
-                author.headers.forEach { key, value in r.setValue(value, forHTTPHeaderField: key) }
-                return r
-            }
-            authorProfileImageView.kf.setImage(with: url, options: [.requestModifier(modifier)])
+            KingfisherHelper.setImage(authorProfileImageView, url: url, headers: author.headers)
         } else {
             authorProfileImageView.image = nil
         }
@@ -696,4 +672,3 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
         }
     }
 }
-

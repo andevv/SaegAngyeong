@@ -39,13 +39,8 @@ final class BannerCell: UICollectionViewCell {
     }
 
     func configure(with data: BannerViewData) {
-        let modifier = AnyModifier { request in
-            var r = request
-            data.headers.forEach { key, value in r.setValue(value, forHTTPHeaderField: key) }
-            return r
-        }
         if let url = data.imageURL {
-            imageView.kf.setImage(with: url, options: [.requestModifier(modifier)])
+            KingfisherHelper.setImage(imageView, url: url, headers: data.headers)
         } else {
             imageView.image = nil
             contentView.backgroundColor = UIColor.white.withAlphaComponent(0.1)

@@ -70,13 +70,8 @@ final class HotTrendCell: UICollectionViewCell {
         titleLabel.text = data.title
         likeLabel.text = "\(data.likeCount)"
 
-        let modifier = AnyModifier { request in
-            var r = request
-            data.headers.forEach { key, value in r.setValue(value, forHTTPHeaderField: key) }
-            return r
-        }
         if let url = data.imageURL {
-            imageView.kf.setImage(with: url, options: [.requestModifier(modifier)])
+            KingfisherHelper.setImage(imageView, url: url, headers: data.headers)
         } else {
             imageView.image = nil
         }
