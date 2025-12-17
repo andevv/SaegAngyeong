@@ -102,6 +102,7 @@ final class AuthRepositoryImpl: AuthRepository {
             nick: dto.nick,
             name: dto.name,
             introduction: dto.introduction,
+            description: nil,
             phoneNumber: dto.phoneNum,
             profileImageURL: dto.profileImage.flatMap { URL(string: $0) },
             hashTags: dto.hashTags ?? []

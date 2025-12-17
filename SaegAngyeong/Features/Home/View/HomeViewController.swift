@@ -138,10 +138,84 @@ final class HomeViewController: BaseViewController<HomeViewModel> {
         return collectionView
     }()
 
+    private let authorTitleLabel: UILabel = {
+        let label = UILabel()
+        label.text = "오늘의 작가 소개"
+        label.textColor = .gray60
+        label.font = .pretendard(.bold, size: 20)
+        return label
+    }()
+
+    private let authorProfileImageView: UIImageView = {
+        let imageView = UIImageView()
+        imageView.contentMode = .scaleAspectFill
+        imageView.clipsToBounds = true
+        imageView.layer.cornerRadius = 32
+        imageView.layer.borderWidth = 1
+        imageView.layer.borderColor = UIColor.gray90.withAlphaComponent(0.2).cgColor
+        return imageView
+    }()
+
+    private let authorNameLabel: UILabel = {
+        let label = UILabel()
+        label.font = .mulgyeol(.bold, size: 22)
+        label.textColor = .gray30
+        return label
+    }()
+
+    private let authorNickLabel: UILabel = {
+        let label = UILabel()
+        label.font = .pretendard(.medium, size: 14)
+        label.textColor = .gray60
+        return label
+    }()
+
+    private let authorIntroLabel: UILabel = {
+        let label = UILabel()
+        label.font = .mulgyeol(.regular, size: 14)
+        label.textColor = .gray45
+        label.numberOfLines = 0
+        return label
+    }()
+
+    private let authorDescriptionLabel: UILabel = {
+        let label = UILabel()
+        label.font = .pretendard(.regular, size: 12)
+        label.textColor = .gray45
+        label.numberOfLines = 0
+        return label
+    }()
+
+    private lazy var authorFilterCollectionView: UICollectionView = {
+        let layout = UICollectionViewFlowLayout()
+        layout.scrollDirection = .horizontal
+        layout.minimumLineSpacing = 12
+        layout.sectionInset = UIEdgeInsets(top: 0, left: 16, bottom: 0, right: 16)
+        layout.itemSize = CGSize(width: 140, height: 100)
+        let collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
+        collectionView.showsHorizontalScrollIndicator = false
+        collectionView.backgroundColor = .clear
+        collectionView.register(AuthorFilterCell.self, forCellWithReuseIdentifier: AuthorFilterCell.reuseID)
+        collectionView.dataSource = self
+        collectionView.delegate = self
+        return collectionView
+    }()
+
+    private let tagStackView: UIStackView = {
+        let stack = UIStackView()
+        stack.axis = .horizontal
+        stack.spacing = 8
+        stack.alignment = .leading
+        stack.distribution = .fillProportionally
+        stack.clipsToBounds = true
+        return stack
+    }()
+
     private let viewDidLoadSubject = PassthroughSubject<Void, Never>()
     private var categories: [CategoryViewData] = []
     private var banners: [BannerViewData] = []
     private var hotTrends: [HotTrendViewData] = []
+    private var todayAuthor: TodayAuthorViewData?
 
     override init(viewModel: HomeViewModel) {
         super.init(viewModel: viewModel)
@@ -211,13 +285,22 @@ final class HomeViewController: BaseViewController<HomeViewModel> {
             bannerCollectionView,
             pageLabel,
             hotTrendTitleLabel,
-            hotTrendCollectionView
+            hotTrendCollectionView,
+            authorTitleLabel,
+            authorProfileImageView,
+            authorNameLabel,
+            authorNickLabel,
+            authorFilterCollectionView,
+            tagStackView,
+            authorIntroLabel,
+            authorDescriptionLabel
         ].forEach { contentView.addSubview($0) }
     }
 
     override func configureLayout() {
         scrollView.snp.makeConstraints { make in
-            make.edges.equalToSuperview() // safe area 무시하고 전체 영역 사용
+            make.top.leading.trailing.equalToSuperview() // 상단 safe area 무시
+            make.bottom.equalTo(view.safeAreaLayoutGuide) // 하단 safe area는 준수
         }
 
         contentView.snp.makeConstraints { make in
@@ -277,6 +360,51 @@ final class HomeViewController: BaseViewController<HomeViewModel> {
             make.top.equalTo(hotTrendTitleLabel.snp.bottom).offset(12)
             make.leading.trailing.equalToSuperview()
             make.height.equalTo(340)
+        }
+
+        authorTitleLabel.snp.makeConstraints { make in
+            make.top.equalTo(hotTrendCollectionView.snp.bottom).offset(12)
+            make.leading.equalToSuperview().inset(16)
+            make.trailing.lessThanOrEqualToSuperview().inset(16)
+        }
+
+        authorProfileImageView.snp.makeConstraints { make in
+            make.top.equalTo(authorTitleLabel.snp.bottom).offset(16)
+            make.leading.equalToSuperview().inset(16)
+            make.width.height.equalTo(64)
+        }
+        authorNameLabel.snp.makeConstraints { make in
+            make.top.equalTo(authorProfileImageView.snp.top).offset(4)
+            make.leading.equalTo(authorProfileImageView.snp.trailing).offset(12)
+            make.trailing.lessThanOrEqualToSuperview().inset(16)
+        }
+        authorNickLabel.snp.makeConstraints { make in
+            make.top.equalTo(authorNameLabel.snp.bottom).offset(4)
+            make.leading.equalTo(authorNameLabel)
+            make.trailing.lessThanOrEqualToSuperview().inset(16)
+        }
+
+        authorFilterCollectionView.snp.makeConstraints { make in
+            make.top.equalTo(authorProfileImageView.snp.bottom).offset(16)
+            make.leading.trailing.equalToSuperview()
+            make.height.equalTo(120)
+        }
+
+        tagStackView.snp.makeConstraints { make in
+            make.top.equalTo(authorFilterCollectionView.snp.bottom).offset(12)
+            make.leading.equalToSuperview().inset(16)
+            make.trailing.lessThanOrEqualToSuperview().inset(16)
+            make.height.greaterThanOrEqualTo(24)
+        }
+
+        authorIntroLabel.snp.makeConstraints { make in
+            make.top.equalTo(tagStackView.snp.bottom).offset(16)
+            make.leading.trailing.equalToSuperview().inset(16)
+        }
+
+        authorDescriptionLabel.snp.makeConstraints { make in
+            make.top.equalTo(authorIntroLabel.snp.bottom).offset(12)
+            make.leading.trailing.equalTo(authorIntroLabel)
             make.bottom.equalToSuperview().offset(-24)
         }
     }
@@ -322,6 +450,14 @@ final class HomeViewController: BaseViewController<HomeViewModel> {
             }
             .store(in: &cancellables)
 
+        output.todayAuthor
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] author in
+                self?.todayAuthor = author
+                self?.apply(author: author)
+            }
+            .store(in: &cancellables)
+
         viewModel.error
             .receive(on: DispatchQueue.main)
             .sink { [weak self] error in
@@ -346,6 +482,40 @@ final class HomeViewController: BaseViewController<HomeViewModel> {
             if case let .failure(error) = result {
                 print("[Home] image load failed:", error)
             }
+        }
+    }
+
+    private func apply(author: TodayAuthorViewData) {
+        authorNameLabel.text = author.name
+        authorNickLabel.text = author.nick
+        authorIntroLabel.text = author.introduction
+        authorDescriptionLabel.text = author.description
+
+        // tags
+        tagStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
+        for tag in author.tags {
+            let label = PaddingLabel(padding: UIEdgeInsets(top: 6, left: 10, bottom: 6, right: 10))
+            label.backgroundColor = UIColor.white.withAlphaComponent(0.08)
+            label.textColor = .gray45
+            label.font = .pretendard(.medium, size: 12)
+            label.layer.cornerRadius = 12
+            label.clipsToBounds = true
+            label.text = tag
+            tagStackView.addArrangedSubview(label)
+        }
+
+        authorFilterCollectionView.reloadData()
+
+        // profile image
+        if let url = author.profileImageURL {
+            let modifier = AnyModifier { request in
+                var r = request
+                author.headers.forEach { key, value in r.setValue(value, forHTTPHeaderField: key) }
+                return r
+            }
+            authorProfileImageView.kf.setImage(with: url, options: [.requestModifier(modifier)])
+        } else {
+            authorProfileImageView.image = nil
         }
     }
 
@@ -420,6 +590,9 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
         if collectionView == bannerCollectionView {
             return banners.count
         }
+        if collectionView == authorFilterCollectionView {
+            return todayAuthor?.filters.count ?? 0
+        }
         return hotTrends.count
     }
 
@@ -434,6 +607,13 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
             cell.configure(with: banners[indexPath.item])
             return cell
         }
+        if collectionView == authorFilterCollectionView {
+            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: AuthorFilterCell.reuseID, for: indexPath) as! AuthorFilterCell
+            if let data = todayAuthor?.filters[indexPath.item] {
+                cell.configure(with: data)
+            }
+            return cell
+        }
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: HotTrendCell.reuseID, for: indexPath) as! HotTrendCell
         cell.configure(with: hotTrends[indexPath.item])
         return cell
@@ -446,6 +626,10 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
         } else if collectionView == bannerCollectionView {
             let banner = banners[indexPath.item]
             print("[Home] banner tapped:", banner.title)
+        } else if collectionView == authorFilterCollectionView {
+            if let item = todayAuthor?.filters[indexPath.item] {
+                print("[Home] author filter tapped:", item.title)
+            }
         } else {
             let item = hotTrends[indexPath.item]
             print("[Home] hot trend tapped:", item.title)
@@ -651,6 +835,41 @@ private final class HotTrendCell: UICollectionViewCell {
         titleLabel.text = data.title
         likeLabel.text = "\(data.likeCount)"
 
+        let modifier = AnyModifier { request in
+            var r = request
+            data.headers.forEach { key, value in r.setValue(value, forHTTPHeaderField: key) }
+            return r
+        }
+        if let url = data.imageURL {
+            imageView.kf.setImage(with: url, options: [.requestModifier(modifier)])
+        } else {
+            imageView.image = nil
+        }
+    }
+}
+
+private final class AuthorFilterCell: UICollectionViewCell {
+    static let reuseID = "AuthorFilterCell"
+
+    private let imageView = UIImageView()
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        contentView.clipsToBounds = true
+        contentView.layer.cornerRadius = 12
+        imageView.contentMode = .scaleAspectFill
+        imageView.clipsToBounds = true
+        contentView.addSubview(imageView)
+        imageView.snp.makeConstraints { make in
+            make.edges.equalToSuperview()
+        }
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    func configure(with data: AuthorFilterViewData) {
         let modifier = AnyModifier { request in
             var r = request
             data.headers.forEach { key, value in r.setValue(value, forHTTPHeaderField: key) }

@@ -29,7 +29,7 @@ protocol UserRepository {
     func updateMyProfile(_ profile: UserProfileUpdate) -> AnyPublisher<UserProfile, DomainError>
     func uploadProfileImage(data: Data, fileName: String, mimeType: String) -> AnyPublisher<URL, DomainError>
     func search(nick: String?) -> AnyPublisher<[UserSummary], DomainError>
-    func todayAuthor() -> AnyPublisher<UserSummary, DomainError>
+    func todayAuthor() -> AnyPublisher<TodayAuthor, DomainError>
 }
 
 // MARK: - Filter

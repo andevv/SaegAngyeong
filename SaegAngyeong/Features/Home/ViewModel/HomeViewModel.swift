@@ -12,6 +12,7 @@ final class HomeViewModel: BaseViewModel, ViewModelType {
 
     private let filterRepository: FilterRepository
     private let bannerRepository: BannerRepository
+    private let userRepository: UserRepository
     private let accessTokenProvider: () -> String?
     private let sesacKey: String
     private let useMockBanner: Bool
@@ -19,12 +20,14 @@ final class HomeViewModel: BaseViewModel, ViewModelType {
     init(
         filterRepository: FilterRepository,
         bannerRepository: BannerRepository,
+        userRepository: UserRepository,
         accessTokenProvider: @escaping () -> String?,
         sesacKey: String,
         useMockBanner: Bool = false
     ) {
         self.filterRepository = filterRepository
         self.bannerRepository = bannerRepository
+        self.userRepository = userRepository
         self.accessTokenProvider = accessTokenProvider
         self.sesacKey = sesacKey
         self.useMockBanner = useMockBanner
@@ -40,6 +43,7 @@ final class HomeViewModel: BaseViewModel, ViewModelType {
         let banners: AnyPublisher<[BannerViewData], Never>
         let categories: AnyPublisher<[CategoryViewData], Never>
         let hotTrends: AnyPublisher<[HotTrendViewData], Never>
+        let todayAuthor: AnyPublisher<TodayAuthorViewData, Never>
     }
 
     func transform(input: Input) -> Output {
@@ -47,6 +51,7 @@ final class HomeViewModel: BaseViewModel, ViewModelType {
         let bannerSubject = PassthroughSubject<[BannerViewData], Never>()
         let categorySubject = CurrentValueSubject<[CategoryViewData], Never>(CategoryViewData.defaults)
         let hotTrendSubject = PassthroughSubject<[HotTrendViewData], Never>()
+        let todayAuthorSubject = PassthroughSubject<TodayAuthorViewData, Never>()
 
         input.viewDidLoad
             .flatMap { [weak self] _ -> AnyPublisher<Filter, DomainError> in
@@ -135,11 +140,46 @@ final class HomeViewModel: BaseViewModel, ViewModelType {
             }
             .store(in: &cancellables)
 
+        input.viewDidLoad
+            .flatMap { [weak self] _ -> AnyPublisher<TodayAuthor, DomainError> in
+                guard let self else { return Empty().eraseToAnyPublisher() }
+                return self.userRepository.todayAuthor()
+            }
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] completion in
+                if case let .failure(error) = completion {
+                    self?.error.send(error)
+                    self?.emitMockAuthor(to: todayAuthorSubject)
+                }
+            } receiveValue: { [weak self] result in
+                guard let self else { return }
+                let viewData = TodayAuthorViewData(
+                    name: result.author.name ?? "",
+                    nick: result.author.nick,
+                    introduction: result.author.introduction ?? "",
+                    description: result.author.description ?? result.author.introduction ?? "",
+                    profileImageURL: result.author.profileImageURL,
+                    tags: result.author.hashTags,
+                    filters: result.filters.compactMap { filter in
+                        AuthorFilterViewData(
+                            id: filter.id,
+                            title: filter.title,
+                            imageURL: filter.files.first,
+                            headers: self.imageHeaders
+                        )
+                    },
+                    headers: self.imageHeaders
+                )
+                todayAuthorSubject.send(viewData)
+            }
+            .store(in: &cancellables)
+
         return Output(
             highlight: highlightSubject.eraseToAnyPublisher(),
             banners: bannerSubject.eraseToAnyPublisher(),
             categories: categorySubject.eraseToAnyPublisher(),
-            hotTrends: hotTrendSubject.eraseToAnyPublisher()
+            hotTrends: hotTrendSubject.eraseToAnyPublisher(),
+            todayAuthor: todayAuthorSubject.eraseToAnyPublisher()
         )
     }
 
@@ -186,6 +226,25 @@ final class HomeViewModel: BaseViewModel, ViewModelType {
         }
         subject.send(mocks)
     }
+
+    private func emitMockAuthor(to subject: PassthroughSubject<TodayAuthorViewData, Never>) {
+        let mockFilters = [
+            AuthorFilterViewData(id: "mock1", title: "Mock1", imageURL: URL(string: "https://images.unsplash.com/photo-1473186578172-c141e6798cf4"), headers: [:]),
+            AuthorFilterViewData(id: "mock2", title: "Mock2", imageURL: URL(string: "https://images.unsplash.com/photo-1433838552652-f9a46b332c40"), headers: [:]),
+            AuthorFilterViewData(id: "mock3", title: "Mock3", imageURL: URL(string: "https://images.unsplash.com/photo-1469474968028-56623f02e42e"), headers: [:])
+        ]
+        let viewData = TodayAuthorViewData(
+            name: "윤새싹",
+            nick: "SESAC YOON",
+            introduction: "자연의 섬세함을 담아내는 감성 사진작가",
+            description: "자연의 섬세함을 담아내는 감성 사진작가",
+            profileImageURL: URL(string: "https://images.unsplash.com/photo-1494790108377-be9c29b29330"),
+            tags: ["#섬세함", "#자연", "#미니멀"],
+            filters: mockFilters,
+            headers: [:]
+        )
+        subject.send(viewData)
+    }
 }
 
 struct HighlightViewData {
@@ -206,6 +265,24 @@ struct HotTrendViewData {
     let id: String
     let title: String
     let likeCount: Int
+    let imageURL: URL?
+    let headers: [String: String]
+}
+
+struct TodayAuthorViewData {
+    let name: String
+    let nick: String
+    let introduction: String
+    let description: String
+    let profileImageURL: URL?
+    let tags: [String]
+    let filters: [AuthorFilterViewData]
+    let headers: [String: String]
+}
+
+struct AuthorFilterViewData {
+    let id: String
+    let title: String
     let imageURL: URL?
     let headers: [String: String]
 }

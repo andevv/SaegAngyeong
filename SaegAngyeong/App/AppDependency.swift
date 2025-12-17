@@ -15,6 +15,7 @@ struct AppDependency {
     let authRepository: AuthRepository
     let filterRepository: FilterRepository
     let bannerRepository: BannerRepository
+    let userRepository: UserRepository
 
     static func make() -> AppDependency {
         let tokenStore = TokenStore()
@@ -38,12 +39,14 @@ struct AppDependency {
         )
         let filterRepository = FilterRepositoryImpl(network: provider)
         let bannerRepository = BannerRepositoryImpl(network: provider)
+        let userRepository = UserRepositoryImpl(network: provider)
         return AppDependency(
             tokenStore: tokenStore,
             networkProvider: provider,
             authRepository: authRepository,
             filterRepository: filterRepository,
-            bannerRepository: bannerRepository
+            bannerRepository: bannerRepository,
+            userRepository: userRepository
         )
     }
 }
