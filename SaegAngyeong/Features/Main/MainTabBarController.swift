@@ -31,8 +31,7 @@ final class MainTabBarController: UITabBarController {
             bannerRepository: dependency.bannerRepository,
             userRepository: dependency.userRepository,
             accessTokenProvider: { dependency.tokenStore.accessToken },
-            sesacKey: AppConfig.apiKey,
-            useMockBanner: true
+            sesacKey: AppConfig.apiKey
         )
         let homeVC = HomeViewController(viewModel: homeVM)
 
