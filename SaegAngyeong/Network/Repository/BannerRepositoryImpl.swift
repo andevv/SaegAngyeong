@@ -22,12 +22,14 @@ final class BannerRepositoryImpl: BannerRepository {
             .map { dto in
                 return dto.data.compactMap { bannerDTO -> Banner in
                     let imageURL = Self.buildURL(from: bannerDTO.imageUrl)
+                    let linkURL = Self.buildFullURL(from: bannerDTO.payload.value)
                     return Banner(
                         id: bannerDTO.name,
                         imageURL: imageURL ?? URL(string: "about:blank")!,
-                        linkURL: nil,
+                        linkURL: linkURL,
                         title: bannerDTO.name,
-                        description: nil
+                        description: nil,
+                        payloadType: bannerDTO.payload.type
                     )
                 }
             }
@@ -42,6 +44,18 @@ final class BannerRepositoryImpl: BannerRepository {
         }
         if !normalized.hasPrefix("v1/") {
             normalized = "v1/" + normalized
+        }
+        return base.appendingPathComponent(normalized)
+    }
+
+    private static func buildFullURL(from path: String) -> URL? {
+        guard let base = URL(string: AppConfig.baseURL) else { return nil }
+        if let url = URL(string: path), url.scheme != nil {
+            return url
+        }
+        var normalized = path
+        if normalized.hasPrefix("/") {
+            normalized.removeFirst()
         }
         return base.appendingPathComponent(normalized)
     }

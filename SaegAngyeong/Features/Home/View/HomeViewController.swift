@@ -578,6 +578,21 @@ final class HomeViewController: BaseViewController<HomeViewModel> {
         }
         return UICollectionViewCompositionalLayout(sectionProvider: sectionProvider)
     }
+
+    private func openBannerIfNeeded(_ banner: BannerViewData) {
+        guard
+            banner.payloadType?.uppercased() == "WEBVIEW",
+            let url = banner.linkURL
+        else { return }
+
+        let webVC = WebViewController(
+            url: url,
+            sesacKey: AppConfig.apiKey,
+            accessTokenProvider: { [weak self] in self?.viewModel.currentAccessToken }
+        )
+        webVC.modalPresentationStyle = .fullScreen
+        present(webVC, animated: true)
+    }
 }
 
 // MARK: - CollectionView
@@ -626,6 +641,7 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
         } else if collectionView == bannerCollectionView {
             let banner = banners[indexPath.item]
             print("[Home] banner tapped:", banner.title)
+            openBannerIfNeeded(banner)
         } else if collectionView == authorFilterCollectionView {
             if let item = todayAuthor?.filters[indexPath.item] {
                 print("[Home] author filter tapped:", item.title)

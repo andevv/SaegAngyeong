@@ -92,7 +92,9 @@ final class HomeViewModel: BaseViewModel, ViewModelType {
                     BannerViewData(
                         title: banner.title ?? "",
                         imageURL: banner.imageURL,
-                        headers: self.imageHeaders
+                        headers: self.imageHeaders,
+                        linkURL: banner.linkURL,
+                        payloadType: banner.payloadType
                     )
                 }
                 bannerSubject.send(viewData)
@@ -187,7 +189,9 @@ final class HomeViewModel: BaseViewModel, ViewModelType {
         let fallback = BannerViewData(
             title: "배너 준비 중",
             imageURL: nil,
-            headers: [:]
+            headers: [:],
+            linkURL: nil,
+            payloadType: nil
         )
         subject.send([fallback])
     }
@@ -237,6 +241,8 @@ struct BannerViewData {
     let title: String
     let imageURL: URL?
     let headers: [String: String]
+    let linkURL: URL?
+    let payloadType: String?
 }
 
 struct HotTrendViewData {
@@ -285,5 +291,9 @@ extension HomeViewModel {
             headers["Authorization"] = token
         }
         return headers
+    }
+
+    var currentAccessToken: String? {
+        accessTokenProvider()
     }
 }
