@@ -46,9 +46,9 @@ final class HotTrendCell: UICollectionViewCell {
             make.leading.equalToSuperview().inset(12)
         }
 
-        likeIcon.image = UIImage(systemName: "heart.fill")
+        likeIcon.image = UIImage(named: "Icon_Like_Fill")
         likeIcon.tintColor = .gray30
-        likeLabel.font = .pretendard(.medium, size: 12)
+        likeLabel.font = .pretendard(.bold, size: 12)
         likeLabel.textColor = .gray30
         likeStack.axis = .horizontal
         likeStack.spacing = 4
