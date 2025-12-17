@@ -39,12 +39,14 @@ final class HomeViewModel: BaseViewModel, ViewModelType {
         let highlight: AnyPublisher<HighlightViewData, Never>
         let banners: AnyPublisher<[BannerViewData], Never>
         let categories: AnyPublisher<[CategoryViewData], Never>
+        let hotTrends: AnyPublisher<[HotTrendViewData], Never>
     }
 
     func transform(input: Input) -> Output {
         let highlightSubject = PassthroughSubject<HighlightViewData, Never>()
         let bannerSubject = PassthroughSubject<[BannerViewData], Never>()
         let categorySubject = CurrentValueSubject<[CategoryViewData], Never>(CategoryViewData.defaults)
+        let hotTrendSubject = PassthroughSubject<[HotTrendViewData], Never>()
 
         input.viewDidLoad
             .flatMap { [weak self] _ -> AnyPublisher<Filter, DomainError> in
@@ -103,10 +105,41 @@ final class HomeViewModel: BaseViewModel, ViewModelType {
             }
             .store(in: &cancellables)
 
+        input.viewDidLoad
+            .flatMap { [weak self] _ -> AnyPublisher<[Filter], DomainError> in
+                guard let self else { return Empty().eraseToAnyPublisher() }
+                return self.filterRepository.hotTrend()
+            }
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] completion in
+                if case let .failure(error) = completion {
+                    self?.error.send(error)
+                    self?.emitMockHotTrends(to: hotTrendSubject)
+                }
+            } receiveValue: { [weak self] filters in
+                guard let self else { return }
+                if filters.isEmpty {
+                    self.emitMockHotTrends(to: hotTrendSubject)
+                    return
+                }
+                let viewData = filters.map { filter in
+                    HotTrendViewData(
+                        id: filter.id,
+                        title: filter.title,
+                        likeCount: filter.likeCount,
+                        imageURL: filter.files.first,
+                        headers: self.imageHeaders
+                    )
+                }
+                hotTrendSubject.send(viewData)
+            }
+            .store(in: &cancellables)
+
         return Output(
             highlight: highlightSubject.eraseToAnyPublisher(),
             banners: bannerSubject.eraseToAnyPublisher(),
-            categories: categorySubject.eraseToAnyPublisher()
+            categories: categorySubject.eraseToAnyPublisher(),
+            hotTrends: hotTrendSubject.eraseToAnyPublisher()
         )
     }
 
@@ -140,6 +173,19 @@ final class HomeViewModel: BaseViewModel, ViewModelType {
         let banners = urls.map { BannerViewData(title: "Mock Banner", imageURL: $0, headers: [:]) }
         subject.send(banners)
     }
+
+    private func emitMockHotTrends(to subject: PassthroughSubject<[HotTrendViewData], Never>) {
+        let urls = [
+            "https://images.unsplash.com/photo-1472214103451-9374bd1c798e",
+            "https://images.unsplash.com/photo-1472220625704-91e1462799b2",
+            "https://images.unsplash.com/photo-1500534314209-a25ddb2bd429"
+        ].compactMap { URL(string: $0) }
+
+        let mocks = urls.enumerated().map { idx, url in
+            HotTrendViewData(id: "mock-\(idx)", title: "트렌드 \(idx + 1)", likeCount: 120 + idx, imageURL: url, headers: [:])
+        }
+        subject.send(mocks)
+    }
 }
 
 struct HighlightViewData {
@@ -152,6 +198,14 @@ struct HighlightViewData {
 
 struct BannerViewData {
     let title: String
+    let imageURL: URL?
+    let headers: [String: String]
+}
+
+struct HotTrendViewData {
+    let id: String
+    let title: String
+    let likeCount: Int
     let imageURL: URL?
     let headers: [String: String]
 }

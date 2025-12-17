@@ -53,7 +53,45 @@ final class FilterRepositoryImpl: FilterRepository {
     }
 
     func hotTrend() -> AnyPublisher<[Filter], DomainError> {
-        Fail(error: DomainError.unknown(message: "Not implemented")).eraseToAnyPublisher()
+        network.request(HotTrendResponseDTO.self, endpoint: FilterAPI.hotTrend)
+            .mapError { _ in DomainError.network }
+            .map { dto -> [Filter] in
+                let base = URL(string: AppConfig.baseURL)
+                return dto.data.map { item in
+                    let urls = item.files.compactMap { path -> URL? in
+                        guard let base else { return nil }
+                        let normalized = path.hasPrefix("/v1") ? path : "/v1" + path
+                        return URL(string: normalized, relativeTo: base)
+                    }
+                    let creator = UserSummary(id: "", nick: "", profileImageURL: nil)
+                    let filterValues = FilterValues(
+                        brightness: nil, exposure: nil, contrast: nil, saturation: nil,
+                        sharpness: nil, temperature: nil, highlight: nil, shadow: nil,
+                        vignette: nil, grain: nil, blur: nil, fade: nil
+                    )
+                    let now = Date()
+                    return Filter(
+                        id: item.id,
+                        category: item.category ?? "",
+                        title: item.title,
+                        introduction: item.description ?? "",
+                        description: item.description ?? "",
+                        files: urls,
+                        price: 0,
+                        filterValues: filterValues,
+                        photoMetadata: nil,
+                        creator: creator,
+                        createdAt: now,
+                        updatedAt: now,
+                        comments: [],
+                        isLiked: item.isLiked ?? false,
+                        likeCount: item.likeCount,
+                        buyerCount: item.buyerCount ?? 0,
+                        isDownloaded: false
+                    )
+                }
+            }
+            .eraseToAnyPublisher()
     }
 
     func todayFilter() -> AnyPublisher<Filter, DomainError> {

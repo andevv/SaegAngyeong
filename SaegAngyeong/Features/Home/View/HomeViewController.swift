@@ -114,9 +114,34 @@ final class HomeViewController: BaseViewController<HomeViewModel> {
         return label
     }()
 
+    private let hotTrendTitleLabel: UILabel = {
+        let label = UILabel()
+        label.text = "핫 트렌드"
+        label.textColor = .gray60
+        label.font = .pretendard(.bold, size: 20)
+        return label
+    }()
+
+    private lazy var hotTrendCollectionView: UICollectionView = {
+        let layout = HomeViewController.makeHotTrendLayout()
+        let collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
+        collectionView.showsHorizontalScrollIndicator = false
+        collectionView.showsVerticalScrollIndicator = false
+        collectionView.alwaysBounceVertical = false
+        collectionView.alwaysBounceHorizontal = true
+        collectionView.isDirectionalLockEnabled = true
+        collectionView.isScrollEnabled = false // 수직 스크롤 방지, 부모 스크롤뷰만 세로 스크롤
+        collectionView.backgroundColor = .clear
+        collectionView.register(HotTrendCell.self, forCellWithReuseIdentifier: HotTrendCell.reuseID)
+        collectionView.dataSource = self
+        collectionView.delegate = self
+        return collectionView
+    }()
+
     private let viewDidLoadSubject = PassthroughSubject<Void, Never>()
     private var categories: [CategoryViewData] = []
     private var banners: [BannerViewData] = []
+    private var hotTrends: [HotTrendViewData] = []
 
     override init(viewModel: HomeViewModel) {
         super.init(viewModel: viewModel)
@@ -158,20 +183,35 @@ final class HomeViewController: BaseViewController<HomeViewModel> {
             let horizontalInset = layout.sectionInset.left + layout.sectionInset.right
             let width = bannerCollectionView.bounds.width - horizontalInset
             if width > 0 {
-                layout.itemSize = CGSize(width: width, height: 100)
+                layout.itemSize = CGSize(width: width, height: 120)
                 layout.invalidateLayout()
             }
         }
+
     }
 
     override func configureUI() {
+        scrollView.contentInsetAdjustmentBehavior = .never
+        scrollView.showsVerticalScrollIndicator = false
+        scrollView.showsHorizontalScrollIndicator = false
+
         view.addSubview(scrollView)
         scrollView.addSubview(contentView)
 
         contentView.addSubview(backgroundImageView)
         backgroundImageView.layer.addSublayer(overlayGradient)
 
-        [subtitleLabel, titleLabel, descriptionLabel, useButton, categoryCollectionView, bannerCollectionView, pageLabel].forEach { contentView.addSubview($0) }
+        [
+            subtitleLabel,
+            titleLabel,
+            descriptionLabel,
+            useButton,
+            categoryCollectionView,
+            bannerCollectionView,
+            pageLabel,
+            hotTrendTitleLabel,
+            hotTrendCollectionView
+        ].forEach { contentView.addSubview($0) }
     }
 
     override func configureLayout() {
@@ -218,13 +258,25 @@ final class HomeViewController: BaseViewController<HomeViewModel> {
         bannerCollectionView.snp.makeConstraints { make in
             make.top.equalTo(backgroundImageView.snp.bottom)
             make.leading.trailing.equalToSuperview()
-            make.height.equalTo(100)
-            make.bottom.equalToSuperview().offset(-24)
+            make.height.equalTo(120)
         }
 
         pageLabel.snp.makeConstraints { make in
             make.trailing.equalTo(bannerCollectionView.snp.trailing).inset(24)
             make.bottom.equalTo(bannerCollectionView.snp.bottom).inset(12)
+        }
+
+        hotTrendTitleLabel.snp.makeConstraints { make in
+            make.top.equalTo(bannerCollectionView.snp.bottom).offset(24)
+            make.leading.equalToSuperview().inset(16)
+            make.trailing.lessThanOrEqualToSuperview().inset(16)
+        }
+
+        hotTrendCollectionView.snp.makeConstraints { make in
+            make.top.equalTo(hotTrendTitleLabel.snp.bottom).offset(12)
+            make.leading.trailing.equalToSuperview()
+            make.height.equalTo(340)
+            make.bottom.equalToSuperview().offset(-24)
         }
     }
 
@@ -258,6 +310,14 @@ final class HomeViewController: BaseViewController<HomeViewModel> {
                 self?.banners = banners
                 self?.updatePageLabel(current: 0, total: banners.count)
                 self?.bannerCollectionView.reloadData()
+            }
+            .store(in: &cancellables)
+
+        output.hotTrends
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] items in
+                self?.hotTrends = items
+                self?.hotTrendCollectionView.reloadData()
             }
             .store(in: &cancellables)
 
@@ -320,8 +380,32 @@ final class HomeViewController: BaseViewController<HomeViewModel> {
         layout.minimumLineSpacing = 12
         layout.sectionInset = UIEdgeInsets(top: 0, left: 12, bottom: 0, right: 12)
         let width = UIScreen.main.bounds.width - layout.sectionInset.left - layout.sectionInset.right
-        layout.itemSize = CGSize(width: width, height: 100)
+        layout.itemSize = CGSize(width: width, height: 120)
         return layout
+    }
+
+    private static func makeHotTrendLayout() -> UICollectionViewCompositionalLayout {
+        let sectionProvider: UICollectionViewCompositionalLayoutSectionProvider = { _, _ in
+            let itemSize = NSCollectionLayoutSize(
+                widthDimension: .fractionalWidth(1.0),
+                heightDimension: .fractionalHeight(1.0)
+            )
+            let item = NSCollectionLayoutItem(layoutSize: itemSize)
+
+            // 세로로 긴 카드, 좌우 패딩 포함 한 장씩 페이징
+            let groupSize = NSCollectionLayoutSize(
+                widthDimension: .fractionalWidth(0.65),
+                heightDimension: .absolute(300)
+            )
+            let group = NSCollectionLayoutGroup.horizontal(layoutSize: groupSize, subitems: [item])
+
+            let section = NSCollectionLayoutSection(group: group)
+            section.orthogonalScrollingBehavior = .groupPagingCentered
+            section.interGroupSpacing = 16
+            section.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16)
+            return section
+        }
+        return UICollectionViewCompositionalLayout(sectionProvider: sectionProvider)
     }
 }
 
@@ -332,7 +416,10 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
         if collectionView == categoryCollectionView {
             return categories.count
         }
-        return banners.count
+        if collectionView == bannerCollectionView {
+            return banners.count
+        }
+        return hotTrends.count
     }
 
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
@@ -341,8 +428,13 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
             cell.configure(with: categories[indexPath.item])
             return cell
         }
-        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: BannerCell.reuseID, for: indexPath) as! BannerCell
-        cell.configure(with: banners[indexPath.item])
+        if collectionView == bannerCollectionView {
+            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: BannerCell.reuseID, for: indexPath) as! BannerCell
+            cell.configure(with: banners[indexPath.item])
+            return cell
+        }
+        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: HotTrendCell.reuseID, for: indexPath) as! HotTrendCell
+        cell.configure(with: hotTrends[indexPath.item])
         return cell
     }
 
@@ -350,9 +442,12 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
         if collectionView == categoryCollectionView {
             let category = categories[indexPath.item]
             print("[Home] category tapped:", category.title)
-        } else {
+        } else if collectionView == bannerCollectionView {
             let banner = banners[indexPath.item]
             print("[Home] banner tapped:", banner.title)
+        } else {
+            let item = hotTrends[indexPath.item]
+            print("[Home] hot trend tapped:", item.title)
         }
     }
 
@@ -484,6 +579,80 @@ private final class BannerCell: UICollectionViewCell {
         } else {
             imageView.image = nil
             contentView.backgroundColor = UIColor.white.withAlphaComponent(0.1)
+        }
+    }
+}
+
+private final class HotTrendCell: UICollectionViewCell {
+    static let reuseID = "HotTrendCell"
+
+    private let containerView = UIView()
+    private let imageView = UIImageView()
+    private let titleLabel = UILabel()
+    private let likeStack = UIStackView()
+    private let likeIcon = UIImageView()
+    private let likeLabel = UILabel()
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        contentView.backgroundColor = .clear
+
+        containerView.layer.cornerRadius = 8
+        containerView.clipsToBounds = true
+        containerView.backgroundColor = .clear
+        contentView.addSubview(containerView)
+        containerView.snp.makeConstraints { make in
+            make.edges.equalToSuperview()
+        }
+
+        imageView.contentMode = .scaleAspectFill
+        imageView.clipsToBounds = true
+        containerView.addSubview(imageView)
+        imageView.snp.makeConstraints { make in
+            make.edges.equalToSuperview()
+        }
+
+        titleLabel.font = .mulgyeol(.regular, size: 14)
+        titleLabel.textColor = .gray30
+        containerView.addSubview(titleLabel)
+        titleLabel.snp.makeConstraints { make in
+            make.top.equalToSuperview().offset(12)
+            make.leading.equalToSuperview().inset(12)
+        }
+
+        likeIcon.image = UIImage(systemName: "heart.fill")
+        likeIcon.tintColor = .gray30
+        likeLabel.font = .pretendard(.medium, size: 12)
+        likeLabel.textColor = .gray30
+        likeStack.axis = .horizontal
+        likeStack.spacing = 4
+        likeStack.alignment = .center
+        likeStack.addArrangedSubview(likeIcon)
+        likeStack.addArrangedSubview(likeLabel)
+        containerView.addSubview(likeStack)
+        likeStack.snp.makeConstraints { make in
+            make.bottom.equalToSuperview().inset(12)
+            make.trailing.equalToSuperview().inset(12)
+        }
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    func configure(with data: HotTrendViewData) {
+        titleLabel.text = data.title
+        likeLabel.text = "\(data.likeCount)"
+
+        let modifier = AnyModifier { request in
+            var r = request
+            data.headers.forEach { key, value in r.setValue(value, forHTTPHeaderField: key) }
+            return r
+        }
+        if let url = data.imageURL {
+            imageView.kf.setImage(with: url, options: [.requestModifier(modifier)])
+        } else {
+            imageView.image = nil
         }
     }
 }

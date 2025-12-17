@@ -26,3 +26,29 @@ struct TodayFilterResponseDTO: Decodable {
         case updatedAt
     }
 }
+
+struct HotTrendResponseDTO: Decodable {
+    let data: [HotTrendItemDTO]
+}
+
+struct HotTrendItemDTO: Decodable {
+    let id: String
+    let category: String?
+    let title: String
+    let description: String?
+    let files: [String]
+    let likeCount: Int
+    let isLiked: Bool?
+    let buyerCount: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case id = "filter_id"
+        case category
+        case title
+        case description
+        case files
+        case likeCount = "like_count"
+        case isLiked = "is_liked"
+        case buyerCount = "buyer_count"
+    }
+}
