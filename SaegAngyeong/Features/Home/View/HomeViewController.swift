@@ -351,7 +351,7 @@ final class HomeViewController: BaseViewController<HomeViewModel> {
         }
 
         hotTrendTitleLabel.snp.makeConstraints { make in
-            make.top.equalTo(bannerCollectionView.snp.bottom).offset(24)
+            make.top.equalTo(bannerCollectionView.snp.bottom).offset(36)
             make.leading.equalToSuperview().inset(16)
             make.trailing.lessThanOrEqualToSuperview().inset(16)
         }
@@ -363,7 +363,7 @@ final class HomeViewController: BaseViewController<HomeViewModel> {
         }
 
         authorTitleLabel.snp.makeConstraints { make in
-            make.top.equalTo(hotTrendCollectionView.snp.bottom).offset(12)
+            make.top.equalTo(hotTrendCollectionView.snp.bottom).offset(6)
             make.leading.equalToSuperview().inset(16)
             make.trailing.lessThanOrEqualToSuperview().inset(16)
         }
