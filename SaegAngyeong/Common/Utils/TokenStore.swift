@@ -16,6 +16,12 @@ final class TokenStore {
         case deviceToken = "com.saegangyeong.token.device"
     }
 
+    private let firstLaunchFlag = "com.saegangyeong.keychain.cleared.on.firstlaunch"
+
+    init() {
+        enforceFirstLaunchClearIfNeeded()
+    }
+
     var accessToken: String? {
         get { read(.accessToken) }
         set { write(newValue, for: .accessToken) }
@@ -34,6 +40,16 @@ final class TokenStore {
     func clear() {
         delete(.accessToken)
         delete(.refreshToken)
+        delete(.deviceToken)
+    }
+
+    // 앱 재설치 후 첫 실행 시 Keychain 정리
+    private func enforceFirstLaunchClearIfNeeded() {
+        let defaults = UserDefaults.standard
+        if defaults.bool(forKey: firstLaunchFlag) == false {
+            clear()
+            defaults.set(true, forKey: firstLaunchFlag)
+        }
     }
 
     // MARK: - Keychain Helpers
