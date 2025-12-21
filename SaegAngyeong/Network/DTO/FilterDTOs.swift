@@ -53,6 +53,64 @@ struct HotTrendItemDTO: Decodable {
     }
 }
 
+// Filter List
+
+struct FilterSummaryPaginationResponseDTO: Decodable {
+    let data: [FilterSummaryItemDTO]
+    let nextCursor: String
+
+    enum CodingKeys: String, CodingKey {
+        case data
+        case nextCursor = "next_cursor"
+    }
+}
+
+struct FilterSummaryItemDTO: Decodable {
+    let filterID: String
+    let category: String
+    let title: String
+    let description: String
+    let files: [String]
+    let creator: UserInfoResponseDTO
+    let isLiked: Bool
+    let likeCount: Int
+    let buyerCount: Int
+    let createdAt: String
+    let updatedAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case filterID = "filter_id"
+        case category
+        case title
+        case description
+        case files
+        case creator
+        case isLiked = "is_liked"
+        case likeCount = "like_count"
+        case buyerCount = "buyer_count"
+        case createdAt
+        case updatedAt
+    }
+}
+
+struct UserInfoResponseDTO: Decodable {
+    let userID: String
+    let nick: String
+    let name: String?
+    let introduction: String?
+    let profileImage: String?
+    let hashTags: [String]?
+
+    enum CodingKeys: String, CodingKey {
+        case userID = "user_id"
+        case nick
+        case name
+        case introduction
+        case profileImage
+        case hashTags
+    }
+}
+
 // Today Author
 
 struct TodayAuthorResponseDTO: Decodable {

@@ -35,14 +35,19 @@ final class MainTabBarController: UITabBarController {
         )
         let homeVC = HomeViewController(viewModel: homeVM)
 
-        let dummy1 = DummyViewController(titleText: "", named: "Feed_Empty", tag: 1, color: .systemGray6)
+        let feedVM = FeedViewModel(
+            filterRepository: dependency.filterRepository,
+            accessTokenProvider: { dependency.tokenStore.accessToken },
+            sesacKey: AppConfig.apiKey
+        )
+        let feedVC = FeedViewController(viewModel: feedVM)
         let dummy2 = DummyViewController(titleText: "", named: "Filter_Empty", tag: 2, color: .systemGray5)
         let dummy3 = DummyViewController(titleText: "", named: "Search_Empty", tag: 3, color: .systemGray4)
         let dummy4 = DummyViewController(titleText: "", named: "Profile_Empty", tag: 4, color: .systemGray3)
 
         viewControllers = [
             homeVC,
-            dummy1,
+            feedVC,
             dummy2,
             dummy3,
             dummy4

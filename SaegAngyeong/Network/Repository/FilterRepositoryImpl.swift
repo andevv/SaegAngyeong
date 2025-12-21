@@ -25,7 +25,47 @@ final class FilterRepositoryImpl: FilterRepository {
     }
 
     func list(next: String?, limit: Int?, category: String?, orderBy: String?) -> AnyPublisher<Paginated<Filter>, DomainError> {
-        Fail(error: DomainError.unknown(message: "Not implemented")).eraseToAnyPublisher()
+        network.request(FilterSummaryPaginationResponseDTO.self, endpoint: FilterAPI.list(next: next, limit: limit, category: category, orderBy: orderBy))
+            .mapError { _ in DomainError.network }
+            .map { [weak self] dto in
+                guard let self else { return Paginated(items: [], nextCursor: nil) }
+                let items = dto.data.map { item -> Filter in
+                    let urls = item.files.compactMap { self.buildURL(from: $0) }
+                    let creator = UserSummary(
+                        id: item.creator.userID,
+                        nick: item.creator.nick,
+                        profileImageURL: item.creator.profileImage.flatMap { self.buildURL(from: $0) }
+                    )
+                    let created = self.parseISODate(item.createdAt)
+                    let updated = self.parseISODate(item.updatedAt)
+                    return Filter(
+                        id: item.filterID,
+                        category: item.category,
+                        title: item.title,
+                        introduction: item.description,
+                        description: item.description,
+                        files: urls,
+                        price: 0,
+                        filterValues: FilterValues(
+                            brightness: nil, exposure: nil, contrast: nil, saturation: nil,
+                            sharpness: nil, temperature: nil, highlight: nil, shadow: nil,
+                            vignette: nil, grain: nil, blur: nil, fade: nil
+                        ),
+                        photoMetadata: nil,
+                        creator: creator,
+                        createdAt: created,
+                        updatedAt: updated,
+                        comments: [],
+                        isLiked: item.isLiked,
+                        likeCount: item.likeCount,
+                        buyerCount: item.buyerCount,
+                        isDownloaded: false
+                    )
+                }
+                let cursor = dto.nextCursor == "0" ? nil : dto.nextCursor
+                return Paginated(items: items, nextCursor: cursor)
+            }
+            .eraseToAnyPublisher()
     }
 
     func detail(id: String) -> AnyPublisher<Filter, DomainError> {
@@ -147,5 +187,24 @@ final class FilterRepositoryImpl: FilterRepository {
 
     func deleteComment(filterID: String, commentID: String) -> AnyPublisher<Void, DomainError> {
         Fail(error: DomainError.unknown(message: "Not implemented")).eraseToAnyPublisher()
+    }
+}
+
+private extension FilterRepositoryImpl {
+    func buildURL(from path: String) -> URL? {
+        guard let base = URL(string: AppConfig.baseURL) else { return nil }
+        var normalized = path
+        if normalized.hasPrefix("/") {
+            normalized.removeFirst()
+        }
+        if !normalized.hasPrefix("v1/") {
+            normalized = "v1/" + normalized
+        }
+        return base.appendingPathComponent(normalized)
+    }
+
+    func parseISODate(_ value: String) -> Date {
+        let formatter = ISO8601DateFormatter()
+        return formatter.date(from: value) ?? Date()
     }
 }
