@@ -61,6 +61,7 @@ final class FeedViewController: BaseViewController<FeedViewModel> {
         let button = UIButton(type: .system)
         button.setTitle("List Mode", for: .normal)
         button.titleLabel?.font = .pretendard(.medium, size: 12)
+        button.tintColor = .gray75
         button.contentEdgeInsets = UIEdgeInsets(top: 6, left: 10, bottom: 6, right: 10)
         button.layer.cornerRadius = 0
         button.layer.borderWidth = 0
