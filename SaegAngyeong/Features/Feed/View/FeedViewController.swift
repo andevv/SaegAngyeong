@@ -142,6 +142,15 @@ final class FeedViewController: BaseViewController<FeedViewModel> {
                 self?.rankingItems = items
                 self?.rankingCollectionView.reloadData()
                 self?.emptyStateImageView.isHidden = !items.isEmpty
+                self?.rankingCollectionView.collectionViewLayout.invalidateLayout()
+                self?.rankingCollectionView.layoutIfNeeded()
+                if !items.isEmpty {
+                    self?.rankingCollectionView.scrollToItem(
+                        at: IndexPath(item: 0, section: 0),
+                        at: .centeredHorizontally,
+                        animated: false
+                    )
+                }
             }
             .store(in: &cancellables)
 
