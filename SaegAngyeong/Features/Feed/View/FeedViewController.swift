@@ -111,7 +111,7 @@ final class FeedViewController: BaseViewController<FeedViewModel> {
         rankingCollectionView.snp.makeConstraints { make in
             make.top.equalTo(orderStackView.snp.bottom).offset(16)
             make.leading.trailing.equalToSuperview()
-            make.height.equalTo(500)
+            make.height.equalTo(480)
         }
 
         emptyStateImageView.snp.makeConstraints { make in
@@ -205,7 +205,7 @@ final class FeedViewController: BaseViewController<FeedViewModel> {
     }
 
     private static func makeRankingLayout() -> UICollectionViewCompositionalLayout {
-        let sectionProvider: UICollectionViewCompositionalLayoutSectionProvider = { _, _ in
+        let sectionProvider: UICollectionViewCompositionalLayoutSectionProvider = { _, layoutEnvironment in
             let itemSize = NSCollectionLayoutSize(
                 widthDimension: .fractionalWidth(1.0),
                 heightDimension: .fractionalHeight(1.0)
@@ -214,7 +214,7 @@ final class FeedViewController: BaseViewController<FeedViewModel> {
 
             let groupSize = NSCollectionLayoutSize(
                 widthDimension: .fractionalWidth(0.6),
-                heightDimension: .absolute(500)
+                heightDimension: .absolute(480)
             )
             let group = NSCollectionLayoutGroup.horizontal(layoutSize: groupSize, subitems: [item])
 
@@ -222,6 +222,19 @@ final class FeedViewController: BaseViewController<FeedViewModel> {
             section.orthogonalScrollingBehavior = .groupPagingCentered
             section.interGroupSpacing = 16
             section.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16)
+            section.visibleItemsInvalidationHandler = { items, offset, environment in
+                let containerWidth = environment.container.effectiveContentSize.width
+                let centerX = offset.x + containerWidth / 2
+                let maxDistance = containerWidth * 0.6
+                items.forEach { item in
+                    guard item.representedElementCategory == .cell else { return }
+                    let distance = abs(item.center.x - centerX)
+                    let progress = max(0, 1 - (distance / maxDistance))
+                    let lift = 40 * progress
+                    item.transform = CGAffineTransform(translationX: 0, y: -lift)
+                    item.zIndex = Int(progress * 10)
+                }
+            }
             return section
         }
         return UICollectionViewCompositionalLayout(sectionProvider: sectionProvider)
