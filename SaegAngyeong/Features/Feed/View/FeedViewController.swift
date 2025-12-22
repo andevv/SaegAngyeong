@@ -206,7 +206,7 @@ final class FeedViewController: BaseViewController<FeedViewModel> {
             let item = NSCollectionLayoutItem(layoutSize: itemSize)
 
             let groupSize = NSCollectionLayoutSize(
-                widthDimension: .fractionalWidth(0.65),
+                widthDimension: .fractionalWidth(0.6),
                 heightDimension: .absolute(500)
             )
             let group = NSCollectionLayoutGroup.horizontal(layoutSize: groupSize, subitems: [item])
@@ -264,8 +264,6 @@ private final class FeedRankCell: UICollectionViewCell {
         contentView.addSubview(shadowView)
 
         containerView.backgroundColor = .blackTurquoise
-        containerView.layer.borderWidth = 1
-        containerView.layer.borderColor = UIColor.gray75.withAlphaComponent(0.25).cgColor
         containerView.clipsToBounds = true
         shadowView.addSubview(containerView)
 
@@ -279,7 +277,7 @@ private final class FeedRankCell: UICollectionViewCell {
         imageContainerView.addSubview(imageView)
 
         creatorLabel.font = .pretendard(.medium, size: 12)
-        creatorLabel.textColor = .gray60
+        creatorLabel.textColor = .gray75
         creatorLabel.textAlignment = .center
         containerView.addSubview(creatorLabel)
 
@@ -289,17 +287,17 @@ private final class FeedRankCell: UICollectionViewCell {
         containerView.addSubview(titleLabel)
 
         categoryLabel.font = .pretendard(.medium, size: 12)
-        categoryLabel.textColor = .gray60
+        categoryLabel.textColor = .gray75
         categoryLabel.textAlignment = .center
         containerView.addSubview(categoryLabel)
 
-        rankBadgeView.backgroundColor = UIColor.gray90.withAlphaComponent(0.9)
+        rankBadgeView.backgroundColor = UIColor.blackTurquoise
         rankBadgeView.layer.borderWidth = 1
-        rankBadgeView.layer.borderColor = UIColor.gray75.withAlphaComponent(0.5).cgColor
+        rankBadgeView.layer.borderColor = UIColor.deepTurquoise.cgColor
         contentView.addSubview(rankBadgeView)
 
-        rankLabel.font = .mulgyeol(.bold, size: 18)
-        rankLabel.textColor = .deepTurquoise
+        rankLabel.font = .mulgyeol(.bold, size: 32)
+        rankLabel.textColor = .brightTurquoise
         rankLabel.textAlignment = .center
         rankBadgeView.addSubview(rankLabel)
 
@@ -316,7 +314,7 @@ private final class FeedRankCell: UICollectionViewCell {
         imageContainerView.snp.makeConstraints { make in
             make.top.equalToSuperview().offset(4)
             make.centerX.equalToSuperview()
-            make.width.height.equalTo(250)
+            make.width.height.equalTo(230)
         }
 
         imageView.snp.makeConstraints { make in
