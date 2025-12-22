@@ -109,7 +109,6 @@ final class FeedViewController: BaseViewController<FeedViewModel> {
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .black
-        navigationController?.navigationBar.barStyle = .black
         viewDidLoadSubject.send(())
     }
 
@@ -124,6 +123,12 @@ final class FeedViewController: BaseViewController<FeedViewModel> {
         navigationController?.navigationBar.scrollEdgeAppearance = appearance
         navigationController?.navigationBar.compactAppearance = appearance
         navigationController?.navigationBar.tintColor = .gray60
+        navigationController?.navigationBar.barStyle = .black
+        setNeedsStatusBarAppearanceUpdate()
+    }
+
+    override var preferredStatusBarStyle: UIStatusBarStyle {
+        .lightContent
     }
 
     override func viewDidLayoutSubviews() {
