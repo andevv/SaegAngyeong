@@ -57,33 +57,13 @@ final class FeedViewController: BaseViewController<FeedViewModel> {
         return label
     }()
 
-    private let feedModeStackView: UIStackView = {
-        let stack = UIStackView()
-        stack.axis = .horizontal
-        stack.spacing = 8
-        stack.alignment = .center
-        return stack
-    }()
-
-    private let listModeButton: UIButton = {
+    private let feedModeButton: UIButton = {
         let button = UIButton(type: .system)
         button.setTitle("List Mode", for: .normal)
         button.titleLabel?.font = .pretendard(.medium, size: 12)
         button.contentEdgeInsets = UIEdgeInsets(top: 6, left: 10, bottom: 6, right: 10)
-        button.layer.cornerRadius = 12
-        button.layer.borderWidth = 1
-        button.layer.borderColor = UIColor.blackTurquoise.cgColor
-        return button
-    }()
-
-    private let blockModeButton: UIButton = {
-        let button = UIButton(type: .system)
-        button.setTitle("Block Mode", for: .normal)
-        button.titleLabel?.font = .pretendard(.medium, size: 12)
-        button.contentEdgeInsets = UIEdgeInsets(top: 6, left: 10, bottom: 6, right: 10)
-        button.layer.cornerRadius = 12
-        button.layer.borderWidth = 1
-        button.layer.borderColor = UIColor.blackTurquoise.cgColor
+        button.layer.cornerRadius = 0
+        button.layer.borderWidth = 0
         return button
     }()
 
@@ -168,7 +148,7 @@ final class FeedViewController: BaseViewController<FeedViewModel> {
             rankingCollectionView,
             emptyStateImageView,
             feedSectionLabel,
-            feedModeStackView,
+            feedModeButton,
             feedCollectionView
         ].forEach { contentView.addSubview($0) }
 
@@ -180,10 +160,7 @@ final class FeedViewController: BaseViewController<FeedViewModel> {
             orderStackView.addArrangedSubview(button)
         }
 
-        listModeButton.addTarget(self, action: #selector(feedModeTapped(_:)), for: .touchUpInside)
-        blockModeButton.addTarget(self, action: #selector(feedModeTapped(_:)), for: .touchUpInside)
-        feedModeStackView.addArrangedSubview(listModeButton)
-        feedModeStackView.addArrangedSubview(blockModeButton)
+        feedModeButton.addTarget(self, action: #selector(feedModeTapped), for: .touchUpInside)
         applyFeedMode(.list)
     }
 
@@ -229,7 +206,7 @@ final class FeedViewController: BaseViewController<FeedViewModel> {
             make.leading.equalToSuperview().inset(20)
         }
 
-        feedModeStackView.snp.makeConstraints { make in
+        feedModeButton.snp.makeConstraints { make in
             make.centerY.equalTo(feedSectionLabel)
             make.trailing.equalToSuperview().inset(20)
         }
@@ -328,10 +305,10 @@ final class FeedViewController: BaseViewController<FeedViewModel> {
     private func applyFeedMode(_ mode: FeedLayoutMode) {
         feedLayoutMode = mode
         let isList = mode == .list
-        listModeButton.setTitleColor(isList ? .gray45 : .gray75, for: .normal)
-        blockModeButton.setTitleColor(isList ? .gray75 : .gray45, for: .normal)
-        listModeButton.backgroundColor = isList ? .brightTurquoise : .blackTurquoise
-        blockModeButton.backgroundColor = isList ? .blackTurquoise : .brightTurquoise
+        let title = isList ? "List Mode" : "Block Mode"
+        feedModeButton.setTitle(title, for: .normal)
+        feedModeButton.setTitleColor(.gray60, for: .normal)
+        feedModeButton.backgroundColor = .clear
         feedCollectionView.setCollectionViewLayout(makeFeedLayout(for: mode), animated: false)
         feedCollectionView.collectionViewLayout.invalidateLayout()
         feedCollectionView.reloadData()
@@ -380,12 +357,8 @@ final class FeedViewController: BaseViewController<FeedViewModel> {
         orderSelectionSubject.send(order)
     }
 
-    @objc private func feedModeTapped(_ sender: UIButton) {
-        if sender == listModeButton {
-            applyFeedMode(.list)
-        } else if sender == blockModeButton {
-            applyFeedMode(.block)
-        }
+    @objc private func feedModeTapped() {
+        applyFeedMode(feedLayoutMode == .list ? .block : .list)
     }
 
     private func presentError(_ error: Error) {
