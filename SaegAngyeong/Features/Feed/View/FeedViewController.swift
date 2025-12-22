@@ -432,6 +432,9 @@ extension FeedViewController: UICollectionViewDataSource, UICollectionViewDelega
             let item = feedItems[indexPath.item]
             cell.configure(with: item)
             cell.onLikeTap = { [weak self] in
+                let generator = UIImpactFeedbackGenerator(style: .light)
+                generator.prepare()
+                generator.impactOccurred()
                 self?.likeToggleSubject.send(FeedLikeAction(filterID: item.id))
             }
             return cell
@@ -440,6 +443,9 @@ extension FeedViewController: UICollectionViewDataSource, UICollectionViewDelega
         let item = feedItems[indexPath.item]
         cell.configure(with: item)
         cell.onLikeTap = { [weak self] in
+            let generator = UIImpactFeedbackGenerator(style: .light)
+            generator.prepare()
+            generator.impactOccurred()
             self?.likeToggleSubject.send(FeedLikeAction(filterID: item.id))
         }
         return cell
