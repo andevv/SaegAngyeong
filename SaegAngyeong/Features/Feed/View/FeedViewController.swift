@@ -70,10 +70,17 @@ final class FeedViewController: BaseViewController<FeedViewModel> {
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .black
+        navigationController?.navigationBar.barStyle = .black
         viewDidLoadSubject.send(())
     }
 
     override func configureUI() {
+        let navTitleLabel = UILabel()
+        navTitleLabel.text = "FEED"
+        navTitleLabel.textColor = .gray60
+        navTitleLabel.font = .mulgyeol(.bold, size: 20)
+        navigationItem.titleView = navTitleLabel
+
         view.addSubview(titleLabel)
         view.addSubview(orderStackView)
         view.addSubview(rankingCollectionView)

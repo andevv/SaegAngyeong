@@ -13,6 +13,7 @@ final class MainTabBarController: UITabBarController {
         super.init(nibName: nil, bundle: nil)
         configureAppearance()
         setupTabs(dependency: dependency)
+        delegate = self
     }
 
     @available(*, unavailable)
@@ -23,6 +24,10 @@ final class MainTabBarController: UITabBarController {
     private func configureAppearance() {
         tabBar.tintColor = .gray15
         tabBar.unselectedItemTintColor = .gray45
+    }
+
+    override var childForStatusBarStyle: UIViewController? {
+        selectedViewController
     }
 
     private func setupTabs(dependency: AppDependency) {
@@ -41,18 +46,25 @@ final class MainTabBarController: UITabBarController {
             sesacKey: AppConfig.apiKey
         )
         let feedVC = FeedViewController(viewModel: feedVM)
+        let feedNav = UINavigationController(rootViewController: feedVC)
         let dummy2 = DummyViewController(titleText: "", named: "Filter_Empty", tag: 2, color: .systemGray5)
         let dummy3 = DummyViewController(titleText: "", named: "Search_Empty", tag: 3, color: .systemGray4)
         let dummy4 = DummyViewController(titleText: "", named: "Profile_Empty", tag: 4, color: .systemGray3)
 
         viewControllers = [
             homeVC,
-            feedVC,
+            feedNav,
             dummy2,
             dummy3,
             dummy4
         ]
         selectedIndex = 0
+    }
+}
+
+extension MainTabBarController: UITabBarControllerDelegate {
+    func tabBarController(_ tabBarController: UITabBarController, didSelect viewController: UIViewController) {
+        setNeedsStatusBarAppearanceUpdate()
     }
 }
 
