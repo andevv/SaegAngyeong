@@ -67,7 +67,7 @@ final class FeedBlockCell: UICollectionViewCell {
         }
 
         creatorLabel.snp.makeConstraints { make in
-            make.top.equalTo(imageView.snp.bottom).offset(10)
+            make.top.equalTo(imageView.snp.bottom).offset(-4)
             make.leading.equalToSuperview().offset(4)
             make.trailing.lessThanOrEqualToSuperview().inset(4)
             make.bottom.equalToSuperview().offset(-4)

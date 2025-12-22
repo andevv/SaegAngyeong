@@ -319,6 +319,7 @@ final class FeedViewController: BaseViewController<FeedViewModel> {
             let layout = FeedMasonryLayout()
             layout.numberOfColumns = 2
             layout.cellPadding = 12
+            layout.verticalPadding = 0
             layout.delegate = self
             return layout
         }
@@ -503,7 +504,7 @@ extension FeedViewController: FeedMasonryLayoutDelegate {
         with width: CGFloat
     ) -> CGFloat {
         guard collectionView == feedCollectionView else { return 180 }
-        return feedItems[indexPath.item].masonryHeight + 64
+        return feedItems[indexPath.item].masonryHeight + 32
     }
 }
 

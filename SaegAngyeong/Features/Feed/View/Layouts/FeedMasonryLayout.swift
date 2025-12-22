@@ -19,6 +19,7 @@ final class FeedMasonryLayout: UICollectionViewLayout {
     weak var delegate: FeedMasonryLayoutDelegate?
     var numberOfColumns: Int = 2
     var cellPadding: CGFloat = 8
+    var verticalPadding: CGFloat = 0
 
     private var cache: [UICollectionViewLayoutAttributes] = []
     private var contentHeight: CGFloat = 0
@@ -39,7 +40,7 @@ final class FeedMasonryLayout: UICollectionViewLayout {
         for column in 0..<numberOfColumns {
             xOffset.append(cellPadding + CGFloat(column) * (columnWidth + cellPadding))
         }
-        var yOffset = Array(repeating: cellPadding, count: numberOfColumns)
+        var yOffset = Array(repeating: verticalPadding, count: numberOfColumns)
         var column = 0
 
         for item in 0..<collectionView.numberOfItems(inSection: 0) {
@@ -51,8 +52,8 @@ final class FeedMasonryLayout: UICollectionViewLayout {
             attributes.frame = frame
             cache.append(attributes)
 
-            contentHeight = max(contentHeight, frame.maxY + cellPadding)
-            yOffset[column] = yOffset[column] + height + cellPadding
+            contentHeight = max(contentHeight, frame.maxY + verticalPadding)
+            yOffset[column] = yOffset[column] + height + verticalPadding
             column = yOffset[0] < yOffset[1] ? 0 : 1
         }
     }
