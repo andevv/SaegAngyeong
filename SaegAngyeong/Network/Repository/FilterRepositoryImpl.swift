@@ -81,7 +81,11 @@ final class FilterRepositoryImpl: FilterRepository {
     }
 
     func like(id: String, status: Bool) -> AnyPublisher<Void, DomainError> {
-        Fail(error: DomainError.unknown(message: "Not implemented")).eraseToAnyPublisher()
+        let body = FilterLikeRequestDTO(likeStatus: status)
+        return network.request(FilterLikeResponseDTO.self, endpoint: FilterAPI.like(filterID: id, body: body))
+            .mapError { _ in DomainError.network }
+            .map { _ in () }
+            .eraseToAnyPublisher()
     }
 
     func userFilters(userID: String, next: String?, limit: Int?, category: String?) -> AnyPublisher<Paginated<Filter>, DomainError> {

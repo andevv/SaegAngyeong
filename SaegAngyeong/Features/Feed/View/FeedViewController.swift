@@ -10,6 +10,8 @@ import SnapKit
 import Combine
 
 final class FeedViewController: BaseViewController<FeedViewModel> {
+    private let scrollView = UIScrollView()
+    private let contentView = UIView()
     private let titleLabel: UILabel = {
         let label = UILabel()
         label.text = "Top Ranking"
@@ -47,11 +49,67 @@ final class FeedViewController: BaseViewController<FeedViewModel> {
         return imageView
     }()
 
+    private let feedSectionLabel: UILabel = {
+        let label = UILabel()
+        label.text = "Filter Feed"
+        label.textColor = .gray60
+        label.font = .pretendard(.bold, size: 18)
+        return label
+    }()
+
+    private let feedModeStackView: UIStackView = {
+        let stack = UIStackView()
+        stack.axis = .horizontal
+        stack.spacing = 8
+        stack.alignment = .center
+        return stack
+    }()
+
+    private let listModeButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setTitle("List Mode", for: .normal)
+        button.titleLabel?.font = .pretendard(.medium, size: 12)
+        button.contentEdgeInsets = UIEdgeInsets(top: 6, left: 10, bottom: 6, right: 10)
+        button.layer.cornerRadius = 12
+        button.layer.borderWidth = 1
+        button.layer.borderColor = UIColor.blackTurquoise.cgColor
+        return button
+    }()
+
+    private let blockModeButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setTitle("Block Mode", for: .normal)
+        button.titleLabel?.font = .pretendard(.medium, size: 12)
+        button.contentEdgeInsets = UIEdgeInsets(top: 6, left: 10, bottom: 6, right: 10)
+        button.layer.cornerRadius = 12
+        button.layer.borderWidth = 1
+        button.layer.borderColor = UIColor.blackTurquoise.cgColor
+        return button
+    }()
+
+    private lazy var feedCollectionView: UICollectionView = {
+        let layout = makeFeedLayout(for: .list)
+        let collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
+        collectionView.backgroundColor = .clear
+        collectionView.isScrollEnabled = false
+        collectionView.showsVerticalScrollIndicator = false
+        collectionView.register(FeedListCell.self, forCellWithReuseIdentifier: FeedListCell.reuseID)
+        collectionView.register(FeedBlockCell.self, forCellWithReuseIdentifier: FeedBlockCell.reuseID)
+        collectionView.dataSource = self
+        collectionView.delegate = self
+        return collectionView
+    }()
+
     private var orderButtons: [FeedOrder: UIButton] = [:]
     private var rankingItems: [FeedRankViewData] = []
+    private var feedItems: [FeedItemViewData] = []
+    private var feedLayoutMode: FeedLayoutMode = .list
+    private var feedCollectionHeightConstraint: Constraint?
 
     private let viewDidLoadSubject = PassthroughSubject<Void, Never>()
     private let orderSelectionSubject = PassthroughSubject<FeedOrder, Never>()
+    private let loadNextPageSubject = PassthroughSubject<Void, Never>()
+    private let likeToggleSubject = PassthroughSubject<FeedLikeAction, Never>()
 
     override init(viewModel: FeedViewModel) {
         super.init(viewModel: viewModel)
@@ -74,6 +132,24 @@ final class FeedViewController: BaseViewController<FeedViewModel> {
         viewDidLoadSubject.send(())
     }
 
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        let appearance = UINavigationBarAppearance()
+        appearance.configureWithTransparentBackground()
+        appearance.titleTextAttributes = [
+            .foregroundColor: UIColor.gray60
+        ]
+        navigationController?.navigationBar.standardAppearance = appearance
+        navigationController?.navigationBar.scrollEdgeAppearance = appearance
+        navigationController?.navigationBar.compactAppearance = appearance
+        navigationController?.navigationBar.tintColor = .gray60
+    }
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        updateFeedCollectionHeight()
+    }
+
     override func configureUI() {
         let navTitleLabel = UILabel()
         navTitleLabel.text = "FEED"
@@ -81,10 +157,20 @@ final class FeedViewController: BaseViewController<FeedViewModel> {
         navTitleLabel.font = .mulgyeol(.bold, size: 20)
         navigationItem.titleView = navTitleLabel
 
-        view.addSubview(titleLabel)
-        view.addSubview(orderStackView)
-        view.addSubview(rankingCollectionView)
-        view.addSubview(emptyStateImageView)
+        scrollView.showsVerticalScrollIndicator = false
+        scrollView.delegate = self
+        view.addSubview(scrollView)
+        scrollView.addSubview(contentView)
+
+        [
+            titleLabel,
+            orderStackView,
+            rankingCollectionView,
+            emptyStateImageView,
+            feedSectionLabel,
+            feedModeStackView,
+            feedCollectionView
+        ].forEach { contentView.addSubview($0) }
 
         FeedOrder.allCases.forEach { order in
             let button = makeOrderButton(title: order.title)
@@ -93,11 +179,28 @@ final class FeedViewController: BaseViewController<FeedViewModel> {
             orderButtons[order] = button
             orderStackView.addArrangedSubview(button)
         }
+
+        listModeButton.addTarget(self, action: #selector(feedModeTapped(_:)), for: .touchUpInside)
+        blockModeButton.addTarget(self, action: #selector(feedModeTapped(_:)), for: .touchUpInside)
+        feedModeStackView.addArrangedSubview(listModeButton)
+        feedModeStackView.addArrangedSubview(blockModeButton)
+        applyFeedMode(.list)
     }
 
     override func configureLayout() {
+        scrollView.snp.makeConstraints { make in
+            make.top.equalTo(view.safeAreaLayoutGuide)
+            make.leading.trailing.equalToSuperview()
+            make.bottom.equalTo(view.safeAreaLayoutGuide)
+        }
+
+        contentView.snp.makeConstraints { make in
+            make.edges.equalToSuperview()
+            make.width.equalTo(scrollView.snp.width)
+        }
+
         titleLabel.snp.makeConstraints { make in
-            make.top.equalTo(view.safeAreaLayoutGuide).offset(16)
+            make.top.equalToSuperview().offset(16)
             make.leading.equalToSuperview().inset(20)
             make.trailing.lessThanOrEqualToSuperview().inset(20)
         }
@@ -120,12 +223,31 @@ final class FeedViewController: BaseViewController<FeedViewModel> {
             make.width.equalToSuperview().multipliedBy(0.55)
             make.height.equalTo(emptyStateImageView.snp.width)
         }
+
+        feedSectionLabel.snp.makeConstraints { make in
+            make.top.equalTo(rankingCollectionView.snp.bottom).offset(24)
+            make.leading.equalToSuperview().inset(20)
+        }
+
+        feedModeStackView.snp.makeConstraints { make in
+            make.centerY.equalTo(feedSectionLabel)
+            make.trailing.equalToSuperview().inset(20)
+        }
+
+        feedCollectionView.snp.makeConstraints { make in
+            make.top.equalTo(feedSectionLabel.snp.bottom).offset(16)
+            make.leading.trailing.equalToSuperview()
+            feedCollectionHeightConstraint = make.height.equalTo(200).constraint
+            make.bottom.equalToSuperview().offset(-24)
+        }
     }
 
     override func bindViewModel() {
         let input = FeedViewModel.Input(
             viewDidLoad: viewDidLoadSubject.eraseToAnyPublisher(),
-            orderSelection: orderSelectionSubject.eraseToAnyPublisher()
+            orderSelection: orderSelectionSubject.eraseToAnyPublisher(),
+            loadNextPage: loadNextPageSubject.eraseToAnyPublisher(),
+            likeToggle: likeToggleSubject.eraseToAnyPublisher()
         )
         let output = viewModel.transform(input: input)
 
@@ -154,6 +276,16 @@ final class FeedViewController: BaseViewController<FeedViewModel> {
             }
             .store(in: &cancellables)
 
+        output.feedItems
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] items in
+                self?.feedItems = items
+                self?.feedCollectionView.collectionViewLayout.invalidateLayout()
+                self?.feedCollectionView.reloadData()
+                self?.updateFeedCollectionHeight()
+            }
+            .store(in: &cancellables)
+
         viewModel.error
             .receive(on: DispatchQueue.main)
             .sink { [weak self] error in
@@ -173,6 +305,46 @@ final class FeedViewController: BaseViewController<FeedViewModel> {
         button.setTitleColor(.gray45, for: .normal)
         button.backgroundColor = .gray90
         return button
+    }
+
+    private func makeFeedLayout(for mode: FeedLayoutMode) -> UICollectionViewLayout {
+        switch mode {
+        case .list:
+            let layout = UICollectionViewFlowLayout()
+            layout.scrollDirection = .vertical
+            layout.minimumLineSpacing = 16
+            layout.sectionInset = UIEdgeInsets(top: 0, left: 20, bottom: 0, right: 20)
+            return layout
+        case .block:
+            let layout = FeedMasonryLayout()
+            layout.numberOfColumns = 2
+            layout.cellPadding = 12
+            layout.delegate = self
+            return layout
+        }
+    }
+
+    private func applyFeedMode(_ mode: FeedLayoutMode) {
+        feedLayoutMode = mode
+        let isList = mode == .list
+        listModeButton.setTitleColor(isList ? .gray45 : .gray75, for: .normal)
+        blockModeButton.setTitleColor(isList ? .gray75 : .gray45, for: .normal)
+        listModeButton.backgroundColor = isList ? .brightTurquoise : .blackTurquoise
+        blockModeButton.backgroundColor = isList ? .blackTurquoise : .brightTurquoise
+        feedCollectionView.setCollectionViewLayout(makeFeedLayout(for: mode), animated: false)
+        feedCollectionView.collectionViewLayout.invalidateLayout()
+        feedCollectionView.reloadData()
+        updateFeedCollectionHeight()
+    }
+
+    private func updateFeedCollectionHeight() {
+        feedCollectionView.layoutIfNeeded()
+        let height = feedCollectionView.collectionViewLayout.collectionViewContentSize.height
+        if let current = feedCollectionHeightConstraint?.layoutConstraints.first?.constant, abs(current - height) < 1 {
+            return
+        }
+        feedCollectionHeightConstraint?.update(offset: max(1, height))
+        view.layoutIfNeeded()
     }
 
     private func applySelectedOrder(_ order: FeedOrder) {
@@ -205,6 +377,14 @@ final class FeedViewController: BaseViewController<FeedViewModel> {
     @objc private func orderButtonTapped(_ sender: UIButton) {
         guard let order = orderForButtonTag(sender.tag) else { return }
         orderSelectionSubject.send(order)
+    }
+
+    @objc private func feedModeTapped(_ sender: UIButton) {
+        if sender == listModeButton {
+            applyFeedMode(.list)
+        } else if sender == blockModeButton {
+            applyFeedMode(.block)
+        }
     }
 
     private func presentError(_ error: Error) {
@@ -251,19 +431,80 @@ final class FeedViewController: BaseViewController<FeedViewModel> {
 
 }
 
+private enum FeedLayoutMode {
+    case list
+    case block
+}
+
 // MARK: - CollectionView
 
 extension FeedViewController: UICollectionViewDataSource, UICollectionViewDelegate {
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        rankingItems.count
+        if collectionView == rankingCollectionView {
+            return rankingItems.count
+        }
+        return feedItems.count
     }
 
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: FeedRankCell.reuseID, for: indexPath) as! FeedRankCell
-        cell.configure(with: rankingItems[indexPath.item])
+        if collectionView == rankingCollectionView {
+            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: FeedRankCell.reuseID, for: indexPath) as! FeedRankCell
+            cell.configure(with: rankingItems[indexPath.item])
+            return cell
+        }
+        if feedLayoutMode == .list {
+            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: FeedListCell.reuseID, for: indexPath) as! FeedListCell
+            let item = feedItems[indexPath.item]
+            cell.configure(with: item)
+            cell.onLikeTap = { [weak self] in
+                self?.likeToggleSubject.send(FeedLikeAction(filterID: item.id))
+            }
+            return cell
+        }
+        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: FeedBlockCell.reuseID, for: indexPath) as! FeedBlockCell
+        let item = feedItems[indexPath.item]
+        cell.configure(with: item)
+        cell.onLikeTap = { [weak self] in
+            self?.likeToggleSubject.send(FeedLikeAction(filterID: item.id))
+        }
         return cell
     }
 
+}
+
+extension FeedViewController: UICollectionViewDelegateFlowLayout {
+    func collectionView(
+        _ collectionView: UICollectionView,
+        layout collectionViewLayout: UICollectionViewLayout,
+        sizeForItemAt indexPath: IndexPath
+    ) -> CGSize {
+        guard collectionView == feedCollectionView, feedLayoutMode == .list else {
+            return CGSize(width: 10, height: 10)
+        }
+        let width = collectionView.bounds.width - 40
+        return CGSize(width: width, height: 128)
+    }
+}
+
+extension FeedViewController: UIScrollViewDelegate {
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        guard scrollView == self.scrollView else { return }
+        let threshold = scrollView.contentSize.height - scrollView.bounds.height - 200
+        if scrollView.contentOffset.y > threshold {
+            loadNextPageSubject.send(())
+        }
+    }
+}
+
+extension FeedViewController: FeedMasonryLayoutDelegate {
+    func collectionView(
+        _ collectionView: UICollectionView,
+        heightForItemAt indexPath: IndexPath,
+        with width: CGFloat
+    ) -> CGFloat {
+        guard collectionView == feedCollectionView else { return 180 }
+        return feedItems[indexPath.item].masonryHeight + 64
+    }
 }
 
 // MARK: - Feed Rank Cell

@@ -93,6 +93,22 @@ struct FilterSummaryItemDTO: Decodable {
     }
 }
 
+struct FilterLikeRequestDTO: Encodable {
+    let likeStatus: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case likeStatus = "like_status"
+    }
+}
+
+struct FilterLikeResponseDTO: Decodable {
+    let likeStatus: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case likeStatus = "like_status"
+    }
+}
+
 struct UserInfoResponseDTO: Decodable {
     let userID: String
     let nick: String
