@@ -69,7 +69,90 @@ final class FilterRepositoryImpl: FilterRepository {
     }
 
     func detail(id: String) -> AnyPublisher<Filter, DomainError> {
-        Fail(error: DomainError.unknown(message: "Not implemented")).eraseToAnyPublisher()
+        network.request(FilterDetailResponseDTO.self, endpoint: FilterAPI.detail(id: id))
+            .mapError { _ in DomainError.network }
+            .map { [weak self] dto in
+                guard let self else {
+                    return Filter(
+                        id: dto.filterID,
+                        category: dto.category,
+                        title: dto.title,
+                        introduction: dto.description,
+                        description: dto.description,
+                        files: [],
+                        price: dto.price,
+                        filterValues: FilterValues(
+                            brightness: nil, exposure: nil, contrast: nil, saturation: nil,
+                            sharpness: nil, temperature: nil, highlight: nil, shadow: nil,
+                            vignette: nil, grain: nil, blur: nil, fade: nil
+                        ),
+                        photoMetadata: nil,
+                        creator: UserSummary(id: dto.creator.userID, nick: dto.creator.nick, profileImageURL: nil),
+                        createdAt: Date(),
+                        updatedAt: Date(),
+                        comments: [],
+                        isLiked: dto.isLiked,
+                        likeCount: dto.likeCount,
+                        buyerCount: dto.buyerCount,
+                        isDownloaded: dto.isDownloaded
+                    )
+                }
+                let urls = dto.files.compactMap { self.buildURL(from: $0) }
+                let creator = UserSummary(
+                    id: dto.creator.userID,
+                    nick: dto.creator.nick,
+                    profileImageURL: dto.creator.profileImage.flatMap { self.buildURL(from: $0) }
+                )
+                let created = self.parseISODate(dto.createdAt)
+                let updated = self.parseISODate(dto.updatedAt)
+                let values = FilterValues(
+                    brightness: dto.filterValues?.brightness,
+                    exposure: dto.filterValues?.exposure,
+                    contrast: dto.filterValues?.contrast,
+                    saturation: dto.filterValues?.saturation,
+                    sharpness: dto.filterValues?.sharpness,
+                    temperature: dto.filterValues?.temperature,
+                    highlight: dto.filterValues?.highlights,
+                    shadow: dto.filterValues?.shadows,
+                    vignette: dto.filterValues?.vignette,
+                    grain: nil,
+                    blur: dto.filterValues?.blur,
+                    fade: nil
+                )
+                let photo = dto.photoMetadata.map { meta in
+                    PhotoMetadata(
+                        camera: meta.camera,
+                        lensInfo: meta.lensInfo,
+                        focalLength: meta.focalLength,
+                        aperture: meta.aperture,
+                        shutterSpeed: meta.shutterSpeed,
+                        iso: meta.iso,
+                        whiteBalance: nil,
+                        location: nil,
+                        takenAt: meta.dateTimeOriginal.map { self.parseISODate($0) }
+                    )
+                }
+                return Filter(
+                    id: dto.filterID,
+                    category: dto.category,
+                    title: dto.title,
+                    introduction: dto.description,
+                    description: dto.description,
+                    files: urls,
+                    price: dto.price,
+                    filterValues: values,
+                    photoMetadata: photo,
+                    creator: creator,
+                    createdAt: created,
+                    updatedAt: updated,
+                    comments: [],
+                    isLiked: dto.isLiked,
+                    likeCount: dto.likeCount,
+                    buyerCount: dto.buyerCount,
+                    isDownloaded: dto.isDownloaded
+                )
+            }
+            .eraseToAnyPublisher()
     }
 
     func update(id: String, draft: FilterDraft) -> AnyPublisher<Filter, DomainError> {

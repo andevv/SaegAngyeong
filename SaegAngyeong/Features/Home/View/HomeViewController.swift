@@ -216,6 +216,7 @@ final class HomeViewController: BaseViewController<HomeViewModel> {
     private var banners: [BannerViewData] = []
     private var hotTrends: [HotTrendViewData] = []
     private var todayAuthor: TodayAuthorViewData?
+    var onHotTrendSelected: ((String) -> Void)?
 
     override init(viewModel: HomeViewModel) {
         super.init(viewModel: viewModel)
@@ -625,6 +626,7 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
         } else {
             let item = hotTrends[indexPath.item]
             print("[Home] hot trend tapped:", item.title)
+            onHotTrendSelected?(item.id)
         }
     }
 

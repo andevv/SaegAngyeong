@@ -27,7 +27,7 @@ struct PhotoMetadata {
     let lensInfo: String?
     let focalLength: Double?
     let aperture: Double?
-    let shutterSpeed: Double?
+    let shutterSpeed: String?
     let iso: Int?
     let whiteBalance: String?
     let location: String?
