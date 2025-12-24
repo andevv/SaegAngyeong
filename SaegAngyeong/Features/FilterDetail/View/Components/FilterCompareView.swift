@@ -12,8 +12,7 @@ import Kingfisher
 final class FilterCompareView: UIView {
     private let originalImageView = UIImageView()
     private let filteredImageView = UIImageView()
-    private let filteredMaskView = UIView()
-    private var filteredWidthConstraint: Constraint?
+    private let maskLayer = CALayer()
 
     private var currentProgress: CGFloat = 0.5
 
@@ -26,20 +25,19 @@ final class FilterCompareView: UIView {
         originalImageView.clipsToBounds = true
         addSubview(originalImageView)
 
-        filteredMaskView.clipsToBounds = true
-        addSubview(filteredMaskView)
-
         filteredImageView.contentMode = .scaleAspectFill
         filteredImageView.clipsToBounds = true
-        filteredMaskView.addSubview(filteredImageView)
+        maskLayer.backgroundColor = UIColor.black.cgColor
+        maskLayer.actions = [
+            "bounds": NSNull(),
+            "position": NSNull(),
+            "frame": NSNull()
+        ]
+        filteredImageView.layer.mask = maskLayer
+        addSubview(filteredImageView)
 
         originalImageView.snp.makeConstraints { make in
             make.edges.equalToSuperview()
-        }
-
-        filteredMaskView.snp.makeConstraints { make in
-            make.top.bottom.leading.equalToSuperview()
-            filteredWidthConstraint = make.width.equalTo(0).constraint
         }
 
         filteredImageView.snp.makeConstraints { make in
@@ -58,15 +56,19 @@ final class FilterCompareView: UIView {
 
     func setProgress(_ progress: CGFloat) {
         currentProgress = min(max(progress, 0.0), 1.0)
-        if let superview = filteredMaskView.superview {
-            let newWidth = superview.bounds.width * currentProgress
-            filteredWidthConstraint?.update(offset: newWidth)
-            layoutIfNeeded()
-        }
+        updateMaskFrame()
     }
 
     override func layoutSubviews() {
         super.layoutSubviews()
-        setProgress(currentProgress)
+        updateMaskFrame()
+    }
+
+    private func updateMaskFrame() {
+        let width = bounds.width * currentProgress
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        maskLayer.frame = CGRect(x: 0, y: 0, width: width, height: bounds.height)
+        CATransaction.commit()
     }
 }
