@@ -8,6 +8,7 @@
 import Foundation
 import Combine
 import UIKit
+import CoreLocation
 
 final class FilterDetailViewModel: BaseViewModel, ViewModelType {
 
@@ -15,6 +16,7 @@ final class FilterDetailViewModel: BaseViewModel, ViewModelType {
     private let filterRepository: FilterRepository
     private let accessTokenProvider: () -> String?
     private let sesacKey: String
+    private let geocoder = CLGeocoder()
 
     init(
         filterID: String,
@@ -55,7 +57,9 @@ final class FilterDetailViewModel: BaseViewModel, ViewModelType {
                 }
             } receiveValue: { [weak self] filter in
                 guard let self else { return }
-                detailSubject.send(self.makeViewData(from: filter))
+                let viewData = self.makeViewData(from: filter)
+                detailSubject.send(viewData)
+                self.resolveAddressIfNeeded(from: viewData, subject: detailSubject)
             }
             .store(in: &cancellables)
 
@@ -86,21 +90,48 @@ final class FilterDetailViewModel: BaseViewModel, ViewModelType {
 
     private func makeViewData(from filter: Filter) -> FilterDetailViewData {
         let metadataTitle = filter.photoMetadata?.camera ?? "촬영 정보"
-        let metadataDetail = [
-            filter.photoMetadata?.lensInfo,
-            filter.photoMetadata?.focalLength.map { "\($0)mm" },
-            filter.photoMetadata?.aperture.map { "f\($0)" },
-            filter.photoMetadata?.iso.map { "ISO \($0)" }
-        ]
-        .compactMap { $0 }
-        .joined(separator: " · ")
+        let metadataLine1: String = {
+            var parts: [String] = []
+            if let lens = filter.photoMetadata?.lensInfo {
+                parts.append("\(lens) -")
+            }
+            if let focal = filter.photoMetadata?.focalLength {
+                parts.append("\(focal)mm")
+            }
+            if let aperture = filter.photoMetadata?.aperture {
+                parts.append("𝒇\(aperture)")
+            }
+            if let iso = filter.photoMetadata?.iso {
+                parts.append("ISO \(iso)")
+            }
+            return parts.joined(separator: " ")
+        }()
 
-        let sizeDetail = [
-            filter.photoMetadata?.takenAt.map { ISO8601DateFormatter().string(from: $0) },
-            filter.photoMetadata?.shutterSpeed
-        ]
-        .compactMap { $0 }
-        .joined(separator: " · ")
+        let metadataLine2 = {
+            let resolution: String? = {
+                guard let width = filter.photoMetadata?.pixelWidth,
+                      let height = filter.photoMetadata?.pixelHeight
+                else { return nil }
+                let mp = Double(width * height) / 1_000_000.0
+                let mpText = String(format: "%.0fMP", mp)
+                return "\(mpText) · \(width) × \(height)"
+            }()
+            let fileSizeText: String? = {
+                guard let bytes = filter.photoMetadata?.fileSize else { return nil }
+                let mb = bytes / 1_000_000.0
+                return String(format: "%.1fMB", mb)
+            }()
+            return [resolution, fileSizeText]
+                .compactMap { $0 }
+                .joined(separator: " · ")
+        }()
+
+        let metadataLine3: String = {
+            if filter.photoMetadata?.latitude != nil, filter.photoMetadata?.longitude != nil {
+                return "위치 확인 중"
+            }
+            return ""
+        }()
 
         return FilterDetailViewData(
             title: filter.title,
@@ -115,10 +146,38 @@ final class FilterDetailViewModel: BaseViewModel, ViewModelType {
             filteredImageURL: filter.files.dropFirst().first,
             creatorName: filter.creator.nick,
             metadataTitle: metadataTitle,
-            metadataDetail: metadataDetail,
-            sizeDetail: sizeDetail,
+            metadataLine1: metadataLine1,
+            metadataLine2: metadataLine2,
+            metadataLine3: metadataLine3,
+            metadataFormat: filter.photoMetadata?.format ?? "EXIF",
+            latitude: filter.photoMetadata?.latitude,
+            longitude: filter.photoMetadata?.longitude,
             headers: imageHeaders
         )
+    }
+
+    private func resolveAddressIfNeeded(
+        from viewData: FilterDetailViewData,
+        subject: CurrentValueSubject<FilterDetailViewData?, Never>
+    ) {
+        guard let lat = viewData.latitude, let lon = viewData.longitude else { return }
+        let location = CLLocation(latitude: lat, longitude: lon)
+        geocoder.reverseGeocodeLocation(location) { placemarks, error in
+            guard error == nil, let placemark = placemarks?.first else { return }
+            let address = [
+                placemark.administrativeArea,
+                placemark.locality,
+                placemark.subLocality,
+                placemark.thoroughfare,
+                placemark.subThoroughfare
+            ]
+            .compactMap { $0 }
+            .joined(separator: " ")
+            guard !address.isEmpty else { return }
+            DispatchQueue.main.async {
+                subject.send(viewData.updating(metadataLine3: address))
+            }
+        }
     }
 }
 
@@ -135,8 +194,12 @@ struct FilterDetailViewData {
     let filteredImageURL: URL?
     let creatorName: String
     let metadataTitle: String
-    let metadataDetail: String
-    let sizeDetail: String
+    let metadataLine1: String
+    let metadataLine2: String
+    let metadataLine3: String
+    let metadataFormat: String
+    let latitude: Double?
+    let longitude: Double?
     let headers: [String: String]
 
     func updating(isLiked: Bool, likeCount: Int) -> FilterDetailViewData {
@@ -153,8 +216,36 @@ struct FilterDetailViewData {
             filteredImageURL: filteredImageURL,
             creatorName: creatorName,
             metadataTitle: metadataTitle,
-            metadataDetail: metadataDetail,
-            sizeDetail: sizeDetail,
+            metadataLine1: metadataLine1,
+            metadataLine2: metadataLine2,
+            metadataLine3: metadataLine3,
+            metadataFormat: metadataFormat,
+            latitude: latitude,
+            longitude: longitude,
+            headers: headers
+        )
+    }
+
+    func updating(metadataLine3: String) -> FilterDetailViewData {
+        FilterDetailViewData(
+            title: title,
+            category: category,
+            description: description,
+            price: price,
+            likeCount: likeCount,
+            buyerCount: buyerCount,
+            isLiked: isLiked,
+            isDownloaded: isDownloaded,
+            originalImageURL: originalImageURL,
+            filteredImageURL: filteredImageURL,
+            creatorName: creatorName,
+            metadataTitle: metadataTitle,
+            metadataLine1: metadataLine1,
+            metadataLine2: metadataLine2,
+            metadataLine3: metadataLine3,
+            metadataFormat: metadataFormat,
+            latitude: latitude,
+            longitude: longitude,
             headers: headers
         )
     }

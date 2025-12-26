@@ -127,9 +127,15 @@ final class FilterRepositoryImpl: FilterRepository {
                         aperture: meta.aperture,
                         shutterSpeed: meta.shutterSpeed,
                         iso: meta.iso,
+                        pixelWidth: meta.pixelWidth,
+                        pixelHeight: meta.pixelHeight,
+                        fileSize: meta.fileSize,
+                        format: meta.format,
                         whiteBalance: nil,
                         location: nil,
-                        takenAt: meta.dateTimeOriginal.map { self.parseISODate($0) }
+                        takenAt: meta.dateTimeOriginal.map { self.parseISODate($0) },
+                        latitude: meta.latitude,
+                        longitude: meta.longitude
                     )
                 }
                 return Filter(

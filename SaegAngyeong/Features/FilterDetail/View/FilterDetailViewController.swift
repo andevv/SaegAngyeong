@@ -8,6 +8,7 @@
 import UIKit
 import SnapKit
 import Combine
+import MapKit
 
 final class FilterDetailViewController: BaseViewController<FilterDetailViewModel> {
     private let scrollView = UIScrollView()
@@ -210,8 +211,12 @@ final class FilterDetailViewController: BaseViewController<FilterDetailViewModel
         likeButton.setImage(UIImage(named: likeIcon), for: .normal)
         metadataCard.configure(
             title: viewData.metadataTitle,
-            detail: viewData.metadataDetail,
-            subDetail: viewData.sizeDetail
+            line1: viewData.metadataLine1,
+            line2: viewData.metadataLine2,
+            line3: viewData.metadataLine3,
+            format: viewData.metadataFormat,
+            latitude: viewData.latitude,
+            longitude: viewData.longitude
         )
     }
 
@@ -281,40 +286,87 @@ private final class StatCardView: UIView {
 }
 
 private final class MetadataCardView: UIView {
+    private let headerBackground = UIView()
+    private let headerStack = UIStackView()
     private let titleLabel = UILabel()
-    private let detailLabel = UILabel()
-    private let subDetailLabel = UILabel()
+    private let formatLabel = UILabel()
+    private let mapView = MKMapView()
+    private let infoStack = UIStackView()
+    private let line1Label = UILabel()
+    private let line2Label = UILabel()
+    private let line3Label = UILabel()
 
     override init(frame: CGRect) {
         super.init(frame: frame)
         backgroundColor = .blackTurquoise
         layer.cornerRadius = 12
 
+        headerBackground.backgroundColor = .black
+        headerBackground.layer.borderWidth = 3
+        headerBackground.layer.borderColor = UIColor.blackTurquoise.cgColor
+        headerBackground.layer.cornerRadius = 12
+        headerBackground.layer.maskedCorners = [
+            .layerMinXMinYCorner,
+            .layerMaxXMinYCorner
+        ]
+        addSubview(headerBackground)
+
+        headerStack.axis = .horizontal
+        headerStack.distribution = .equalSpacing
+        headerBackground.addSubview(headerStack)
+
         titleLabel.font = .pretendard(.bold, size: 14)
-        titleLabel.textColor = .gray60
+        titleLabel.textColor = .deepTurquoise
+        formatLabel.font = .pretendard(.bold, size: 12)
+        formatLabel.textColor = .deepTurquoise
+        formatLabel.text = "EXIF"
 
-        detailLabel.font = .pretendard(.medium, size: 12)
-        detailLabel.textColor = .gray60
+        headerStack.addArrangedSubview(titleLabel)
+        headerStack.addArrangedSubview(formatLabel)
 
-        subDetailLabel.font = .pretendard(.regular, size: 11)
-        subDetailLabel.textColor = .gray75
+        mapView.layer.cornerRadius = 12
+        mapView.clipsToBounds = true
+        mapView.isScrollEnabled = false
+        mapView.isZoomEnabled = false
+        mapView.isRotateEnabled = false
+        mapView.isPitchEnabled = false
+        addSubview(mapView)
 
-        [titleLabel, detailLabel, subDetailLabel].forEach { addSubview($0) }
+        infoStack.axis = .vertical
+        infoStack.spacing = 6
+        addSubview(infoStack)
 
-        titleLabel.snp.makeConstraints { make in
-            make.top.equalToSuperview().offset(12)
-            make.leading.trailing.equalToSuperview().inset(12)
+        line1Label.font = .pretendard(.medium, size: 12)
+        line1Label.textColor = .gray75
+
+        line2Label.font = .pretendard(.medium, size: 12)
+        line2Label.textColor = .gray75
+
+        line3Label.font = .pretendard(.regular, size: 11)
+        line3Label.textColor = .gray75
+
+        [line1Label, line2Label, line3Label].forEach { infoStack.addArrangedSubview($0) }
+
+        headerBackground.snp.makeConstraints { make in
+            make.top.leading.trailing.equalToSuperview()
+            make.height.equalTo(40)
         }
 
-        detailLabel.snp.makeConstraints { make in
-            make.top.equalTo(titleLabel.snp.bottom).offset(6)
-            make.leading.trailing.equalTo(titleLabel)
+        headerStack.snp.makeConstraints { make in
+            make.edges.equalToSuperview().inset(12)
         }
 
-        subDetailLabel.snp.makeConstraints { make in
-            make.top.equalTo(detailLabel.snp.bottom).offset(6)
-            make.leading.trailing.equalTo(titleLabel)
+        mapView.snp.makeConstraints { make in
+            make.top.equalTo(headerBackground.snp.bottom).offset(10)
+            make.leading.equalToSuperview().offset(12)
+            make.width.height.equalTo(72)
             make.bottom.equalToSuperview().inset(12)
+        }
+
+        infoStack.snp.makeConstraints { make in
+            make.leading.equalTo(mapView.snp.trailing).offset(12)
+            make.trailing.equalToSuperview().inset(12)
+            make.centerY.equalTo(mapView)
         }
     }
 
@@ -322,9 +374,19 @@ private final class MetadataCardView: UIView {
         fatalError("init(coder:) has not been implemented")
     }
 
-    func configure(title: String, detail: String, subDetail: String) {
+    func configure(title: String, line1: String, line2: String, line3: String, format: String, latitude: Double?, longitude: Double?) {
         titleLabel.text = title
-        detailLabel.text = detail
-        subDetailLabel.text = subDetail
+        line1Label.text = line1
+        line2Label.text = line2
+        line3Label.text = line3
+        line3Label.isHidden = line3.isEmpty
+        formatLabel.text = format
+
+        if let lat = latitude, let lon = longitude {
+            let coordinate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
+            let region = MKCoordinateRegion(center: coordinate, latitudinalMeters: 250, longitudinalMeters: 250)
+            mapView.setRegion(region, animated: false)
+            mapView.removeAnnotations(mapView.annotations)
+        }
     }
 }

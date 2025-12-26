@@ -29,9 +29,15 @@ struct PhotoMetadata {
     let aperture: Double?
     let shutterSpeed: String?
     let iso: Int?
+    let pixelWidth: Int?
+    let pixelHeight: Int?
+    let fileSize: Double?
+    let format: String?
     let whiteBalance: String?
     let location: String?
     let takenAt: Date?
+    let latitude: Double?
+    let longitude: Double?
 }
 
 struct Filter {
