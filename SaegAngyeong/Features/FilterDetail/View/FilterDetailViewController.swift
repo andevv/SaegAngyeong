@@ -100,7 +100,7 @@ final class FilterDetailViewController: BaseViewController<FilterDetailViewModel
         compareBar.addSubview(compareThumb)
         statsStack.addArrangedSubview(downloadCard)
         statsStack.addArrangedSubview(likeCard)
-        contentView.addSubview(likeButton)
+        navigationItem.rightBarButtonItem = UIBarButtonItem(customView: likeButton)
 
         let pan = UIPanGestureRecognizer(target: self, action: #selector(handleComparePan(_:)))
         compareBar.addGestureRecognizer(pan)
@@ -146,12 +146,6 @@ final class FilterDetailViewController: BaseViewController<FilterDetailViewModel
         beforeLabel.snp.makeConstraints { make in
             make.centerY.equalTo(compareBar)
             make.trailing.equalTo(compareBar.snp.trailing).inset(12)
-        }
-
-        likeButton.snp.makeConstraints { make in
-            make.top.equalTo(compareContainerView.snp.top).offset(12)
-            make.trailing.equalTo(compareContainerView.snp.trailing).inset(12)
-            make.width.height.equalTo(28)
         }
 
         priceLabel.snp.makeConstraints { make in
@@ -200,7 +194,11 @@ final class FilterDetailViewController: BaseViewController<FilterDetailViewModel
     }
 
     private func apply(_ viewData: FilterDetailViewData) {
-        navigationItem.title = viewData.title
+        let navTitleLabel = UILabel()
+        navTitleLabel.text = viewData.title
+        navTitleLabel.textColor = .gray60
+        navTitleLabel.font = .mulgyeol(.bold, size: 20)
+        navigationItem.titleView = navTitleLabel
         priceLabel.text = "\(viewData.price)"
         coinLabel.text = "Coin"
         compareView.setImages(original: viewData.originalImageURL, filtered: viewData.filteredImageURL, headers: viewData.headers)
