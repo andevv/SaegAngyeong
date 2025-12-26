@@ -289,6 +289,7 @@ private final class MetadataCardView: UIView {
     private let titleLabel = UILabel()
     private let formatLabel = UILabel()
     private let mapView = MKMapView()
+    private let noLocationImageView = UIImageView()
     private let infoStack = UIStackView()
     private let line1Label = UILabel()
     private let line2Label = UILabel()
@@ -330,6 +331,11 @@ private final class MetadataCardView: UIView {
         mapView.isPitchEnabled = false
         addSubview(mapView)
 
+        noLocationImageView.image = UIImage(named: "Icon_NoLocation")
+        noLocationImageView.contentMode = .scaleAspectFit
+        noLocationImageView.isHidden = true
+        mapView.addSubview(noLocationImageView)
+
         infoStack.axis = .vertical
         infoStack.spacing = 6
         addSubview(infoStack)
@@ -361,6 +367,11 @@ private final class MetadataCardView: UIView {
             make.bottom.equalToSuperview().inset(12)
         }
 
+        noLocationImageView.snp.makeConstraints { make in
+            make.center.equalToSuperview()
+            make.width.height.equalTo(32)
+        }
+
         infoStack.snp.makeConstraints { make in
             make.leading.equalTo(mapView.snp.trailing).offset(12)
             make.trailing.equalToSuperview().inset(12)
@@ -385,6 +396,14 @@ private final class MetadataCardView: UIView {
             let region = MKCoordinateRegion(center: coordinate, latitudinalMeters: 250, longitudinalMeters: 250)
             mapView.setRegion(region, animated: false)
             mapView.removeAnnotations(mapView.annotations)
+            mapView.isHidden = false
+            noLocationImageView.isHidden = true
+        }
+        if latitude == nil || longitude == nil {
+            mapView.isHidden = false
+            mapView.setRegion(MKCoordinateRegion(), animated: false)
+            noLocationImageView.isHidden = false
+            line3Label.isHidden = true
         }
     }
 }
