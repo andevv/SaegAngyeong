@@ -91,8 +91,8 @@ final class UserRepositoryImpl: UserRepository {
                         price: 0,
                         filterValues: FilterValues(
                             brightness: nil, exposure: nil, contrast: nil, saturation: nil,
-                            sharpness: nil, temperature: nil, highlight: nil, shadow: nil,
-                            vignette: nil, grain: nil, blur: nil, fade: nil
+                            sharpness: nil, noiseReduction: nil, temperature: nil, highlight: nil, shadow: nil,
+                            vignette: nil, grain: nil, blur: nil, fade: nil, blackPoint: nil
                         ),
                         photoMetadata: nil,
                         creator: creator,

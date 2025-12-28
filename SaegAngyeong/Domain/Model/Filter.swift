@@ -13,6 +13,7 @@ struct FilterValues {
     let contrast: Double?
     let saturation: Double?
     let sharpness: Double?
+    let noiseReduction: Double?
     let temperature: Double?
     let highlight: Double?
     let shadow: Double?
@@ -20,6 +21,7 @@ struct FilterValues {
     let grain: Double?
     let blur: Double?
     let fade: Double?
+    let blackPoint: Double?
 }
 
 struct PhotoMetadata {

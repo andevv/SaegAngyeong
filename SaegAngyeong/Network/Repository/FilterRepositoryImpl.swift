@@ -48,8 +48,8 @@ final class FilterRepositoryImpl: FilterRepository {
                         price: 0,
                         filterValues: FilterValues(
                             brightness: nil, exposure: nil, contrast: nil, saturation: nil,
-                            sharpness: nil, temperature: nil, highlight: nil, shadow: nil,
-                            vignette: nil, grain: nil, blur: nil, fade: nil
+                            sharpness: nil, noiseReduction: nil, temperature: nil, highlight: nil, shadow: nil,
+                            vignette: nil, grain: nil, blur: nil, fade: nil, blackPoint: nil
                         ),
                         photoMetadata: nil,
                         creator: creator,
@@ -83,8 +83,8 @@ final class FilterRepositoryImpl: FilterRepository {
                         price: dto.price,
                         filterValues: FilterValues(
                             brightness: nil, exposure: nil, contrast: nil, saturation: nil,
-                            sharpness: nil, temperature: nil, highlight: nil, shadow: nil,
-                            vignette: nil, grain: nil, blur: nil, fade: nil
+                            sharpness: nil, noiseReduction: nil, temperature: nil, highlight: nil, shadow: nil,
+                            vignette: nil, grain: nil, blur: nil, fade: nil, blackPoint: nil
                         ),
                         photoMetadata: nil,
                         creator: UserSummary(id: dto.creator.userID, nick: dto.creator.nick, profileImageURL: nil),
@@ -111,13 +111,15 @@ final class FilterRepositoryImpl: FilterRepository {
                     contrast: dto.filterValues?.contrast,
                     saturation: dto.filterValues?.saturation,
                     sharpness: dto.filterValues?.sharpness,
+                    noiseReduction: dto.filterValues?.noiseReduction,
                     temperature: dto.filterValues?.temperature,
                     highlight: dto.filterValues?.highlights,
                     shadow: dto.filterValues?.shadows,
                     vignette: dto.filterValues?.vignette,
                     grain: nil,
                     blur: dto.filterValues?.blur,
-                    fade: nil
+                    fade: nil,
+                    blackPoint: dto.filterValues?.blackPoint
                 )
                 let photo = dto.photoMetadata.map { meta in
                     PhotoMetadata(
@@ -199,8 +201,8 @@ final class FilterRepositoryImpl: FilterRepository {
                     let creator = UserSummary(id: "", nick: "", profileImageURL: nil)
                     let filterValues = FilterValues(
                         brightness: nil, exposure: nil, contrast: nil, saturation: nil,
-                        sharpness: nil, temperature: nil, highlight: nil, shadow: nil,
-                        vignette: nil, grain: nil, blur: nil, fade: nil
+                        sharpness: nil, noiseReduction: nil, temperature: nil, highlight: nil, shadow: nil,
+                        vignette: nil, grain: nil, blur: nil, fade: nil, blackPoint: nil
                     )
                     let now = Date()
                     return Filter(
@@ -240,8 +242,8 @@ final class FilterRepositoryImpl: FilterRepository {
                 let creator = UserSummary(id: "", nick: "", profileImageURL: nil)
                 let filterValues = FilterValues(
                     brightness: nil, exposure: nil, contrast: nil, saturation: nil,
-                    sharpness: nil, temperature: nil, highlight: nil, shadow: nil,
-                    vignette: nil, grain: nil, blur: nil, fade: nil
+                    sharpness: nil, noiseReduction: nil, temperature: nil, highlight: nil, shadow: nil,
+                    vignette: nil, grain: nil, blur: nil, fade: nil, blackPoint: nil
                 )
                 let dateFormatter = ISO8601DateFormatter()
                 let created = dateFormatter.date(from: dto.createdAt) ?? Date()

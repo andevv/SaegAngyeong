@@ -29,6 +29,8 @@ final class FilterDetailViewController: BaseViewController<FilterDetailViewModel
     private let likeCard = StatCardView()
 
     private let metadataCard = MetadataCardView()
+    private let presetsCard = PresetsCardView()
+    private let purchaseButton = UIButton(type: .system)
 
     private let likeButton = UIButton(type: .system)
 
@@ -85,6 +87,12 @@ final class FilterDetailViewController: BaseViewController<FilterDetailViewModel
         likeButton.tintColor = .gray60
         likeButton.addTarget(self, action: #selector(likeTapped), for: .touchUpInside)
 
+        purchaseButton.setTitle("결제하기", for: .normal)
+        purchaseButton.titleLabel?.font = .pretendard(.bold, size: 16)
+        purchaseButton.backgroundColor = UIColor.brightTurquoise.withAlphaComponent(0.9)
+        purchaseButton.setTitleColor(.gray30, for: .normal)
+        purchaseButton.layer.cornerRadius = 12
+
         [
             compareContainerView,
             compareBar,
@@ -93,7 +101,9 @@ final class FilterDetailViewController: BaseViewController<FilterDetailViewModel
             priceLabel,
             coinLabel,
             statsStack,
-            metadataCard
+            metadataCard,
+            presetsCard,
+            purchaseButton
         ].forEach { contentView.addSubview($0) }
 
         compareContainerView.addSubview(compareView)
@@ -167,6 +177,17 @@ final class FilterDetailViewController: BaseViewController<FilterDetailViewModel
         metadataCard.snp.makeConstraints { make in
             make.top.equalTo(statsStack.snp.bottom).offset(16)
             make.leading.trailing.equalTo(compareContainerView)
+        }
+
+        presetsCard.snp.makeConstraints { make in
+            make.top.equalTo(metadataCard.snp.bottom).offset(16)
+            make.leading.trailing.equalTo(compareContainerView)
+        }
+
+        purchaseButton.snp.makeConstraints { make in
+            make.top.equalTo(presetsCard.snp.bottom).offset(16)
+            make.leading.trailing.equalTo(compareContainerView)
+            make.height.equalTo(48)
             make.bottom.equalToSuperview().offset(-24)
         }
     }
@@ -216,6 +237,21 @@ final class FilterDetailViewController: BaseViewController<FilterDetailViewModel
             latitude: viewData.latitude,
             longitude: viewData.longitude
         )
+        presetsCard.configure(items: viewData.presets, locked: viewData.requiresPurchase && !viewData.isPurchased)
+        purchaseButton.isHidden = !viewData.requiresPurchase
+        if viewData.requiresPurchase {
+            if viewData.isPurchased {
+                purchaseButton.setTitle("구매완료", for: .normal)
+                purchaseButton.backgroundColor = UIColor.gray90.withAlphaComponent(0.9)
+                purchaseButton.setTitleColor(.gray75, for: .normal)
+                purchaseButton.isEnabled = false
+            } else {
+                purchaseButton.setTitle("결제하기", for: .normal)
+                purchaseButton.backgroundColor = UIColor.brightTurquoise.withAlphaComponent(0.9)
+                purchaseButton.setTitleColor(.gray30, for: .normal)
+                purchaseButton.isEnabled = true
+            }
+        }
     }
 
     @objc private func handleComparePan(_ gesture: UIPanGestureRecognizer) {
@@ -405,5 +441,173 @@ private final class MetadataCardView: UIView {
             noLocationImageView.isHidden = false
             line3Label.isHidden = true
         }
+    }
+}
+
+private final class PresetsCardView: UIView {
+    private let headerBackground = UIView()
+    private let headerStack = UIStackView()
+    private let titleLabel = UILabel()
+    private let lutLabel = UILabel()
+    private let gridStack = UIStackView()
+    private let overlayView = UIVisualEffectView(effect: UIBlurEffect(style: .systemChromeMaterialDark))
+    private let lockIcon = UIImageView()
+    private let lockLabel = UILabel()
+
+    private var itemViews: [PresetItemView] = []
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        backgroundColor = .blackTurquoise
+        layer.cornerRadius = 12
+
+        headerBackground.backgroundColor = .black
+        headerBackground.layer.borderWidth = 3
+        headerBackground.layer.borderColor = UIColor.blackTurquoise.cgColor
+        headerBackground.layer.cornerRadius = 12
+        headerBackground.layer.maskedCorners = [
+            .layerMinXMinYCorner,
+            .layerMaxXMinYCorner
+        ]
+        addSubview(headerBackground)
+
+        headerStack.axis = .horizontal
+        headerStack.distribution = .equalSpacing
+        headerBackground.addSubview(headerStack)
+
+        titleLabel.text = "Filter Presets"
+        titleLabel.font = .pretendard(.bold, size: 14)
+        titleLabel.textColor = .deepTurquoise
+
+        lutLabel.text = "LUT"
+        lutLabel.font = .pretendard(.bold, size: 12)
+        lutLabel.textColor = .deepTurquoise
+
+        headerStack.addArrangedSubview(titleLabel)
+        headerStack.addArrangedSubview(lutLabel)
+
+        gridStack.axis = .vertical
+        gridStack.spacing = 14
+        addSubview(gridStack)
+
+        overlayView.isOpaque = false
+        overlayView.alpha = 1.0
+        overlayView.layer.cornerRadius = 12
+        overlayView.clipsToBounds = true
+        overlayView.contentView.backgroundColor = UIColor.black.withAlphaComponent(0.15)
+        addSubview(overlayView)
+
+        lockIcon.image = UIImage(systemName: "lock.fill")
+        lockIcon.tintColor = .gray30
+        overlayView.contentView.addSubview(lockIcon)
+
+        lockLabel.text = "결제가 필요한 유료 필터입니다"
+        lockLabel.font = .pretendard(.bold, size: 14)
+        lockLabel.textColor = .gray30
+        overlayView.contentView.addSubview(lockLabel)
+
+        headerBackground.snp.makeConstraints { make in
+            make.top.leading.trailing.equalToSuperview()
+            make.height.equalTo(40)
+        }
+
+        headerStack.snp.makeConstraints { make in
+            make.edges.equalToSuperview().inset(12)
+        }
+
+        gridStack.snp.makeConstraints { make in
+            make.top.equalTo(headerBackground.snp.bottom).offset(14)
+            make.leading.trailing.equalToSuperview().inset(12)
+            make.bottom.equalToSuperview().inset(16)
+        }
+
+        overlayView.snp.makeConstraints { make in
+            make.edges.equalTo(gridStack)
+        }
+
+        lockIcon.snp.makeConstraints { make in
+            make.centerX.equalToSuperview()
+            make.centerY.equalToSuperview().offset(-14)
+            make.width.height.equalTo(28)
+        }
+
+        lockLabel.snp.makeConstraints { make in
+            make.top.equalTo(lockIcon.snp.bottom).offset(10)
+            make.centerX.equalToSuperview()
+        }
+
+        configure(items: [], locked: false)
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    func configure(items: [FilterPresetViewData], locked: Bool) {
+        gridStack.arrangedSubviews.forEach { $0.removeFromSuperview() }
+        itemViews.removeAll()
+
+        let rows = stride(from: 0, to: items.count, by: 6).map { idx in
+            Array(items[idx..<min(idx + 6, items.count)])
+        }
+        rows.forEach { rowItems in
+            let rowStack = UIStackView()
+            rowStack.axis = .horizontal
+            rowStack.spacing = 14
+            rowStack.distribution = .fillEqually
+            rowItems.forEach { item in
+                let view = PresetItemView()
+                view.configure(iconName: item.iconName, valueText: item.valueText)
+                rowStack.addArrangedSubview(view)
+                itemViews.append(view)
+            }
+            gridStack.addArrangedSubview(rowStack)
+        }
+
+        overlayView.isHidden = !locked
+        gridStack.alpha = 1.0
+    }
+}
+
+private final class PresetItemView: UIView {
+    private let iconView = UIImageView()
+    private let valueLabel = UILabel()
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+
+        iconView.contentMode = .scaleAspectFit
+        iconView.tintColor = .gray30
+        addSubview(iconView)
+
+        valueLabel.font = .pretendard(.medium, size: 11)
+        valueLabel.textColor = .gray60
+        valueLabel.textAlignment = .center
+        addSubview(valueLabel)
+
+        iconView.snp.makeConstraints { make in
+            make.top.equalToSuperview()
+            make.centerX.equalToSuperview()
+            make.width.height.equalTo(28)
+        }
+
+        valueLabel.snp.makeConstraints { make in
+            make.top.equalTo(iconView.snp.bottom).offset(6)
+            make.leading.trailing.equalToSuperview()
+            make.bottom.equalToSuperview()
+        }
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    func configure(iconName: String, valueText: String) {
+        if let image = UIImage(named: iconName)?.withRenderingMode(.alwaysTemplate) {
+            iconView.image = image
+        } else {
+            iconView.image = UIImage(named: iconName)
+        }
+        valueLabel.text = valueText
     }
 }

@@ -152,8 +152,39 @@ final class FilterDetailViewModel: BaseViewModel, ViewModelType {
             metadataFormat: filter.photoMetadata?.format ?? "EXIF",
             latitude: filter.photoMetadata?.latitude,
             longitude: filter.photoMetadata?.longitude,
+            presets: makePresets(from: filter.filterValues),
+            requiresPurchase: filter.price > 0,
+            isPurchased: filter.isDownloaded,
             headers: imageHeaders
         )
+    }
+
+    private func makePresets(from values: FilterValues) -> [FilterPresetViewData] {
+        let items: [(String, Double?)] = [
+            ("Brightness", values.brightness),
+            ("Exposure", values.exposure),
+            ("Contrast", values.contrast),
+            ("Saturation", values.saturation),
+            ("Sharpness", values.sharpness),
+            ("Temperature", values.temperature),
+            ("BlackPoint", values.blackPoint),
+            ("Blur", values.blur),
+            ("Vignette", values.vignette),
+            ("Noise", values.noiseReduction),
+            ("Highlights", values.highlight),
+            ("Shadows", values.shadow)
+        ]
+        return items.map { iconName, value in
+            FilterPresetViewData(
+                iconName: iconName,
+                valueText: formatPresetValue(value)
+            )
+        }
+    }
+
+    private func formatPresetValue(_ value: Double?) -> String {
+        guard let value else { return "-" }
+        return String(format: "%.1f", value)
     }
 
     private func resolveAddressIfNeeded(
@@ -200,6 +231,9 @@ struct FilterDetailViewData {
     let metadataFormat: String
     let latitude: Double?
     let longitude: Double?
+    let presets: [FilterPresetViewData]
+    let requiresPurchase: Bool
+    let isPurchased: Bool
     let headers: [String: String]
 
     func updating(isLiked: Bool, likeCount: Int) -> FilterDetailViewData {
@@ -222,6 +256,9 @@ struct FilterDetailViewData {
             metadataFormat: metadataFormat,
             latitude: latitude,
             longitude: longitude,
+            presets: presets,
+            requiresPurchase: requiresPurchase,
+            isPurchased: isPurchased,
             headers: headers
         )
     }
@@ -246,9 +283,17 @@ struct FilterDetailViewData {
             metadataFormat: metadataFormat,
             latitude: latitude,
             longitude: longitude,
+            presets: presets,
+            requiresPurchase: requiresPurchase,
+            isPurchased: isPurchased,
             headers: headers
         )
     }
+}
+
+struct FilterPresetViewData {
+    let iconName: String
+    let valueText: String
 }
 
 extension FilterDetailViewModel {
