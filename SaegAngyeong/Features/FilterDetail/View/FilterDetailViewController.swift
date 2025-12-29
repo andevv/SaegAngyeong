@@ -30,6 +30,13 @@ final class FilterDetailViewController: BaseViewController<FilterDetailViewModel
 
     private let metadataCard = MetadataCardView()
     private let presetsCard = PresetsCardView()
+    private let dividerView = UIView()
+    private let authorProfileImageView = UIImageView()
+    private let authorNameLabel = UILabel()
+    private let authorNickLabel = UILabel()
+    private let messageButton = UIButton(type: .system)
+    private let tagStackView = UIStackView()
+    private let filterDescriptionLabel = UILabel()
     private let purchaseButton = UIButton(type: .system)
 
     private let likeButton = UIButton(type: .system)
@@ -83,6 +90,36 @@ final class FilterDetailViewController: BaseViewController<FilterDetailViewModel
         downloadCard.configure(title: "다운로드", value: "-")
         likeCard.configure(title: "찜하기", value: "-")
 
+        dividerView.backgroundColor = UIColor.white.withAlphaComponent(0.08)
+
+        authorProfileImageView.contentMode = .scaleAspectFill
+        authorProfileImageView.clipsToBounds = true
+        authorProfileImageView.layer.cornerRadius = 24
+        authorProfileImageView.layer.borderWidth = 1
+        authorProfileImageView.layer.borderColor = UIColor.gray90.withAlphaComponent(0.3).cgColor
+
+        authorNameLabel.font = .mulgyeol(.bold, size: 18)
+        authorNameLabel.textColor = .gray30
+
+        authorNickLabel.font = .pretendard(.medium, size: 12)
+        authorNickLabel.textColor = .gray75
+
+        messageButton.setImage(UIImage(named: "Icon_Message"), for: .normal)
+        messageButton.tintColor = .gray60
+        messageButton.backgroundColor = .blackTurquoise
+        messageButton.layer.cornerRadius = 12
+        messageButton.clipsToBounds = true
+        messageButton.contentEdgeInsets = UIEdgeInsets(top: 8, left: 8, bottom: 8, right: 8)
+        messageButton.addTarget(self, action: #selector(messageTapped), for: .touchUpInside)
+
+        tagStackView.axis = .horizontal
+        tagStackView.spacing = 8
+        tagStackView.alignment = .leading
+
+        filterDescriptionLabel.font = .pretendard(.regular, size: 12)
+        filterDescriptionLabel.textColor = .gray60
+        filterDescriptionLabel.numberOfLines = 0
+
         likeButton.setImage(UIImage(named: "Icon_Like_Empty"), for: .normal)
         likeButton.tintColor = .gray60
         likeButton.addTarget(self, action: #selector(likeTapped), for: .touchUpInside)
@@ -103,6 +140,13 @@ final class FilterDetailViewController: BaseViewController<FilterDetailViewModel
             statsStack,
             metadataCard,
             presetsCard,
+            dividerView,
+            authorProfileImageView,
+            authorNameLabel,
+            authorNickLabel,
+            messageButton,
+            tagStackView,
+            filterDescriptionLabel,
             purchaseButton
         ].forEach { contentView.addSubview($0) }
 
@@ -188,6 +232,45 @@ final class FilterDetailViewController: BaseViewController<FilterDetailViewModel
             make.top.equalTo(presetsCard.snp.bottom).offset(16)
             make.leading.trailing.equalTo(compareContainerView)
             make.height.equalTo(48)
+        }
+
+        dividerView.snp.makeConstraints { make in
+            make.top.equalTo(purchaseButton.snp.bottom).offset(20)
+            make.leading.trailing.equalTo(compareContainerView)
+            make.height.equalTo(1)
+        }
+
+        authorProfileImageView.snp.makeConstraints { make in
+            make.top.equalTo(dividerView.snp.bottom).offset(16)
+            make.leading.equalTo(compareContainerView)
+            make.width.height.equalTo(48)
+        }
+
+        authorNameLabel.snp.makeConstraints { make in
+            make.top.equalTo(authorProfileImageView.snp.top).offset(2)
+            make.leading.equalTo(authorProfileImageView.snp.trailing).offset(12)
+        }
+
+        authorNickLabel.snp.makeConstraints { make in
+            make.top.equalTo(authorNameLabel.snp.bottom).offset(4)
+            make.leading.equalTo(authorNameLabel)
+        }
+
+        messageButton.snp.makeConstraints { make in
+            make.centerY.equalTo(authorProfileImageView)
+            make.trailing.equalTo(compareContainerView)
+            make.width.height.equalTo(44)
+        }
+
+        tagStackView.snp.makeConstraints { make in
+            make.top.equalTo(authorProfileImageView.snp.bottom).offset(12)
+            make.leading.equalTo(compareContainerView)
+            make.trailing.lessThanOrEqualTo(compareContainerView)
+        }
+
+        filterDescriptionLabel.snp.makeConstraints { make in
+            make.top.equalTo(tagStackView.snp.bottom).offset(12)
+            make.leading.trailing.equalTo(compareContainerView)
             make.bottom.equalToSuperview().offset(-24)
         }
     }
@@ -252,6 +335,22 @@ final class FilterDetailViewController: BaseViewController<FilterDetailViewModel
                 purchaseButton.isEnabled = true
             }
         }
+
+        authorNameLabel.text = viewData.creatorName
+        authorNickLabel.text = viewData.creatorNick
+        filterDescriptionLabel.text = viewData.description
+        tagStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
+        viewData.creatorHashTags.forEach { tag in
+            let label = PaddingLabel(padding: UIEdgeInsets(top: 4, left: 10, bottom: 4, right: 10))
+            label.text = "#\(tag)"
+            label.font = .pretendard(.medium, size: 11)
+            label.textColor = .gray60
+            label.backgroundColor = .blackTurquoise
+            label.layer.cornerRadius = 10
+            label.clipsToBounds = true
+            tagStackView.addArrangedSubview(label)
+        }
+        KingfisherHelper.setImage(authorProfileImageView, url: viewData.creatorProfileURL, headers: viewData.headers, logLabel: "creator-profile")
     }
 
     @objc private func handleComparePan(_ gesture: UIPanGestureRecognizer) {
@@ -271,6 +370,10 @@ final class FilterDetailViewController: BaseViewController<FilterDetailViewModel
         generator.prepare()
         generator.impactOccurred()
         likeToggleSubject.send(())
+    }
+
+    @objc private func messageTapped() {
+        print("[FilterDetail] message tapped")
     }
 
     private func presentError(_ error: Error) {
@@ -497,7 +600,7 @@ private final class PresetsCardView: UIView {
         overlayView.contentView.backgroundColor = UIColor.black.withAlphaComponent(0.15)
         addSubview(overlayView)
 
-        lockIcon.image = UIImage(systemName: "lock.fill")
+        lockIcon.image = UIImage(named: "Icon_Lock")
         lockIcon.tintColor = .gray30
         overlayView.contentView.addSubview(lockIcon)
 

@@ -75,7 +75,10 @@ final class UserRepositoryImpl: UserRepository {
                             guard let base else { return nil }
                             let normalized = path.hasPrefix("/v1") ? path : "/v1" + path
                             return URL(string: normalized, relativeTo: base)
-                        }
+                        },
+                        name: item.creator.name,
+                        introduction: item.creator.introduction,
+                        hashTags: item.creator.hashTags
                     )
 
                     let created = dateFormatter.date(from: item.createdAt) ?? Date()

@@ -11,6 +11,9 @@ struct UserSummary {
     let id: String
     let nick: String
     let profileImageURL: URL?
+    let name: String?
+    let introduction: String?
+    let hashTags: [String]
 }
 
 struct UserProfile {

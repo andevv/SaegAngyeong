@@ -34,7 +34,10 @@ final class FilterRepositoryImpl: FilterRepository {
                     let creator = UserSummary(
                         id: item.creator.userID,
                         nick: item.creator.nick,
-                        profileImageURL: item.creator.profileImage.flatMap { self.buildURL(from: $0) }
+                        profileImageURL: item.creator.profileImage.flatMap { self.buildURL(from: $0) },
+                        name: item.creator.name,
+                        introduction: item.creator.introduction,
+                        hashTags: item.creator.hashTags ?? []
                     )
                     let created = self.parseISODate(item.createdAt)
                     let updated = self.parseISODate(item.updatedAt)
@@ -87,7 +90,7 @@ final class FilterRepositoryImpl: FilterRepository {
                             vignette: nil, grain: nil, blur: nil, fade: nil, blackPoint: nil
                         ),
                         photoMetadata: nil,
-                        creator: UserSummary(id: dto.creator.userID, nick: dto.creator.nick, profileImageURL: nil),
+                        creator: UserSummary(id: dto.creator.userID, nick: dto.creator.nick, profileImageURL: nil, name: dto.creator.name, introduction: dto.creator.introduction, hashTags: dto.creator.hashTags ?? []),
                         createdAt: Date(),
                         updatedAt: Date(),
                         comments: [],
@@ -101,7 +104,10 @@ final class FilterRepositoryImpl: FilterRepository {
                 let creator = UserSummary(
                     id: dto.creator.userID,
                     nick: dto.creator.nick,
-                    profileImageURL: dto.creator.profileImage.flatMap { self.buildURL(from: $0) }
+                    profileImageURL: dto.creator.profileImage.flatMap { self.buildURL(from: $0) },
+                    name: dto.creator.name,
+                    introduction: dto.creator.introduction,
+                    hashTags: dto.creator.hashTags ?? []
                 )
                 let created = self.parseISODate(dto.createdAt)
                 let updated = self.parseISODate(dto.updatedAt)
@@ -198,7 +204,7 @@ final class FilterRepositoryImpl: FilterRepository {
                         let normalized = path.hasPrefix("/v1") ? path : "/v1" + path
                         return URL(string: normalized, relativeTo: base)
                     }
-                    let creator = UserSummary(id: "", nick: "", profileImageURL: nil)
+                    let creator = UserSummary(id: "", nick: "", profileImageURL: nil, name: nil, introduction: nil, hashTags: [])
                     let filterValues = FilterValues(
                         brightness: nil, exposure: nil, contrast: nil, saturation: nil,
                         sharpness: nil, noiseReduction: nil, temperature: nil, highlight: nil, shadow: nil,
@@ -239,7 +245,7 @@ final class FilterRepositoryImpl: FilterRepository {
                     let normalized = path.hasPrefix("/v1") ? path : "/v1" + path
                     return URL(string: normalized, relativeTo: base)
                 }
-                let creator = UserSummary(id: "", nick: "", profileImageURL: nil)
+                let creator = UserSummary(id: "", nick: "", profileImageURL: nil, name: nil, introduction: nil, hashTags: [])
                 let filterValues = FilterValues(
                     brightness: nil, exposure: nil, contrast: nil, saturation: nil,
                     sharpness: nil, noiseReduction: nil, temperature: nil, highlight: nil, shadow: nil,

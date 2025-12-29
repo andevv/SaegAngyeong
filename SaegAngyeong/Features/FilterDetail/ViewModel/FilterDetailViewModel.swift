@@ -144,7 +144,11 @@ final class FilterDetailViewModel: BaseViewModel, ViewModelType {
             isDownloaded: filter.isDownloaded,
             originalImageURL: filter.files.first,
             filteredImageURL: filter.files.dropFirst().first,
-            creatorName: filter.creator.nick,
+            creatorName: filter.creator.name ?? filter.creator.nick,
+            creatorNick: filter.creator.nick,
+            creatorIntroduction: filter.creator.introduction ?? "",
+            creatorHashTags: filter.creator.hashTags,
+            creatorProfileURL: filter.creator.profileImageURL,
             metadataTitle: metadataTitle,
             metadataLine1: metadataLine1,
             metadataLine2: metadataLine2,
@@ -224,6 +228,10 @@ struct FilterDetailViewData {
     let originalImageURL: URL?
     let filteredImageURL: URL?
     let creatorName: String
+    let creatorNick: String
+    let creatorIntroduction: String
+    let creatorHashTags: [String]
+    let creatorProfileURL: URL?
     let metadataTitle: String
     let metadataLine1: String
     let metadataLine2: String
@@ -249,6 +257,10 @@ struct FilterDetailViewData {
             originalImageURL: originalImageURL,
             filteredImageURL: filteredImageURL,
             creatorName: creatorName,
+            creatorNick: creatorNick,
+            creatorIntroduction: creatorIntroduction,
+            creatorHashTags: creatorHashTags,
+            creatorProfileURL: creatorProfileURL,
             metadataTitle: metadataTitle,
             metadataLine1: metadataLine1,
             metadataLine2: metadataLine2,
@@ -276,6 +288,10 @@ struct FilterDetailViewData {
             originalImageURL: originalImageURL,
             filteredImageURL: filteredImageURL,
             creatorName: creatorName,
+            creatorNick: creatorNick,
+            creatorIntroduction: creatorIntroduction,
+            creatorHashTags: creatorHashTags,
+            creatorProfileURL: creatorProfileURL,
             metadataTitle: metadataTitle,
             metadataLine1: metadataLine1,
             metadataLine2: metadataLine2,
