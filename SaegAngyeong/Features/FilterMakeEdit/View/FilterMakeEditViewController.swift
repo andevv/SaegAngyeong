@@ -6,8 +6,40 @@
 //
 
 import UIKit
+import SnapKit
+import Combine
 
-final class FilterMakeEditViewController: UIViewController {
+final class FilterMakeEditViewController: BaseViewController<FilterMakeEditViewModel> {
+    private let imageContainer = UIView()
+    private let imageView = UIImageView()
+    private let undoButton = UIButton(type: .system)
+    private let redoButton = UIButton(type: .system)
+    private let compareButton = UIButton(type: .system)
+
+    private let valueLabel = UILabel()
+    private let slider = UISlider()
+    private lazy var adjustmentCollectionView: UICollectionView = {
+        let layout = UICollectionViewFlowLayout()
+        layout.scrollDirection = .horizontal
+        layout.minimumLineSpacing = 16
+        layout.itemSize = CGSize(width: 60, height: 64)
+        let collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
+        collectionView.backgroundColor = .clear
+        collectionView.showsHorizontalScrollIndicator = false
+        collectionView.register(FilterAdjustmentCell.self, forCellWithReuseIdentifier: FilterAdjustmentCell.reuseID)
+        collectionView.dataSource = self
+        collectionView.delegate = self
+        return collectionView
+    }()
+
+    private let viewDidLoadSubject = PassthroughSubject<Void, Never>()
+    private let adjustmentSelectedSubject = PassthroughSubject<FilterAdjustmentType, Never>()
+    private let sliderValueChangedSubject = PassthroughSubject<Double, Never>()
+    private let sliderEditingEndedSubject = PassthroughSubject<Double, Never>()
+    private let undoTappedSubject = PassthroughSubject<Void, Never>()
+    private let redoTappedSubject = PassthroughSubject<Void, Never>()
+    private let saveTappedSubject = PassthroughSubject<Void, Never>()
+
     private let titleLabel: UILabel = {
         let label = UILabel()
         label.text = "EDIT"
@@ -16,13 +48,324 @@ final class FilterMakeEditViewController: UIViewController {
         return label
     }()
 
+    private var originalImage: UIImage?
+    private var currentFilteredImage: UIImage?
+    private var selectedAdjustment: FilterAdjustmentType = .brightness
+
+    var onAdjustmentsUpdated: ((FilterAdjustmentValues) -> Void)?
+
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .black
-        navigationItem.titleView = titleLabel
+        originalImage = viewModel.snapshotOriginalImage()
+        viewDidLoadSubject.send(())
     }
 
-    override var preferredStatusBarStyle: UIStatusBarStyle {
-        .lightContent
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        onAdjustmentsUpdated?(viewModel.snapshotAdjustments())
+    }
+
+    override func configureUI() {
+        navigationItem.titleView = titleLabel
+
+        let saveButton = UIButton(type: .system)
+        saveButton.setImage(UIImage(named: "Icon_Save"), for: .normal)
+        saveButton.tintColor = .gray60
+        saveButton.addTarget(self, action: #selector(saveTapped), for: .touchUpInside)
+        navigationItem.rightBarButtonItem = UIBarButtonItem(customView: saveButton)
+
+        imageContainer.backgroundColor = .blackTurquoise
+        imageContainer.layer.cornerRadius = 14
+        imageContainer.clipsToBounds = true
+
+        imageView.contentMode = .scaleAspectFill
+        imageView.clipsToBounds = true
+
+        undoButton.setImage(UIImage(named: "Icon_Undo"), for: .normal)
+        undoButton.tintColor = .gray60
+        undoButton.addTarget(self, action: #selector(undoTapped), for: .touchUpInside)
+
+        redoButton.setImage(UIImage(named: "Icon_Redo"), for: .normal)
+        redoButton.tintColor = .gray60
+        redoButton.addTarget(self, action: #selector(redoTapped), for: .touchUpInside)
+
+        compareButton.setImage(UIImage(named: "Icon_Compare"), for: .normal)
+        compareButton.tintColor = .gray60
+        compareButton.addTarget(self, action: #selector(compareTouchDown), for: .touchDown)
+        compareButton.addTarget(self, action: #selector(compareTouchUp), for: [.touchUpInside, .touchUpOutside, .touchCancel])
+
+        valueLabel.textColor = .gray60
+        valueLabel.font = .pretendard(.medium, size: 12)
+        valueLabel.textAlignment = .center
+
+        slider.minimumTrackTintColor = .brightTurquoise
+        slider.maximumTrackTintColor = .gray15
+        slider.addTarget(self, action: #selector(sliderChanged(_:)), for: .valueChanged)
+        slider.addTarget(self, action: #selector(sliderEditingEnded(_:)), for: [.touchUpInside, .touchUpOutside, .touchCancel])
+
+        view.addSubview(imageContainer)
+        imageContainer.addSubview(imageView)
+        imageContainer.addSubview(undoButton)
+        imageContainer.addSubview(redoButton)
+        imageContainer.addSubview(compareButton)
+        view.addSubview(valueLabel)
+        view.addSubview(slider)
+        view.addSubview(adjustmentCollectionView)
+    }
+
+    override func configureLayout() {
+        imageContainer.snp.makeConstraints { make in
+            make.top.equalTo(view.safeAreaLayoutGuide).offset(16)
+            make.leading.trailing.equalToSuperview().inset(20)
+            make.height.equalTo(imageContainer.snp.width)
+        }
+
+        imageView.snp.makeConstraints { make in
+            make.edges.equalToSuperview()
+        }
+
+        undoButton.snp.makeConstraints { make in
+            make.leading.equalToSuperview().offset(12)
+            make.bottom.equalToSuperview().inset(12)
+            make.width.height.equalTo(30)
+        }
+
+        redoButton.snp.makeConstraints { make in
+            make.leading.equalTo(undoButton.snp.trailing).offset(10)
+            make.centerY.equalTo(undoButton)
+            make.width.height.equalTo(30)
+        }
+
+        compareButton.snp.makeConstraints { make in
+            make.trailing.equalToSuperview().inset(12)
+            make.centerY.equalTo(undoButton)
+            make.width.height.equalTo(30)
+        }
+
+        valueLabel.snp.makeConstraints { make in
+            make.top.equalTo(imageContainer.snp.bottom).offset(16)
+            make.centerX.equalToSuperview()
+        }
+
+        slider.snp.makeConstraints { make in
+            make.top.equalTo(valueLabel.snp.bottom).offset(8)
+            make.leading.trailing.equalToSuperview().inset(24)
+        }
+
+        adjustmentCollectionView.snp.makeConstraints { make in
+            make.top.equalTo(slider.snp.bottom).offset(16)
+            make.leading.trailing.equalToSuperview()
+            make.height.equalTo(72)
+            make.bottom.lessThanOrEqualTo(view.safeAreaLayoutGuide).offset(-16)
+        }
+    }
+
+    override func bindViewModel() {
+        let input = FilterMakeEditViewModel.Input(
+            viewDidLoad: viewDidLoadSubject.eraseToAnyPublisher(),
+            adjustmentSelected: adjustmentSelectedSubject.eraseToAnyPublisher(),
+            sliderValueChanged: sliderValueChangedSubject.eraseToAnyPublisher(),
+            sliderEditingEnded: sliderEditingEndedSubject.eraseToAnyPublisher(),
+            undoTapped: undoTappedSubject.eraseToAnyPublisher(),
+            redoTapped: redoTappedSubject.eraseToAnyPublisher(),
+            saveTapped: saveTappedSubject.eraseToAnyPublisher()
+        )
+
+        let output = viewModel.transform(input: input)
+
+        output.previewImage
+            .sink { [weak self] image in
+                self?.currentFilteredImage = image
+                if self?.compareButton.isHighlighted == true {
+                    return
+                }
+                self?.imageView.image = image
+            }
+            .store(in: &cancellables)
+
+        output.selectedAdjustment
+            .sink { [weak self] adjustment in
+                self?.selectedAdjustment = adjustment
+                self?.updateSlider(for: adjustment)
+                self?.adjustmentCollectionView.reloadData()
+            }
+            .store(in: &cancellables)
+
+        output.currentValue
+            .sink { [weak self] value in
+                self?.updateValueLabel(value: value)
+                self?.slider.value = Float(value)
+            }
+            .store(in: &cancellables)
+
+        output.undoEnabled
+            .sink { [weak self] enabled in
+                self?.undoButton.isEnabled = enabled
+                self?.undoButton.tintColor = enabled ? .gray60 : .gray45
+            }
+            .store(in: &cancellables)
+
+        output.redoEnabled
+            .sink { [weak self] enabled in
+                self?.redoButton.isEnabled = enabled
+                self?.redoButton.tintColor = enabled ? .gray60 : .gray45
+            }
+            .store(in: &cancellables)
+
+        output.isSaving
+            .sink { [weak self] saving in
+                self?.navigationItem.rightBarButtonItem?.customView?.isUserInteractionEnabled = !saving
+            }
+            .store(in: &cancellables)
+
+        output.saveCompleted
+            .sink { [weak self] in
+                self?.presentSaveSuccess()
+            }
+            .store(in: &cancellables)
+
+        viewModel.error
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] error in
+                self?.presentError(error)
+            }
+            .store(in: &cancellables)
+    }
+
+    private func updateSlider(for adjustment: FilterAdjustmentType) {
+        let range = adjustment.range
+        slider.minimumValue = Float(range.lowerBound)
+        slider.maximumValue = Float(range.upperBound)
+    }
+
+    private func updateValueLabel(value: Double) {
+        let formatter = NumberFormatter()
+        formatter.maximumFractionDigits = value >= 1000 ? 0 : 1
+        formatter.minimumFractionDigits = value >= 1000 ? 0 : 1
+        let text = formatter.string(from: NSNumber(value: value)) ?? "\(value)"
+        valueLabel.text = text
+    }
+
+    private func presentSaveSuccess() {
+        let alert = UIAlertController(title: "완료", message: "필터 업로드가 완료되었습니다.", preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "확인", style: .default) { [weak self] _ in
+            self?.navigationController?.popViewController(animated: true)
+        })
+        present(alert, animated: true)
+    }
+
+    private func presentError(_ error: Error) {
+        let message: String
+        if let domainError = error as? DomainError {
+            switch domainError {
+            case .validation(let text):
+                message = text
+            case .unknown(let text):
+                message = text ?? "요청 처리 중 오류가 발생했습니다."
+            default:
+                message = "요청 처리 중 오류가 발생했습니다."
+            }
+        } else {
+            message = error.localizedDescription
+        }
+        let alert = UIAlertController(title: "오류", message: message, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "확인", style: .default))
+        present(alert, animated: true)
+    }
+
+    @objc private func sliderChanged(_ sender: UISlider) {
+        sliderValueChangedSubject.send(Double(sender.value))
+    }
+
+    @objc private func sliderEditingEnded(_ sender: UISlider) {
+        sliderEditingEndedSubject.send(Double(sender.value))
+    }
+
+    @objc private func undoTapped() {
+        undoTappedSubject.send(())
+    }
+
+    @objc private func redoTapped() {
+        redoTappedSubject.send(())
+    }
+
+    @objc private func compareTouchDown() {
+        imageView.image = originalImage ?? currentFilteredImage
+    }
+
+    @objc private func compareTouchUp() {
+        imageView.image = currentFilteredImage
+    }
+
+    @objc private func saveTapped() {
+        saveTappedSubject.send(())
+    }
+}
+
+extension FilterMakeEditViewController: UICollectionViewDataSource, UICollectionViewDelegate {
+    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+        FilterAdjustmentType.allCases.count
+    }
+
+    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: FilterAdjustmentCell.reuseID, for: indexPath) as? FilterAdjustmentCell else {
+            return UICollectionViewCell()
+        }
+        let adjustment = FilterAdjustmentType.allCases[indexPath.item]
+        cell.configure(
+            iconName: adjustment.iconName,
+            title: adjustment.title,
+            isSelected: adjustment == selectedAdjustment
+        )
+        return cell
+    }
+
+    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        let adjustment = FilterAdjustmentType.allCases[indexPath.item]
+        adjustmentSelectedSubject.send(adjustment)
+    }
+}
+
+private final class FilterAdjustmentCell: UICollectionViewCell {
+    static let reuseID = "FilterAdjustmentCell"
+
+    private let iconView = UIImageView()
+    private let titleLabel = UILabel()
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        contentView.addSubview(iconView)
+        contentView.addSubview(titleLabel)
+
+        iconView.contentMode = .scaleAspectFit
+        iconView.tintColor = .gray60
+
+        titleLabel.font = .pretendard(.medium, size: 9)
+        titleLabel.textColor = .gray60
+        titleLabel.textAlignment = .center
+
+        iconView.snp.makeConstraints { make in
+            make.top.equalToSuperview()
+            make.centerX.equalToSuperview()
+            make.width.height.equalTo(28)
+        }
+
+        titleLabel.snp.makeConstraints { make in
+            make.top.equalTo(iconView.snp.bottom).offset(6)
+            make.leading.trailing.equalToSuperview()
+        }
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) is not supported")
+    }
+
+    func configure(iconName: String, title: String, isSelected: Bool) {
+        iconView.image = UIImage(named: iconName)
+        titleLabel.text = title
+        titleLabel.textColor = isSelected ? .gray30 : .gray60
+        iconView.tintColor = isSelected ? .brightTurquoise : .gray60
     }
 }

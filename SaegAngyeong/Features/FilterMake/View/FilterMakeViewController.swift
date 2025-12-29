@@ -52,6 +52,8 @@ final class FilterMakeViewController: BaseViewController<FilterMakeViewModel> {
     private let saveButton = UIButton(type: .system)
     private var isSaveEnabled = false
     private var isSaving = false
+    private var selectedCategory: FilterMakeCategory?
+    private var currentAdjustments = FilterAdjustmentValues.defaultValues
 
     override init(viewModel: FilterMakeViewModel) {
         super.init(viewModel: viewModel)
@@ -355,6 +357,7 @@ final class FilterMakeViewController: BaseViewController<FilterMakeViewModel> {
         output.selectedCategory
             .sink { [weak self] category in
                 self?.applySelectedCategory(category)
+                self?.selectedCategory = category
             }
             .store(in: &cancellables)
 
@@ -516,7 +519,18 @@ final class FilterMakeViewController: BaseViewController<FilterMakeViewModel> {
     }
 
     @objc private func editTapped() {
-        let editVC = FilterMakeEditViewController()
+        let draft = FilterMakeDraft(
+            title: nameTextField.text ?? "",
+            category: selectedCategory,
+            description: descriptionTextView.text ?? "",
+            priceText: priceTextField.text ?? "",
+            image: photoImageView.image
+        )
+        let editVM = viewModel.makeEditViewModel(draft: draft, adjustments: currentAdjustments)
+        let editVC = FilterMakeEditViewController(viewModel: editVM)
+        editVC.onAdjustmentsUpdated = { [weak self] values in
+            self?.currentAdjustments = values
+        }
         navigationController?.pushViewController(editVC, animated: true)
     }
 

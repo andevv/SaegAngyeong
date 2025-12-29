@@ -133,8 +133,12 @@ final class FilterMakeViewModel: BaseViewModel, ViewModelType {
             error.send(DomainError.validation(message: "판매 가격을 입력해주세요."))
             return
         }
-        guard let image, let data = image.jpegData(compressionQuality: 0.9) else {
+        guard let image else {
             error.send(DomainError.validation(message: "대표 사진을 등록해주세요."))
+            return
+        }
+        guard let data = Self.makeUploadData(from: image) else {
+            error.send(DomainError.validation(message: "이미지 용량이 너무 큽니다. 2MB 이하로 줄여주세요."))
             return
         }
 
@@ -188,6 +192,42 @@ final class FilterMakeViewModel: BaseViewModel, ViewModelType {
         return path
     }
 
+    private static func makeUploadData(from image: UIImage, maxBytes: Int = 2 * 1024 * 1024) -> Data? {
+        let resized = resizeToScreenSizeIfNeeded(image)
+        if let data = resized.jpegData(compressionQuality: 0.9), data.count <= maxBytes {
+            return data
+        }
+
+        let qualities: [CGFloat] = [0.85, 0.75, 0.65, 0.55, 0.45]
+        for quality in qualities {
+            if let data = resized.jpegData(compressionQuality: quality), data.count <= maxBytes {
+                return data
+            }
+        }
+        return nil
+    }
+
+    private static func resizeToScreenSizeIfNeeded(_ image: UIImage) -> UIImage {
+        let maxDimension: CGFloat = 1080
+        let width = image.size.width
+        let height = image.size.height
+        let maxSide = max(width, height)
+        guard maxSide > maxDimension else { return image }
+        let scale = maxDimension / maxSide
+        let newSize = CGSize(width: width * scale, height: height * scale)
+        return resizedImage(image, to: newSize) ?? image
+    }
+
+    private static func resizedImage(_ image: UIImage, to size: CGSize) -> UIImage? {
+        guard size.width > 0, size.height > 0 else { return nil }
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = image.scale
+        let renderer = UIGraphicsImageRenderer(size: size, format: format)
+        return renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: size))
+        }
+    }
+
     private static let defaultFilterValues = FilterValues(
         brightness: 0,
         exposure: 0,
@@ -204,6 +244,19 @@ final class FilterMakeViewModel: BaseViewModel, ViewModelType {
         fade: 0,
         blackPoint: 0
     )
+}
+
+extension FilterMakeViewModel {
+    func makeEditViewModel(
+        draft: FilterMakeDraft,
+        adjustments: FilterAdjustmentValues
+    ) -> FilterMakeEditViewModel {
+        FilterMakeEditViewModel(
+            filterRepository: filterRepository,
+            draft: draft,
+            adjustments: adjustments
+        )
+    }
 }
 
 enum FilterMakeCategory: String, CaseIterable {
