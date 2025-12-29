@@ -109,6 +109,92 @@ struct FilterLikeResponseDTO: Decodable {
     }
 }
 
+struct FilterFileUploadResponseDTO: Decodable {
+    let files: [String]
+}
+
+struct FilterCreateRequestDTO: Encodable {
+    let category: String
+    let title: String
+    let price: Int
+    let description: String
+    let files: [String]
+    let photoMetadata: PhotoMetadataRequestDTO?
+    let filterValues: FilterValuesRequestDTO
+
+    enum CodingKeys: String, CodingKey {
+        case category
+        case title
+        case price
+        case description
+        case files
+        case photoMetadata = "photo_metadata"
+        case filterValues = "filter_values"
+    }
+}
+
+struct PhotoMetadataRequestDTO: Encodable {
+    let camera: String?
+    let lensInfo: String?
+    let focalLength: Double?
+    let aperture: Double?
+    let iso: Int?
+    let shutterSpeed: String?
+    let pixelWidth: Int?
+    let pixelHeight: Int?
+    let fileSize: Double?
+    let format: String?
+    let dateTimeOriginal: String?
+    let latitude: Double?
+    let longitude: Double?
+
+    enum CodingKeys: String, CodingKey {
+        case camera
+        case lensInfo = "lens_info"
+        case focalLength = "focal_length"
+        case aperture
+        case iso
+        case shutterSpeed = "shutter_speed"
+        case pixelWidth = "pixel_width"
+        case pixelHeight = "pixel_height"
+        case fileSize = "file_size"
+        case format
+        case dateTimeOriginal = "date_time_original"
+        case latitude
+        case longitude
+    }
+}
+
+struct FilterValuesRequestDTO: Encodable {
+    let brightness: Double
+    let exposure: Double
+    let contrast: Double
+    let saturation: Double
+    let sharpness: Double
+    let blur: Double
+    let vignette: Double
+    let noiseReduction: Double
+    let highlights: Double
+    let shadows: Double
+    let temperature: Double
+    let blackPoint: Double
+
+    enum CodingKeys: String, CodingKey {
+        case brightness
+        case exposure
+        case contrast
+        case saturation
+        case sharpness
+        case blur
+        case vignette
+        case noiseReduction = "noise_reduction"
+        case highlights
+        case shadows
+        case temperature
+        case blackPoint = "black_point"
+    }
+}
+
 // Filter Detail
 
 struct FilterDetailResponseDTO: Decodable {

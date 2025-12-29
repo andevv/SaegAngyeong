@@ -67,7 +67,7 @@ struct FilterDraft {
     let title: String
     let price: Int
     let description: String
-    let files: [URL]
+    let files: [String]
     let photoMetadata: PhotoMetadata?
     let filterValues: FilterValues
 }

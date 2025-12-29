@@ -17,11 +17,86 @@ final class FilterRepositoryImpl: FilterRepository {
     }
 
     func uploadFiles(_ files: [UploadFileData]) -> AnyPublisher<[URL], DomainError> {
-        Fail(error: DomainError.unknown(message: "Not implemented")).eraseToAnyPublisher()
+        let uploadFiles = files.map { UploadFile(data: $0.data, fileName: $0.fileName, mimeType: $0.mimeType) }
+        return network.request(FilterFileUploadResponseDTO.self, endpoint: FilterAPI.uploadFiles(files: uploadFiles))
+            .mapError { _ in DomainError.network }
+            .map { [weak self] dto in
+                guard let self else { return [] }
+                return dto.files.compactMap { self.buildURL(from: $0) }
+            }
+            .eraseToAnyPublisher()
     }
 
     func create(_ draft: FilterDraft) -> AnyPublisher<Filter, DomainError> {
-        Fail(error: DomainError.unknown(message: "Not implemented")).eraseToAnyPublisher()
+        let request = FilterCreateRequestDTO(
+            category: draft.category,
+            title: draft.title,
+            price: draft.price,
+            description: draft.description,
+            files: draft.files,
+            photoMetadata: draft.photoMetadata.map { meta in
+                PhotoMetadataRequestDTO(
+                    camera: meta.camera,
+                    lensInfo: meta.lensInfo,
+                    focalLength: meta.focalLength,
+                    aperture: meta.aperture,
+                    iso: meta.iso,
+                    shutterSpeed: meta.shutterSpeed,
+                    pixelWidth: meta.pixelWidth,
+                    pixelHeight: meta.pixelHeight,
+                    fileSize: meta.fileSize,
+                    format: meta.format,
+                    dateTimeOriginal: meta.takenAt.map { self.formatISODate($0) },
+                    latitude: meta.latitude,
+                    longitude: meta.longitude
+                )
+            },
+            filterValues: FilterValuesRequestDTO(
+                brightness: draft.filterValues.brightness ?? 0,
+                exposure: draft.filterValues.exposure ?? 0,
+                contrast: draft.filterValues.contrast ?? 0,
+                saturation: draft.filterValues.saturation ?? 0,
+                sharpness: draft.filterValues.sharpness ?? 0,
+                blur: draft.filterValues.blur ?? 0,
+                vignette: draft.filterValues.vignette ?? 0,
+                noiseReduction: draft.filterValues.noiseReduction ?? 0,
+                highlights: draft.filterValues.highlight ?? 0,
+                shadows: draft.filterValues.shadow ?? 0,
+                temperature: draft.filterValues.temperature ?? 0,
+                blackPoint: draft.filterValues.blackPoint ?? 0
+            )
+        )
+        return network.request(FilterDetailResponseDTO.self, endpoint: FilterAPI.create(body: request))
+            .mapError { _ in DomainError.network }
+            .map { [weak self] dto in
+                guard let self else {
+                    return Filter(
+                        id: dto.filterID,
+                        category: dto.category,
+                        title: dto.title,
+                        introduction: dto.description,
+                        description: dto.description,
+                        files: [],
+                        price: dto.price,
+                        filterValues: FilterValues(
+                            brightness: nil, exposure: nil, contrast: nil, saturation: nil,
+                            sharpness: nil, noiseReduction: nil, temperature: nil, highlight: nil, shadow: nil,
+                            vignette: nil, grain: nil, blur: nil, fade: nil, blackPoint: nil
+                        ),
+                        photoMetadata: nil,
+                        creator: UserSummary(id: dto.creator.userID, nick: dto.creator.nick, profileImageURL: nil, name: dto.creator.name, introduction: dto.creator.introduction, hashTags: dto.creator.hashTags ?? []),
+                        createdAt: Date(),
+                        updatedAt: Date(),
+                        comments: [],
+                        isLiked: dto.isLiked,
+                        likeCount: dto.likeCount,
+                        buyerCount: dto.buyerCount,
+                        isDownloaded: dto.isDownloaded
+                    )
+                }
+                return self.mapFilter(from: dto)
+            }
+            .eraseToAnyPublisher()
     }
 
     func list(next: String?, limit: Int?, category: String?, orderBy: String?) -> AnyPublisher<Paginated<Filter>, DomainError> {
@@ -100,71 +175,7 @@ final class FilterRepositoryImpl: FilterRepository {
                         isDownloaded: dto.isDownloaded
                     )
                 }
-                let urls = dto.files.compactMap { self.buildURL(from: $0) }
-                let creator = UserSummary(
-                    id: dto.creator.userID,
-                    nick: dto.creator.nick,
-                    profileImageURL: dto.creator.profileImage.flatMap { self.buildURL(from: $0) },
-                    name: dto.creator.name,
-                    introduction: dto.creator.introduction,
-                    hashTags: dto.creator.hashTags ?? []
-                )
-                let created = self.parseISODate(dto.createdAt)
-                let updated = self.parseISODate(dto.updatedAt)
-                let values = FilterValues(
-                    brightness: dto.filterValues?.brightness,
-                    exposure: dto.filterValues?.exposure,
-                    contrast: dto.filterValues?.contrast,
-                    saturation: dto.filterValues?.saturation,
-                    sharpness: dto.filterValues?.sharpness,
-                    noiseReduction: dto.filterValues?.noiseReduction,
-                    temperature: dto.filterValues?.temperature,
-                    highlight: dto.filterValues?.highlights,
-                    shadow: dto.filterValues?.shadows,
-                    vignette: dto.filterValues?.vignette,
-                    grain: nil,
-                    blur: dto.filterValues?.blur,
-                    fade: nil,
-                    blackPoint: dto.filterValues?.blackPoint
-                )
-                let photo = dto.photoMetadata.map { meta in
-                    PhotoMetadata(
-                        camera: meta.camera,
-                        lensInfo: meta.lensInfo,
-                        focalLength: meta.focalLength,
-                        aperture: meta.aperture,
-                        shutterSpeed: meta.shutterSpeed,
-                        iso: meta.iso,
-                        pixelWidth: meta.pixelWidth,
-                        pixelHeight: meta.pixelHeight,
-                        fileSize: meta.fileSize,
-                        format: meta.format,
-                        whiteBalance: nil,
-                        location: nil,
-                        takenAt: meta.dateTimeOriginal.map { self.parseISODate($0) },
-                        latitude: meta.latitude,
-                        longitude: meta.longitude
-                    )
-                }
-                return Filter(
-                    id: dto.filterID,
-                    category: dto.category,
-                    title: dto.title,
-                    introduction: dto.description,
-                    description: dto.description,
-                    files: urls,
-                    price: dto.price,
-                    filterValues: values,
-                    photoMetadata: photo,
-                    creator: creator,
-                    createdAt: created,
-                    updatedAt: updated,
-                    comments: [],
-                    isLiked: dto.isLiked,
-                    likeCount: dto.likeCount,
-                    buyerCount: dto.buyerCount,
-                    isDownloaded: dto.isDownloaded
-                )
+                return self.mapFilter(from: dto)
             }
             .eraseToAnyPublisher()
     }
@@ -292,6 +303,74 @@ final class FilterRepositoryImpl: FilterRepository {
 }
 
 private extension FilterRepositoryImpl {
+    func mapFilter(from dto: FilterDetailResponseDTO) -> Filter {
+        let urls = dto.files.compactMap { self.buildURL(from: $0) }
+        let creator = UserSummary(
+            id: dto.creator.userID,
+            nick: dto.creator.nick,
+            profileImageURL: dto.creator.profileImage.flatMap { self.buildURL(from: $0) },
+            name: dto.creator.name,
+            introduction: dto.creator.introduction,
+            hashTags: dto.creator.hashTags ?? []
+        )
+        let created = self.parseISODate(dto.createdAt)
+        let updated = self.parseISODate(dto.updatedAt)
+        let values = FilterValues(
+            brightness: dto.filterValues?.brightness,
+            exposure: dto.filterValues?.exposure,
+            contrast: dto.filterValues?.contrast,
+            saturation: dto.filterValues?.saturation,
+            sharpness: dto.filterValues?.sharpness,
+            noiseReduction: dto.filterValues?.noiseReduction,
+            temperature: dto.filterValues?.temperature,
+            highlight: dto.filterValues?.highlights,
+            shadow: dto.filterValues?.shadows,
+            vignette: dto.filterValues?.vignette,
+            grain: nil,
+            blur: dto.filterValues?.blur,
+            fade: nil,
+            blackPoint: dto.filterValues?.blackPoint
+        )
+        let photo = dto.photoMetadata.map { meta in
+            PhotoMetadata(
+                camera: meta.camera,
+                lensInfo: meta.lensInfo,
+                focalLength: meta.focalLength,
+                aperture: meta.aperture,
+                shutterSpeed: meta.shutterSpeed,
+                iso: meta.iso,
+                pixelWidth: meta.pixelWidth,
+                pixelHeight: meta.pixelHeight,
+                fileSize: meta.fileSize,
+                format: meta.format,
+                whiteBalance: nil,
+                location: nil,
+                takenAt: meta.dateTimeOriginal.map { self.parseISODate($0) },
+                latitude: meta.latitude,
+                longitude: meta.longitude
+            )
+        }
+        return Filter(
+            id: dto.filterID,
+            category: dto.category,
+            title: dto.title,
+            introduction: dto.description,
+            description: dto.description,
+            files: urls,
+            price: dto.price,
+            filterValues: values,
+            photoMetadata: photo,
+            creator: creator,
+            createdAt: created,
+            updatedAt: updated,
+            comments: [],
+            isLiked: dto.isLiked,
+            likeCount: dto.likeCount,
+            buyerCount: dto.buyerCount,
+            isDownloaded: dto.isDownloaded
+        )
+    }
+
     func buildURL(from path: String) -> URL? {
         guard let base = URL(string: AppConfig.baseURL) else { return nil }
         var normalized = path
@@ -307,5 +386,10 @@ private extension FilterRepositoryImpl {
     func parseISODate(_ value: String) -> Date {
         let formatter = ISO8601DateFormatter()
         return formatter.date(from: value) ?? Date()
+    }
+
+    func formatISODate(_ value: Date) -> String {
+        let formatter = ISO8601DateFormatter()
+        return formatter.string(from: value)
     }
 }
