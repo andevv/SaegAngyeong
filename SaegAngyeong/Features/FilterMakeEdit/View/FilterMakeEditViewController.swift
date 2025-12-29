@@ -299,6 +299,9 @@ final class FilterMakeEditViewController: BaseViewController<FilterMakeEditViewM
     }
 
     @objc private func saveTapped() {
+        let currentValue = Double(slider.value)
+        sliderValueChangedSubject.send(currentValue)
+        sliderEditingEndedSubject.send(currentValue)
         saveTappedSubject.send(())
     }
 }
