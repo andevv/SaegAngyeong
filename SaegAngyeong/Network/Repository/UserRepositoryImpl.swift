@@ -25,7 +25,35 @@ final class UserRepositoryImpl: UserRepository {
     }
 
     func fetchMyProfile() -> AnyPublisher<UserProfile, DomainError> {
-        Fail(error: DomainError.unknown(message: "Not implemented")).eraseToAnyPublisher()
+        network.request(UserProfileResponseDTO.self, endpoint: UserAPI.myProfile)
+            .mapError { _ in DomainError.network }
+            .map { [weak self] dto in
+                guard let self else {
+                    return UserProfile(
+                        id: dto.userID,
+                        email: dto.email,
+                        nick: dto.nick,
+                        name: dto.name,
+                        introduction: dto.introduction,
+                        description: nil,
+                        phoneNumber: dto.phoneNum,
+                        profileImageURL: nil,
+                        hashTags: dto.hashTags ?? []
+                    )
+                }
+                return UserProfile(
+                    id: dto.userID,
+                    email: dto.email,
+                    nick: dto.nick,
+                    name: dto.name,
+                    introduction: dto.introduction,
+                    description: nil,
+                    phoneNumber: dto.phoneNum,
+                    profileImageURL: dto.profileImage.flatMap { self.buildURL(from: $0) },
+                    hashTags: dto.hashTags ?? []
+                )
+            }
+            .eraseToAnyPublisher()
     }
 
     func updateMyProfile(_ profile: UserProfileUpdate) -> AnyPublisher<UserProfile, DomainError> {
@@ -112,5 +140,19 @@ final class UserRepositoryImpl: UserRepository {
                 return TodayAuthor(author: authorProfile, filters: filters)
             }
             .eraseToAnyPublisher()
+    }
+}
+
+private extension UserRepositoryImpl {
+    func buildURL(from path: String) -> URL? {
+        guard let base = URL(string: AppConfig.baseURL) else { return nil }
+        var normalized = path
+        if normalized.hasPrefix("/") {
+            normalized.removeFirst()
+        }
+        if !normalized.hasPrefix("v1/") {
+            normalized = "v1/" + normalized
+        }
+        return base.appendingPathComponent(normalized)
     }
 }

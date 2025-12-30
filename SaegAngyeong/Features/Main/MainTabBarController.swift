@@ -48,15 +48,18 @@ final class MainTabBarController: UITabBarController {
         let filterMakeVC = FilterMakeViewController(viewModel: filterMakeVM)
         let filterMakeNav = BaseNavigationController(rootViewController: filterMakeVC)
 
+        let myPageVM = MyPageViewModel(userRepository: dependency.userRepository)
+        let myPageVC = MyPageViewController(viewModel: myPageVM)
+        let myPageNav = BaseNavigationController(rootViewController: myPageVC)
+
         let dummy3 = DummyViewController(titleText: "", named: "Search_Empty", tag: 3, color: .systemGray4)
-        let dummy4 = DummyViewController(titleText: "", named: "Profile_Empty", tag: 4, color: .systemGray3)
 
         viewControllers = [
             homeVC,
             feedNav,
             filterMakeNav,
             dummy3,
-            dummy4
+            myPageNav
         ]
         selectedIndex = 0
     }
