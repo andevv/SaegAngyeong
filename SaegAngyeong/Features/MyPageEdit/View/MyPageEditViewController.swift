@@ -13,6 +13,7 @@ import Kingfisher
 final class MyPageEditViewController: BaseViewController<MyPageEditViewModel> {
     private let scrollView = UIScrollView()
     private let contentView = UIView()
+    private let refreshControl = UIRefreshControl()
 
     private let profileImageView = UIImageView()
     private let changeImageButton = UIButton(type: .system)
@@ -35,7 +36,11 @@ final class MyPageEditViewController: BaseViewController<MyPageEditViewModel> {
     private let hashTagField = UITextField()
 
     private let viewDidLoadSubject = PassthroughSubject<Void, Never>()
+    private let refreshSubject = PassthroughSubject<Void, Never>()
     private let saveTappedSubject = PassthroughSubject<MyPageEditDraft, Never>()
+    private var profileImageURL: URL?
+    private var shouldRefreshProfile = false
+    private var shouldForceRefreshImage = false
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -55,6 +60,10 @@ final class MyPageEditViewController: BaseViewController<MyPageEditViewModel> {
         navigationController?.navigationBar.compactAppearance = appearance
         navigationController?.navigationBar.tintColor = .gray60
         navigationController?.navigationBar.barStyle = .black
+        if shouldRefreshProfile {
+            refreshSubject.send(())
+            shouldRefreshProfile = false
+        }
     }
 
     override var preferredStatusBarStyle: UIStatusBarStyle {
@@ -78,6 +87,9 @@ final class MyPageEditViewController: BaseViewController<MyPageEditViewModel> {
         scrollView.showsVerticalScrollIndicator = false
         view.addSubview(scrollView)
         scrollView.addSubview(contentView)
+        refreshControl.tintColor = .gray60
+        refreshControl.addTarget(self, action: #selector(refreshTriggered), for: .valueChanged)
+        scrollView.refreshControl = refreshControl
         let tapGesture = UITapGestureRecognizer(target: self, action: #selector(dismissKeyboard))
         tapGesture.cancelsTouchesInView = false
         scrollView.addGestureRecognizer(tapGesture)
@@ -88,8 +100,9 @@ final class MyPageEditViewController: BaseViewController<MyPageEditViewModel> {
         profileImageView.layer.borderWidth = 1
         profileImageView.layer.borderColor = UIColor.gray90.withAlphaComponent(0.3).cgColor
         profileImageView.backgroundColor = .blackTurquoise
+        profileImageView.image = UIImage(named: "Profile_Empty")
 
-        changeImageButton.setTitle("이미지 변경", for: .normal)
+        changeImageButton.setTitle("프로필 이미지 변경", for: .normal)
         changeImageButton.titleLabel?.font = .pretendard(.medium, size: 12)
         changeImageButton.setTitleColor(.gray60, for: .normal)
         changeImageButton.layer.borderWidth = 1
@@ -241,6 +254,7 @@ final class MyPageEditViewController: BaseViewController<MyPageEditViewModel> {
     override func bindViewModel() {
         let input = MyPageEditViewModel.Input(
             viewDidLoad: viewDidLoadSubject.eraseToAnyPublisher(),
+            refresh: refreshSubject.eraseToAnyPublisher(),
             saveTapped: saveTappedSubject.eraseToAnyPublisher()
         )
         let output = viewModel.transform(input: input)
@@ -248,6 +262,7 @@ final class MyPageEditViewController: BaseViewController<MyPageEditViewModel> {
         output.profile
             .sink { [weak self] profile in
                 self?.applyProfile(profile)
+                self?.refreshControl.endRefreshing()
             }
             .store(in: &cancellables)
 
@@ -260,6 +275,7 @@ final class MyPageEditViewController: BaseViewController<MyPageEditViewModel> {
         viewModel.error
             .receive(on: DispatchQueue.main)
             .sink { [weak self] error in
+                self?.refreshControl.endRefreshing()
                 self?.presentError(error)
             }
             .store(in: &cancellables)
@@ -288,11 +304,27 @@ final class MyPageEditViewController: BaseViewController<MyPageEditViewModel> {
         introPlaceholderLabel.isHidden = !(introTextView.text?.isEmpty ?? true)
         phoneField.text = profile.phoneNumber ?? ""
         hashTagField.text = profile.hashTags.joined(separator: ", ")
-
+        let fallback = profileImageView.image ?? UIImage(named: "Profile_Empty")
+        let retryStrategy = DelayRetryStrategy(maxRetryCount: 3, retryInterval: .seconds(0.5))
         if let url = profile.profileImageURL {
-            profileImageView.kf.setImage(with: url)
+            profileImageURL = url
+            let displayURL = shouldForceRefreshImage ? cacheBustedURL(from: url) : url
+            if shouldForceRefreshImage {
+                profileImageView.kf.setImage(
+                    with: displayURL,
+                    placeholder: fallback,
+                    options: [.forceRefresh, .cacheOriginalImage, .keepCurrentImageWhileLoading, .retryStrategy(retryStrategy)]
+                )
+                shouldForceRefreshImage = false
+            } else {
+                profileImageView.kf.setImage(
+                    with: displayURL,
+                    placeholder: fallback,
+                    options: [.keepCurrentImageWhileLoading, .retryStrategy(retryStrategy)]
+                )
+            }
         } else {
-            profileImageView.image = UIImage(named: "Profile_Empty")
+            profileImageView.image = fallback
         }
     }
 
@@ -329,18 +361,38 @@ final class MyPageEditViewController: BaseViewController<MyPageEditViewModel> {
             name: nameField.text ?? "",
             introduction: introTextView.text ?? "",
             phone: phoneField.text ?? "",
-            hashTagsText: hashTagField.text ?? ""
+            hashTagsText: hashTagField.text ?? "",
+            profileImageURL: profileImageURL
         )
         saveTappedSubject.send(draft)
     }
 
     @objc private func changeImageTapped() {
-        let uploadVC = MyPageImageUploadViewController()
+        let uploadVC = MyPageImageUploadViewController(viewModel: viewModel.makeImageUploadViewModel())
+        uploadVC.onUploadCompleted = { [weak self] url in
+            self?.profileImageURL = url
+            self?.profileImageView.kf.setImage(with: url)
+            self?.shouldRefreshProfile = true
+            self?.shouldForceRefreshImage = true
+        }
         navigationController?.pushViewController(uploadVC, animated: true)
     }
 
     @objc private func dismissKeyboard() {
         view.endEditing(true)
+    }
+
+    @objc private func refreshTriggered() {
+        shouldForceRefreshImage = true
+        refreshSubject.send(())
+    }
+
+    private func cacheBustedURL(from url: URL) -> URL {
+        guard var components = URLComponents(url: url, resolvingAgainstBaseURL: true) else { return url }
+        var items = components.queryItems ?? []
+        items.append(URLQueryItem(name: "t", value: String(Int(Date().timeIntervalSince1970))))
+        components.queryItems = items
+        return components.url ?? url
     }
 }
 

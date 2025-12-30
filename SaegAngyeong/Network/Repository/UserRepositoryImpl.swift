@@ -98,7 +98,14 @@ final class UserRepositoryImpl: UserRepository {
     }
 
     func uploadProfileImage(data: Data, fileName: String, mimeType: String) -> AnyPublisher<URL, DomainError> {
-        Fail(error: DomainError.unknown(message: "Not implemented")).eraseToAnyPublisher()
+        let file = UploadFile(data: data, fileName: fileName, mimeType: mimeType, fieldName: "profile")
+        return network.request(UserProfileImageUploadResponseDTO.self, endpoint: UserAPI.uploadProfileImage(files: [file]))
+            .mapError { _ in DomainError.network }
+            .compactMap { [weak self] dto in
+                guard let self else { return nil }
+                return self.buildURL(from: dto.profileImage)
+            }
+            .eraseToAnyPublisher()
     }
 
     func search(nick: String?) -> AnyPublisher<[UserSummary], DomainError> {

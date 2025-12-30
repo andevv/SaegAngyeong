@@ -46,3 +46,11 @@ struct UserProfileUpdateRequestDTO: Encodable {
         case hashTags
     }
 }
+
+struct UserProfileImageUploadResponseDTO: Decodable {
+    let profileImage: String
+
+    enum CodingKeys: String, CodingKey {
+        case profileImage
+    }
+}

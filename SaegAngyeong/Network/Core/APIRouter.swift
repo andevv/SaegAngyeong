@@ -16,6 +16,14 @@ struct UploadFile {
     let data: Data
     let fileName: String
     let mimeType: String
+    let fieldName: String
+
+    init(data: Data, fileName: String, mimeType: String, fieldName: String = "files") {
+        self.data = data
+        self.fileName = fileName
+        self.mimeType = mimeType
+        self.fieldName = fieldName
+    }
 }
 
 /// 실제로 어떤 형태의 요청을 보낼지 정의
@@ -166,7 +174,7 @@ final class NetworkProvider: NetworkProviding {
                 files.forEach { file in
                     formData.append(
                         file.data,
-                        withName: "files",
+                        withName: file.fieldName,
                         fileName: file.fileName,
                         mimeType: file.mimeType
                     )

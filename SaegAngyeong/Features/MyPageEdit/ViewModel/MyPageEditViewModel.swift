@@ -14,6 +14,7 @@ struct MyPageEditDraft {
     let introduction: String
     let phone: String
     let hashTagsText: String
+    let profileImageURL: URL?
 }
 
 final class MyPageEditViewModel: BaseViewModel, ViewModelType {
@@ -28,6 +29,7 @@ final class MyPageEditViewModel: BaseViewModel, ViewModelType {
 
     struct Input {
         let viewDidLoad: AnyPublisher<Void, Never>
+        let refresh: AnyPublisher<Void, Never>
         let saveTapped: AnyPublisher<MyPageEditDraft, Never>
     }
 
@@ -40,7 +42,10 @@ final class MyPageEditViewModel: BaseViewModel, ViewModelType {
         let profileSubject = CurrentValueSubject<UserProfile?, Never>(initialProfile)
         let saveCompletedSubject = PassthroughSubject<UserProfile, Never>()
 
-        input.viewDidLoad
+        let delayedRefresh = input.refresh
+            .delay(for: .milliseconds(1000), scheduler: DispatchQueue.main)
+
+        Publishers.Merge(input.viewDidLoad, delayedRefresh)
             .flatMap { [weak self] _ -> AnyPublisher<UserProfile, DomainError> in
                 guard let self else { return Empty().eraseToAnyPublisher() }
                 self.isLoading.send(true)
@@ -91,7 +96,7 @@ final class MyPageEditViewModel: BaseViewModel, ViewModelType {
             introduction: intro.isEmpty ? nil : intro,
             description: nil,
             phoneNumber: phone.isEmpty ? nil : phone,
-            profileImageURL: nil,
+            profileImageURL: draft.profileImageURL,
             hashTags: hashTags
         )
 
@@ -122,5 +127,11 @@ final class MyPageEditViewModel: BaseViewModel, ViewModelType {
     private func isValidNick(_ nick: String) -> Bool {
         let forbidden = CharacterSet(charactersIn: ".,?*+-@^${}()|[]\\")
         return nick.rangeOfCharacter(from: forbidden) == nil
+    }
+}
+
+extension MyPageEditViewModel {
+    func makeImageUploadViewModel() -> MyPageImageUploadViewModel {
+        MyPageImageUploadViewModel(userRepository: userRepository)
     }
 }
