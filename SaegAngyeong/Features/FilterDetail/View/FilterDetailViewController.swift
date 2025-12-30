@@ -428,7 +428,9 @@ private final class MetadataCardView: UIView {
     private let titleLabel = UILabel()
     private let formatLabel = UILabel()
     private let mapView = MKMapView()
+    private let noLocationView = UIView()
     private let noLocationImageView = UIImageView()
+    private let noLocationLabel = UILabel()
     private let infoStack = UIStackView()
     private let line1Label = UILabel()
     private let line2Label = UILabel()
@@ -470,10 +472,23 @@ private final class MetadataCardView: UIView {
         mapView.isPitchEnabled = false
         addSubview(mapView)
 
+        noLocationView.backgroundColor = .blackTurquoise
+        noLocationView.layer.cornerRadius = 12
+        noLocationView.layer.borderWidth = 2
+        noLocationView.layer.borderColor = UIColor.deepTurquoise.cgColor
+        noLocationView.isHidden = true
+        addSubview(noLocationView)
+
         noLocationImageView.image = UIImage(named: "Icon_NoLocation")
+        noLocationImageView.tintColor = .deepTurquoise
         noLocationImageView.contentMode = .scaleAspectFit
-        noLocationImageView.isHidden = true
-        mapView.addSubview(noLocationImageView)
+
+        noLocationLabel.text = "No Location"
+        noLocationLabel.font = .pretendard(.medium, size: 10)
+        noLocationLabel.textColor = .deepTurquoise
+
+        noLocationView.addSubview(noLocationImageView)
+        noLocationView.addSubview(noLocationLabel)
 
         infoStack.axis = .vertical
         infoStack.spacing = 6
@@ -506,9 +521,19 @@ private final class MetadataCardView: UIView {
             make.bottom.equalToSuperview().inset(12)
         }
 
+        noLocationView.snp.makeConstraints { make in
+            make.edges.equalTo(mapView)
+        }
+
         noLocationImageView.snp.makeConstraints { make in
-            make.center.equalToSuperview()
-            make.width.height.equalTo(32)
+            make.top.equalToSuperview().offset(12)
+            make.centerX.equalToSuperview()
+            make.width.height.equalTo(26)
+        }
+
+        noLocationLabel.snp.makeConstraints { make in
+            make.top.equalTo(noLocationImageView.snp.bottom).offset(6)
+            make.centerX.equalToSuperview()
         }
 
         infoStack.snp.makeConstraints { make in
@@ -536,12 +561,11 @@ private final class MetadataCardView: UIView {
             mapView.setRegion(region, animated: false)
             mapView.removeAnnotations(mapView.annotations)
             mapView.isHidden = false
-            noLocationImageView.isHidden = true
-        }
-        if latitude == nil || longitude == nil {
-            mapView.isHidden = false
-            mapView.setRegion(MKCoordinateRegion(), animated: false)
-            noLocationImageView.isHidden = false
+            noLocationView.isHidden = true
+            line3Label.isHidden = line3.isEmpty
+        } else {
+            mapView.isHidden = true
+            noLocationView.isHidden = false
             line3Label.isHidden = true
         }
     }
