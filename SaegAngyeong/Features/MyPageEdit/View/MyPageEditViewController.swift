@@ -14,6 +14,7 @@ final class MyPageEditViewController: BaseViewController<MyPageEditViewModel> {
     private let scrollView = UIScrollView()
     private let contentView = UIView()
     private let refreshControl = UIRefreshControl()
+    private lazy var keyboardObserver = KeyboardInsetObserver(scrollView: scrollView, containerView: view)
 
     private let profileImageView = UIImageView()
     private let changeImageButton = UIButton(type: .system)
@@ -50,6 +51,7 @@ final class MyPageEditViewController: BaseViewController<MyPageEditViewModel> {
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        keyboardObserver.start()
         let appearance = UINavigationBarAppearance()
         appearance.configureWithTransparentBackground()
         appearance.titleTextAttributes = [
@@ -64,6 +66,11 @@ final class MyPageEditViewController: BaseViewController<MyPageEditViewModel> {
             refreshSubject.send(())
             shouldRefreshProfile = false
         }
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        keyboardObserver.stop()
     }
 
     override var preferredStatusBarStyle: UIStatusBarStyle {

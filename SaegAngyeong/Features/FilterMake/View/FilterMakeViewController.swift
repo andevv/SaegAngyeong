@@ -13,6 +13,7 @@ import PhotosUI
 final class FilterMakeViewController: BaseViewController<FilterMakeViewModel> {
     private let scrollView = UIScrollView()
     private let contentView = UIView()
+    private lazy var keyboardObserver = KeyboardInsetObserver(scrollView: scrollView, containerView: view)
 
     private let nameLabel = UILabel()
     private let nameFieldContainer = UIView()
@@ -77,6 +78,7 @@ final class FilterMakeViewController: BaseViewController<FilterMakeViewModel> {
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        keyboardObserver.start()
         let appearance = UINavigationBarAppearance()
         appearance.configureWithTransparentBackground()
         appearance.titleTextAttributes = [
@@ -88,6 +90,11 @@ final class FilterMakeViewController: BaseViewController<FilterMakeViewModel> {
         navigationController?.navigationBar.tintColor = .gray60
         navigationController?.navigationBar.barStyle = .black
         setNeedsStatusBarAppearanceUpdate()
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        keyboardObserver.stop()
     }
 
     override var preferredStatusBarStyle: UIStatusBarStyle {
@@ -541,6 +548,7 @@ final class FilterMakeViewController: BaseViewController<FilterMakeViewModel> {
     @objc private func dismissKeyboard() {
         view.endEditing(true)
     }
+
 }
 
 extension FilterMakeViewController: PHPickerViewControllerDelegate {
