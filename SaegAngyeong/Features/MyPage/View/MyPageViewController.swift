@@ -22,7 +22,6 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
     private let hashTagStack = UIStackView()
 
     private let editProfileButton = UIButton(type: .system)
-    private let uploadImageButton = UIButton(type: .system)
 
     private let viewDidLoadSubject = PassthroughSubject<Void, Never>()
     private let refreshSubject = PassthroughSubject<Void, Never>()
@@ -101,6 +100,9 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
         hashTagStack.axis = .horizontal
         hashTagStack.spacing = 8
         hashTagStack.alignment = .leading
+        hashTagStack.distribution = .fill
+        hashTagStack.setContentHuggingPriority(.required, for: .horizontal)
+        hashTagStack.setContentCompressionResistancePriority(.required, for: .horizontal)
 
         editProfileButton.setTitle("프로필 수정", for: .normal)
         editProfileButton.titleLabel?.font = .pretendard(.medium, size: 12)
@@ -109,14 +111,6 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
         editProfileButton.layer.cornerRadius = 12
         editProfileButton.addTarget(self, action: #selector(editProfileTapped), for: .touchUpInside)
 
-        uploadImageButton.setTitle("프로필 이미지 변경", for: .normal)
-        uploadImageButton.titleLabel?.font = .pretendard(.medium, size: 12)
-        uploadImageButton.setTitleColor(.gray60, for: .normal)
-        uploadImageButton.layer.cornerRadius = 12
-        uploadImageButton.layer.borderWidth = 1
-        uploadImageButton.layer.borderColor = UIColor.gray90.withAlphaComponent(0.4).cgColor
-        uploadImageButton.addTarget(self, action: #selector(uploadImageTapped), for: .touchUpInside)
-
         [
             profileImageView,
             nameLabel,
@@ -124,7 +118,6 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
             introLabel,
             hashTagStack,
             editProfileButton,
-            uploadImageButton,
             infoStack
         ].forEach { contentView.addSubview($0) }
     }
@@ -163,7 +156,8 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
 
         hashTagStack.snp.makeConstraints { make in
             make.top.equalTo(introLabel.snp.bottom).offset(12)
-            make.leading.trailing.equalToSuperview().inset(20)
+            make.leading.equalToSuperview().inset(20)
+            make.trailing.lessThanOrEqualToSuperview().inset(20)
         }
 
         editProfileButton.snp.makeConstraints { make in
@@ -173,14 +167,8 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
             make.height.equalTo(44)
         }
 
-        uploadImageButton.snp.makeConstraints { make in
-            make.top.equalTo(editProfileButton.snp.bottom).offset(10)
-            make.leading.trailing.equalTo(editProfileButton)
-            make.height.equalTo(44)
-        }
-
         infoStack.snp.makeConstraints { make in
-            make.top.equalTo(uploadImageButton.snp.bottom).offset(20)
+            make.top.equalTo(editProfileButton.snp.bottom).offset(20)
             make.leading.trailing.equalToSuperview().inset(20)
             make.bottom.equalToSuperview().offset(-24)
         }
@@ -224,7 +212,10 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
         if profile.hashTags.isEmpty {
             hashTagStack.addArrangedSubview(makeHashTagLabel(text: "#태그없음"))
         } else {
-            profile.hashTags.forEach { hashTagStack.addArrangedSubview(makeHashTagLabel(text: $0)) }
+            profile.hashTags.forEach { hashTag in
+                let display = hashTag.hasPrefix("#") ? hashTag : "#\(hashTag)"
+                hashTagStack.addArrangedSubview(makeHashTagLabel(text: display))
+            }
         }
 
         if let url = profile.profileImageURL {
@@ -276,6 +267,8 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
         label.clipsToBounds = true
         label.layer.borderWidth = 1
         label.layer.borderColor = UIColor.gray90.withAlphaComponent(0.25).cgColor
+        label.setContentHuggingPriority(.required, for: .horizontal)
+        label.setContentCompressionResistancePriority(.required, for: .horizontal)
         return label
     }
 
@@ -290,8 +283,4 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
         navigationController?.pushViewController(editVC, animated: true)
     }
 
-    @objc private func uploadImageTapped() {
-        let uploadVC = MyPageImageUploadViewController()
-        navigationController?.pushViewController(uploadVC, animated: true)
-    }
 }
