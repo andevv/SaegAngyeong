@@ -57,7 +57,44 @@ final class UserRepositoryImpl: UserRepository {
     }
 
     func updateMyProfile(_ profile: UserProfileUpdate) -> AnyPublisher<UserProfile, DomainError> {
-        Fail(error: DomainError.unknown(message: "Not implemented")).eraseToAnyPublisher()
+        let request = UserProfileUpdateRequestDTO(
+            nick: profile.nick,
+            name: profile.name,
+            introduction: profile.introduction,
+            phoneNum: profile.phoneNumber,
+            profileImage: profile.profileImageURL.flatMap { normalizeProfilePath(from: $0) },
+            hashTags: profile.hashTags
+        )
+
+        return network.request(UserProfileResponseDTO.self, endpoint: UserAPI.updateMyProfile(body: request))
+            .mapError { _ in DomainError.network }
+            .map { [weak self] dto in
+                guard let self else {
+                    return UserProfile(
+                        id: dto.userID,
+                        email: dto.email,
+                        nick: dto.nick,
+                        name: dto.name,
+                        introduction: dto.introduction,
+                        description: nil,
+                        phoneNumber: dto.phoneNum,
+                        profileImageURL: nil,
+                        hashTags: dto.hashTags ?? []
+                    )
+                }
+                return UserProfile(
+                    id: dto.userID,
+                    email: dto.email,
+                    nick: dto.nick,
+                    name: dto.name,
+                    introduction: dto.introduction,
+                    description: nil,
+                    phoneNumber: dto.phoneNum,
+                    profileImageURL: dto.profileImage.flatMap { self.buildURL(from: $0) },
+                    hashTags: dto.hashTags ?? []
+                )
+            }
+            .eraseToAnyPublisher()
     }
 
     func uploadProfileImage(data: Data, fileName: String, mimeType: String) -> AnyPublisher<URL, DomainError> {
@@ -154,5 +191,14 @@ private extension UserRepositoryImpl {
             normalized = "v1/" + normalized
         }
         return base.appendingPathComponent(normalized)
+    }
+
+    func normalizeProfilePath(from url: URL) -> String {
+        let path = url.path
+        if path.hasPrefix("/v1/") {
+            let trimmed = String(path.dropFirst(3))
+            return trimmed.hasPrefix("/") ? trimmed : "/" + trimmed
+        }
+        return path
     }
 }

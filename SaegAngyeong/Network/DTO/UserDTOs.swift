@@ -28,3 +28,21 @@ struct UserProfileResponseDTO: Decodable {
         case hashTags
     }
 }
+
+struct UserProfileUpdateRequestDTO: Encodable {
+    let nick: String?
+    let name: String?
+    let introduction: String?
+    let phoneNum: String?
+    let profileImage: String?
+    let hashTags: [String]?
+
+    enum CodingKeys: String, CodingKey {
+        case nick
+        case name
+        case introduction
+        case phoneNum
+        case profileImage
+        case hashTags
+    }
+}

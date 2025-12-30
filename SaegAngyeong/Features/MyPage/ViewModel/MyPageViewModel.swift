@@ -48,3 +48,9 @@ final class MyPageViewModel: BaseViewModel, ViewModelType {
         return Output(profile: profileSubject.eraseToAnyPublisher())
     }
 }
+
+extension MyPageViewModel {
+    func makeEditViewModel(initialProfile: UserProfile?) -> MyPageEditViewModel {
+        MyPageEditViewModel(userRepository: userRepository, initialProfile: initialProfile)
+    }
+}

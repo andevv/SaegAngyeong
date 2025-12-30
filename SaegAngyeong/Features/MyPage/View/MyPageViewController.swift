@@ -26,6 +26,7 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
 
     private let viewDidLoadSubject = PassthroughSubject<Void, Never>()
     private let refreshSubject = PassthroughSubject<Void, Never>()
+    private var currentProfile: UserProfile?
 
     override init(viewModel: MyPageViewModel) {
         super.init(viewModel: viewModel)
@@ -208,6 +209,7 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
 
     private func applyProfile(_ profile: UserProfile?) {
         guard let profile else { return }
+        currentProfile = profile
         nameLabel.text = profile.name ?? profile.nick
         nickLabel.text = profile.nick
         introLabel.text = profile.introduction?.isEmpty == false ? profile.introduction : "소개가 아직 없습니다."
@@ -284,7 +286,7 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
     }
 
     @objc private func editProfileTapped() {
-        let editVC = MyPageEditViewController()
+        let editVC = MyPageEditViewController(viewModel: viewModel.makeEditViewModel(initialProfile: currentProfile))
         navigationController?.pushViewController(editVC, animated: true)
     }
 
