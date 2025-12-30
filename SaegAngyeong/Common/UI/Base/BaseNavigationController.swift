@@ -11,4 +11,9 @@ final class BaseNavigationController: UINavigationController {
     override var childForStatusBarStyle: UIViewController? {
         topViewController
     }
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        view.backgroundColor = .black
+    }
 }
