@@ -48,7 +48,10 @@ final class MainTabBarController: UITabBarController {
         let filterMakeVC = FilterMakeViewController(viewModel: filterMakeVM)
         let filterMakeNav = BaseNavigationController(rootViewController: filterMakeVC)
 
-        let myPageVM = MyPageViewModel(userRepository: dependency.userRepository)
+        let myPageVM = MyPageViewModel(
+            userRepository: dependency.userRepository,
+            orderRepository: dependency.orderRepository
+        )
         let myPageVC = MyPageViewController(viewModel: myPageVM)
         let myPageNav = BaseNavigationController(rootViewController: myPageVC)
 

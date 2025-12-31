@@ -10,9 +10,11 @@ import Combine
 
 final class MyPageViewModel: BaseViewModel, ViewModelType {
     private let userRepository: UserRepository
+    private let orderRepository: OrderRepository
 
-    init(userRepository: UserRepository) {
+    init(userRepository: UserRepository, orderRepository: OrderRepository) {
         self.userRepository = userRepository
+        self.orderRepository = orderRepository
         super.init()
     }
 
@@ -52,5 +54,9 @@ final class MyPageViewModel: BaseViewModel, ViewModelType {
 extension MyPageViewModel {
     func makeEditViewModel(initialProfile: UserProfile?) -> MyPageEditViewModel {
         MyPageEditViewModel(userRepository: userRepository, initialProfile: initialProfile)
+    }
+
+    func makePurchaseHistoryViewModel() -> PurchaseHistoryViewModel {
+        PurchaseHistoryViewModel(orderRepository: orderRepository)
     }
 }

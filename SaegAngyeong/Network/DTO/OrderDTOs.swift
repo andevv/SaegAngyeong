@@ -36,7 +36,7 @@ struct OrderCreateResponseDTO: Decodable {
 struct OrderResponseDTO: Decodable {
     let orderID: String
     let orderCode: String
-    let totalPrice: Int
+    let totalPrice: Int?
     let filter: FilterSummaryResponseDTO_Order
     let paidAt: String?
     let createdAt: String
@@ -66,7 +66,7 @@ struct FilterSummaryResponseDTO_Order: Decodable {
     let updatedAt: String
 
     enum CodingKeys: String, CodingKey {
-        case filterID = "filter_id"
+        case filterID = "id"
         case category
         case title
         case description

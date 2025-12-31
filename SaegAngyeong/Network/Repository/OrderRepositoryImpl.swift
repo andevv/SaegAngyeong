@@ -42,7 +42,44 @@ final class OrderRepositoryImpl: OrderRepository {
     }
 
     func list() -> AnyPublisher<[Order], DomainError> {
-        Fail(error: DomainError.unknown(message: "Not implemented"))
+        return network.request(OrderListResponseDTO.self, endpoint: OrderAPI.list)
+            .mapError { _ in DomainError.network }
+            .map { [weak self] dto in
+                guard let self else { return [] }
+                return dto.data.map { order in
+                    let creator = UserSummary(
+                        id: order.filter.creator.userID,
+                        nick: order.filter.creator.nick,
+                        profileImageURL: order.filter.creator.profileImage.flatMap { self.buildURL(from: $0) },
+                        name: order.filter.creator.name,
+                        introduction: order.filter.creator.introduction,
+                        hashTags: order.filter.creator.hashTags ?? []
+                    )
+                    let files = order.filter.files.compactMap { self.buildURL(from: $0) }
+                    let values = self.mapValues(order.filter.filterValues)
+                    let totalPrice = order.totalPrice ?? order.filter.price
+                    return Order(
+                        id: order.orderID,
+                        code: order.orderCode,
+                        totalPrice: totalPrice,
+                        filter: FilterSummary(
+                            id: order.filter.filterID,
+                            category: order.filter.category,
+                            title: order.filter.title,
+                            description: order.filter.description,
+                            files: files,
+                            price: order.filter.price,
+                            creator: creator,
+                            filterValues: values,
+                            createdAt: self.parseISODate(order.filter.createdAt),
+                            updatedAt: self.parseISODate(order.filter.updatedAt)
+                        ),
+                        paidAt: order.paidAt.map { self.parseISODate($0) },
+                        createdAt: self.parseISODate(order.createdAt),
+                        updatedAt: self.parseISODate(order.updatedAt)
+                    )
+                }
+            }
             .eraseToAnyPublisher()
     }
 
@@ -54,5 +91,36 @@ final class OrderRepositoryImpl: OrderRepository {
     private func parseISODate(_ value: String) -> Date {
         let formatter = ISO8601DateFormatter()
         return formatter.date(from: value) ?? Date()
+    }
+
+    private func buildURL(from path: String) -> URL? {
+        guard let base = URL(string: AppConfig.baseURL) else { return nil }
+        var normalized = path
+        if normalized.hasPrefix("/") {
+            normalized.removeFirst()
+        }
+        if !normalized.hasPrefix("v1/") {
+            normalized = "v1/" + normalized
+        }
+        return base.appendingPathComponent(normalized)
+    }
+
+    private func mapValues(_ values: FilterValuesDTO) -> FilterValues {
+        FilterValues(
+            brightness: values.brightness,
+            exposure: values.exposure,
+            contrast: values.contrast,
+            saturation: values.saturation,
+            sharpness: values.sharpness,
+            noiseReduction: values.noiseReduction,
+            temperature: values.temperature,
+            highlight: values.highlights,
+            shadow: values.shadows,
+            vignette: values.vignette,
+            grain: nil,
+            blur: values.blur,
+            fade: nil,
+            blackPoint: values.blackPoint
+        )
     }
 }

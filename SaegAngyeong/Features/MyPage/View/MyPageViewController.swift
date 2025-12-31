@@ -22,6 +22,7 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
     private let hashTagStack = UIStackView()
 
     private let editProfileButton = UIButton(type: .system)
+    private let purchaseHistoryButton = UIButton(type: .system)
 
     private let viewDidLoadSubject = PassthroughSubject<Void, Never>()
     private let refreshSubject = PassthroughSubject<Void, Never>()
@@ -111,6 +112,21 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
         editProfileButton.layer.cornerRadius = 12
         editProfileButton.addTarget(self, action: #selector(editProfileTapped), for: .touchUpInside)
 
+        purchaseHistoryButton.setTitle("구매내역", for: .normal)
+        purchaseHistoryButton.titleLabel?.font = .pretendard(.medium, size: 13)
+        purchaseHistoryButton.setTitleColor(.gray30, for: .normal)
+        purchaseHistoryButton.backgroundColor = .blackTurquoise
+        purchaseHistoryButton.layer.cornerRadius = 12
+        purchaseHistoryButton.contentHorizontalAlignment = .left
+        purchaseHistoryButton.contentEdgeInsets = UIEdgeInsets(top: 12, left: 16, bottom: 12, right: 16)
+        if let image = UIImage(named: "Icon_chevron")?.withRenderingMode(.alwaysTemplate) {
+            purchaseHistoryButton.setImage(image, for: .normal)
+            purchaseHistoryButton.tintColor = .gray60
+            purchaseHistoryButton.semanticContentAttribute = .forceRightToLeft
+            purchaseHistoryButton.imageEdgeInsets = UIEdgeInsets(top: 0, left: 8, bottom: 0, right: -8)
+        }
+        purchaseHistoryButton.addTarget(self, action: #selector(purchaseHistoryTapped), for: .touchUpInside)
+
         [
             profileImageView,
             nameLabel,
@@ -118,7 +134,8 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
             introLabel,
             hashTagStack,
             editProfileButton,
-            infoStack
+            infoStack,
+            purchaseHistoryButton
         ].forEach { contentView.addSubview($0) }
     }
 
@@ -170,6 +187,12 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
         infoStack.snp.makeConstraints { make in
             make.top.equalTo(editProfileButton.snp.bottom).offset(20)
             make.leading.trailing.equalToSuperview().inset(20)
+        }
+
+        purchaseHistoryButton.snp.makeConstraints { make in
+            make.top.equalTo(infoStack.snp.bottom).offset(16)
+            make.leading.trailing.equalTo(editProfileButton)
+            make.height.equalTo(48)
             make.bottom.equalToSuperview().offset(-24)
         }
     }
@@ -281,6 +304,12 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
     @objc private func editProfileTapped() {
         let editVC = MyPageEditViewController(viewModel: viewModel.makeEditViewModel(initialProfile: currentProfile))
         navigationController?.pushViewController(editVC, animated: true)
+    }
+
+    @objc private func purchaseHistoryTapped() {
+        let historyVM = viewModel.makePurchaseHistoryViewModel()
+        let historyVC = PurchaseHistoryViewController(viewModel: historyVM)
+        navigationController?.pushViewController(historyVC, animated: true)
     }
 
 }
