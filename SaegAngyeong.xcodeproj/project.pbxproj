@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		FE2648EC2F05002E00096A9E /* iamport-ios in Frameworks */ = {isa = PBXBuildFile; productRef = FE2648EB2F05002E00096A9E /* iamport-ios */; };
 		FE2D5D062EEEA866004AB8F8 /* SnapKit in Frameworks */ = {isa = PBXBuildFile; productRef = FE2D5D052EEEA866004AB8F8 /* SnapKit */; };
 		FE2D5D092EEEA8A7004AB8F8 /* Alamofire in Frameworks */ = {isa = PBXBuildFile; productRef = FE2D5D082EEEA8A7004AB8F8 /* Alamofire */; };
 		FE2D5D0C2EEEA8F9004AB8F8 /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = FE2D5D0B2EEEA8F9004AB8F8 /* Kingfisher */; };
@@ -51,6 +52,7 @@
 				FE2D5D062EEEA866004AB8F8 /* SnapKit in Frameworks */,
 				FE2D5D092EEEA8A7004AB8F8 /* Alamofire in Frameworks */,
 				FEE034232EE94600008B74AB /* FirebaseMessaging in Frameworks */,
+				FE2648EC2F05002E00096A9E /* iamport-ios in Frameworks */,
 				FEE034212EE94600008B74AB /* FirebaseAnalytics in Frameworks */,
 				FE2D5D0C2EEEA8F9004AB8F8 /* Kingfisher in Frameworks */,
 			);
@@ -101,6 +103,7 @@
 				FE2D5D052EEEA866004AB8F8 /* SnapKit */,
 				FE2D5D082EEEA8A7004AB8F8 /* Alamofire */,
 				FE2D5D0B2EEEA8F9004AB8F8 /* Kingfisher */,
+				FE2648EB2F05002E00096A9E /* iamport-ios */,
 			);
 			productName = SaegAngyeong;
 			productReference = FEE034022EE9330E008B74AB /* SaegAngyeong.app */;
@@ -135,6 +138,7 @@
 				FE2D5D042EEEA866004AB8F8 /* XCRemoteSwiftPackageReference "SnapKit" */,
 				FE2D5D072EEEA8A7004AB8F8 /* XCRemoteSwiftPackageReference "Alamofire" */,
 				FE2D5D0A2EEEA8F9004AB8F8 /* XCRemoteSwiftPackageReference "Kingfisher" */,
+				FE2648EA2F05002E00096A9E /* XCRemoteSwiftPackageReference "iamport-ios" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = FEE034032EE9330E008B74AB /* Products */;
@@ -395,6 +399,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		FE2648EA2F05002E00096A9E /* XCRemoteSwiftPackageReference "iamport-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/iamport/iamport-ios.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.4.7;
+			};
+		};
 		FE2D5D042EEEA866004AB8F8 /* XCRemoteSwiftPackageReference "SnapKit" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/SnapKit/SnapKit";
@@ -430,6 +442,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		FE2648EB2F05002E00096A9E /* iamport-ios */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FE2648EA2F05002E00096A9E /* XCRemoteSwiftPackageReference "iamport-ios" */;
+			productName = "iamport-ios";
+		};
 		FE2D5D052EEEA866004AB8F8 /* SnapKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = FE2D5D042EEEA866004AB8F8 /* XCRemoteSwiftPackageReference "SnapKit" */;
