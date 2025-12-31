@@ -17,6 +17,14 @@ struct Order {
     let updatedAt: Date
 }
 
+struct OrderCreate {
+    let id: String
+    let code: String
+    let totalPrice: Int
+    let createdAt: Date
+    let updatedAt: Date
+}
+
 struct FilterSummary {
     let id: String
     let category: String

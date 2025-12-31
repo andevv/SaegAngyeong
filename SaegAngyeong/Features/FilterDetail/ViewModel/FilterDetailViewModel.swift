@@ -34,6 +34,7 @@ final class FilterDetailViewModel: BaseViewModel, ViewModelType {
     struct Input {
         let viewDidLoad: AnyPublisher<Void, Never>
         let likeToggle: AnyPublisher<Void, Never>
+        let refresh: AnyPublisher<Void, Never>
     }
 
     struct Output {
@@ -43,7 +44,7 @@ final class FilterDetailViewModel: BaseViewModel, ViewModelType {
     func transform(input: Input) -> Output {
         let detailSubject = CurrentValueSubject<FilterDetailViewData?, Never>(nil)
 
-        input.viewDidLoad
+        Publishers.Merge(input.viewDidLoad, input.refresh)
             .flatMap { [weak self] _ -> AnyPublisher<Filter, DomainError> in
                 guard let self else { return Empty().eraseToAnyPublisher() }
                 self.isLoading.send(true)
@@ -134,6 +135,7 @@ final class FilterDetailViewModel: BaseViewModel, ViewModelType {
         }()
 
         return FilterDetailViewData(
+            filterID: filter.id,
             title: filter.title,
             category: filter.category,
             description: filter.description,
@@ -217,6 +219,7 @@ final class FilterDetailViewModel: BaseViewModel, ViewModelType {
 }
 
 struct FilterDetailViewData {
+    let filterID: String
     let title: String
     let category: String
     let description: String
@@ -246,6 +249,7 @@ struct FilterDetailViewData {
 
     func updating(isLiked: Bool, likeCount: Int) -> FilterDetailViewData {
         FilterDetailViewData(
+            filterID: filterID,
             title: title,
             category: category,
             description: description,
@@ -277,6 +281,7 @@ struct FilterDetailViewData {
 
     func updating(metadataLine3: String) -> FilterDetailViewData {
         FilterDetailViewData(
+            filterID: filterID,
             title: title,
             category: category,
             description: description,

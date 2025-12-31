@@ -11,6 +11,8 @@ import Combine
 import MapKit
 
 final class FilterDetailViewController: BaseViewController<FilterDetailViewModel> {
+    private let orderRepository: OrderRepository
+    private let paymentRepository: PaymentRepository
     private let scrollView = UIScrollView()
     private let contentView = UIView()
 
@@ -42,9 +44,26 @@ final class FilterDetailViewController: BaseViewController<FilterDetailViewModel
     private let likeButton = UIButton(type: .system)
 
     private var compareProgress: CGFloat = 0.5
+    private var currentViewData: FilterDetailViewData?
 
     private let viewDidLoadSubject = PassthroughSubject<Void, Never>()
     private let likeToggleSubject = PassthroughSubject<Void, Never>()
+    private let refreshSubject = PassthroughSubject<Void, Never>()
+
+    init(
+        viewModel: FilterDetailViewModel,
+        orderRepository: OrderRepository,
+        paymentRepository: PaymentRepository
+    ) {
+        self.orderRepository = orderRepository
+        self.paymentRepository = paymentRepository
+        super.init(viewModel: viewModel)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) is not supported")
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -129,6 +148,7 @@ final class FilterDetailViewController: BaseViewController<FilterDetailViewModel
         purchaseButton.backgroundColor = UIColor.brightTurquoise.withAlphaComponent(0.9)
         purchaseButton.setTitleColor(.gray30, for: .normal)
         purchaseButton.layer.cornerRadius = 12
+        purchaseButton.addTarget(self, action: #selector(purchaseTapped), for: .touchUpInside)
 
         [
             compareContainerView,
@@ -278,7 +298,8 @@ final class FilterDetailViewController: BaseViewController<FilterDetailViewModel
     override func bindViewModel() {
         let input = FilterDetailViewModel.Input(
             viewDidLoad: viewDidLoadSubject.eraseToAnyPublisher(),
-            likeToggle: likeToggleSubject.eraseToAnyPublisher()
+            likeToggle: likeToggleSubject.eraseToAnyPublisher(),
+            refresh: refreshSubject.eraseToAnyPublisher()
         )
         let output = viewModel.transform(input: input)
 
@@ -298,6 +319,7 @@ final class FilterDetailViewController: BaseViewController<FilterDetailViewModel
     }
 
     private func apply(_ viewData: FilterDetailViewData) {
+        currentViewData = viewData
         let navTitleLabel = UILabel()
         navTitleLabel.text = viewData.title
         navTitleLabel.textColor = .gray60
@@ -374,6 +396,22 @@ final class FilterDetailViewController: BaseViewController<FilterDetailViewModel
 
     @objc private func messageTapped() {
         print("[FilterDetail] message tapped")
+    }
+
+    @objc private func purchaseTapped() {
+        guard let viewData = currentViewData, viewData.requiresPurchase, !viewData.isPurchased else { return }
+        let paymentViewModel = PaymentViewModel(
+            filterID: viewData.filterID,
+            title: viewData.title,
+            totalPrice: viewData.price,
+            orderRepository: orderRepository,
+            paymentRepository: paymentRepository
+        )
+        let paymentViewController = PaymentViewController(viewModel: paymentViewModel)
+        paymentViewController.onPaymentSuccess = { [weak self] in
+            self?.refreshSubject.send(())
+        }
+        navigationController?.pushViewController(paymentViewController, animated: true)
     }
 
     private func presentError(_ error: Error) {

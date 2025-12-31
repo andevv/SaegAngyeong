@@ -39,7 +39,11 @@ final class HomeCoordinator {
             accessTokenProvider: { [weak self] in self?.dependency.tokenStore.accessToken },
             sesacKey: AppConfig.apiKey
         )
-        let viewController = FilterDetailViewController(viewModel: viewModel)
+        let viewController = FilterDetailViewController(
+            viewModel: viewModel,
+            orderRepository: dependency.orderRepository,
+            paymentRepository: dependency.paymentRepository
+        )
         navigationController.pushViewController(viewController, animated: true)
     }
 }

@@ -91,7 +91,7 @@ protocol VideoRepository {
 // MARK: - Order & Payment
 
 protocol OrderRepository {
-    func create(filterID: String, totalPrice: Int) -> AnyPublisher<Order, DomainError>
+    func create(filterID: String, totalPrice: Int) -> AnyPublisher<OrderCreate, DomainError>
     func list() -> AnyPublisher<[Order], DomainError>
     func paymentDetail(orderCode: String) -> AnyPublisher<Order, DomainError>
 }
