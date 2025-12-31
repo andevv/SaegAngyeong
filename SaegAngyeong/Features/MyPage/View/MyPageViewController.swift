@@ -23,6 +23,7 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
 
     private let editProfileButton = UIButton(type: .system)
     private let purchaseHistoryButton = UIButton(type: .system)
+    private let likedFilterButton = UIButton(type: .system)
 
     private let viewDidLoadSubject = PassthroughSubject<Void, Never>()
     private let refreshSubject = PassthroughSubject<Void, Never>()
@@ -127,6 +128,21 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
         }
         purchaseHistoryButton.addTarget(self, action: #selector(purchaseHistoryTapped), for: .touchUpInside)
 
+        likedFilterButton.setTitle("좋아요한 필터", for: .normal)
+        likedFilterButton.titleLabel?.font = .pretendard(.medium, size: 13)
+        likedFilterButton.setTitleColor(.gray30, for: .normal)
+        likedFilterButton.backgroundColor = .blackTurquoise
+        likedFilterButton.layer.cornerRadius = 12
+        likedFilterButton.contentHorizontalAlignment = .left
+        likedFilterButton.contentEdgeInsets = UIEdgeInsets(top: 12, left: 16, bottom: 12, right: 16)
+        if let image = UIImage(named: "Icon_chevron")?.withRenderingMode(.alwaysTemplate) {
+            likedFilterButton.setImage(image, for: .normal)
+            likedFilterButton.tintColor = .gray60
+            likedFilterButton.semanticContentAttribute = .forceRightToLeft
+            likedFilterButton.imageEdgeInsets = UIEdgeInsets(top: 0, left: 8, bottom: 0, right: -8)
+        }
+        likedFilterButton.addTarget(self, action: #selector(likedFilterTapped), for: .touchUpInside)
+
         [
             profileImageView,
             nameLabel,
@@ -135,7 +151,8 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
             hashTagStack,
             editProfileButton,
             infoStack,
-            purchaseHistoryButton
+            purchaseHistoryButton,
+            likedFilterButton
         ].forEach { contentView.addSubview($0) }
     }
 
@@ -191,6 +208,12 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
 
         purchaseHistoryButton.snp.makeConstraints { make in
             make.top.equalTo(infoStack.snp.bottom).offset(16)
+            make.leading.trailing.equalTo(editProfileButton)
+            make.height.equalTo(48)
+        }
+
+        likedFilterButton.snp.makeConstraints { make in
+            make.top.equalTo(purchaseHistoryButton.snp.bottom).offset(12)
             make.leading.trailing.equalTo(editProfileButton)
             make.height.equalTo(48)
             make.bottom.equalToSuperview().offset(-24)
@@ -310,6 +333,12 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
         let historyVM = viewModel.makePurchaseHistoryViewModel()
         let historyVC = PurchaseHistoryViewController(viewModel: historyVM)
         navigationController?.pushViewController(historyVC, animated: true)
+    }
+
+    @objc private func likedFilterTapped() {
+        let likedVM = viewModel.makeLikedFilterViewModel()
+        let likedVC = LikedFilterViewController(viewModel: likedVM)
+        navigationController?.pushViewController(likedVC, animated: true)
     }
 
 }

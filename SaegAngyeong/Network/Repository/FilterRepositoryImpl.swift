@@ -201,7 +201,50 @@ final class FilterRepositoryImpl: FilterRepository {
     }
 
     func likedFilters(category: String?, next: String?, limit: Int?) -> AnyPublisher<Paginated<Filter>, DomainError> {
-        Fail(error: DomainError.unknown(message: "Not implemented")).eraseToAnyPublisher()
+        network.request(FilterSummaryPaginationResponseDTO.self, endpoint: FilterAPI.likedFilters(category: category, next: next, limit: limit))
+            .mapError { _ in DomainError.network }
+            .map { [weak self] dto in
+                guard let self else { return Paginated(items: [], nextCursor: nil) }
+                let items = dto.data.map { item -> Filter in
+                    let urls = item.files.compactMap { self.buildURL(from: $0) }
+                    let creator = UserSummary(
+                        id: item.creator.userID,
+                        nick: item.creator.nick,
+                        profileImageURL: item.creator.profileImage.flatMap { self.buildURL(from: $0) },
+                        name: item.creator.name,
+                        introduction: item.creator.introduction,
+                        hashTags: item.creator.hashTags ?? []
+                    )
+                    let created = self.parseISODate(item.createdAt)
+                    let updated = self.parseISODate(item.updatedAt)
+                    return Filter(
+                        id: item.filterID,
+                        category: item.category,
+                        title: item.title,
+                        introduction: item.description,
+                        description: item.description,
+                        files: urls,
+                        price: 0,
+                        filterValues: FilterValues(
+                            brightness: nil, exposure: nil, contrast: nil, saturation: nil,
+                            sharpness: nil, noiseReduction: nil, temperature: nil, highlight: nil, shadow: nil,
+                            vignette: nil, grain: nil, blur: nil, fade: nil, blackPoint: nil
+                        ),
+                        photoMetadata: nil,
+                        creator: creator,
+                        createdAt: created,
+                        updatedAt: updated,
+                        comments: [],
+                        isLiked: item.isLiked,
+                        likeCount: item.likeCount,
+                        buyerCount: item.buyerCount,
+                        isDownloaded: false
+                    )
+                }
+                let cursor = dto.nextCursor == "0" ? nil : dto.nextCursor
+                return Paginated(items: items, nextCursor: cursor)
+            }
+            .eraseToAnyPublisher()
     }
 
     func hotTrend() -> AnyPublisher<[Filter], DomainError> {

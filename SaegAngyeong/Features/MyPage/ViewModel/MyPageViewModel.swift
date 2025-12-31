@@ -11,10 +11,22 @@ import Combine
 final class MyPageViewModel: BaseViewModel, ViewModelType {
     private let userRepository: UserRepository
     private let orderRepository: OrderRepository
+    private let filterRepository: FilterRepository
+    private let accessTokenProvider: () -> String?
+    private let sesacKey: String
 
-    init(userRepository: UserRepository, orderRepository: OrderRepository) {
+    init(
+        userRepository: UserRepository,
+        orderRepository: OrderRepository,
+        filterRepository: FilterRepository,
+        accessTokenProvider: @escaping () -> String?,
+        sesacKey: String
+    ) {
         self.userRepository = userRepository
         self.orderRepository = orderRepository
+        self.filterRepository = filterRepository
+        self.accessTokenProvider = accessTokenProvider
+        self.sesacKey = sesacKey
         super.init()
     }
 
@@ -58,5 +70,13 @@ extension MyPageViewModel {
 
     func makePurchaseHistoryViewModel() -> PurchaseHistoryViewModel {
         PurchaseHistoryViewModel(orderRepository: orderRepository)
+    }
+
+    func makeLikedFilterViewModel() -> LikedFilterViewModel {
+        LikedFilterViewModel(
+            filterRepository: filterRepository,
+            accessTokenProvider: accessTokenProvider,
+            sesacKey: sesacKey
+        )
     }
 }

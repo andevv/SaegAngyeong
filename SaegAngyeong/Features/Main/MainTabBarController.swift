@@ -45,7 +45,10 @@ final class MainTabBarController: UITabBarController {
 
         let myPageVM = MyPageViewModel(
             userRepository: dependency.userRepository,
-            orderRepository: dependency.orderRepository
+            orderRepository: dependency.orderRepository,
+            filterRepository: dependency.filterRepository,
+            accessTokenProvider: { dependency.tokenStore.accessToken },
+            sesacKey: AppConfig.apiKey
         )
         let myPageVC = MyPageViewController(viewModel: myPageVM)
         let myPageNav = BaseNavigationController(rootViewController: myPageVC)
