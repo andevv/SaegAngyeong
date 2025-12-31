@@ -10,9 +10,11 @@ import UIKit
 final class MainTabBarController: UITabBarController {
 
     private let homeCoordinator: HomeCoordinator
+    private let feedCoordinator: FeedCoordinator
 
     init(dependency: AppDependency) {
         self.homeCoordinator = HomeCoordinator(dependency: dependency)
+        self.feedCoordinator = FeedCoordinator(dependency: dependency)
         super.init(nibName: nil, bundle: nil)
         configureAppearance()
         setupTabs(dependency: dependency)
@@ -35,14 +37,7 @@ final class MainTabBarController: UITabBarController {
 
     private func setupTabs(dependency: AppDependency) {
         let homeVC = homeCoordinator.start()
-
-        let feedVM = FeedViewModel(
-            filterRepository: dependency.filterRepository,
-            accessTokenProvider: { dependency.tokenStore.accessToken },
-            sesacKey: AppConfig.apiKey
-        )
-        let feedVC = FeedViewController(viewModel: feedVM)
-        let feedNav = BaseNavigationController(rootViewController: feedVC)
+        let feedVC = feedCoordinator.start()
 
         let filterMakeVM = FilterMakeViewModel(filterRepository: dependency.filterRepository)
         let filterMakeVC = FilterMakeViewController(viewModel: filterMakeVM)
@@ -59,7 +54,7 @@ final class MainTabBarController: UITabBarController {
 
         viewControllers = [
             homeVC,
-            feedNav,
+            feedVC,
             filterMakeNav,
             dummy3,
             myPageNav

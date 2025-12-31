@@ -10,6 +10,7 @@ import SnapKit
 import Combine
 
 final class FeedViewController: BaseViewController<FeedViewModel> {
+    var onFilterSelected: ((String) -> Void)?
     private let scrollView = UIScrollView()
     private let contentView = UIView()
     private let titleLabel: UILabel = {
@@ -454,6 +455,16 @@ extension FeedViewController: UICollectionViewDataSource, UICollectionViewDelega
             self?.likeToggleSubject.send(FeedLikeAction(filterID: item.id))
         }
         return cell
+    }
+
+    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        if collectionView == rankingCollectionView {
+            let id = rankingItems[indexPath.item].id
+            onFilterSelected?(id)
+            return
+        }
+        let id = feedItems[indexPath.item].id
+        onFilterSelected?(id)
     }
 
 }
