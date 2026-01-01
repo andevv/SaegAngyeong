@@ -11,6 +11,9 @@ import Combine
 import Kingfisher
 
 final class MyPageViewController: BaseViewController<MyPageViewModel> {
+    var onEditProfileRequested: ((UserProfile?) -> Void)?
+    var onPurchaseHistoryRequested: (() -> Void)?
+    var onLikedFilterRequested: (() -> Void)?
     private let scrollView = UIScrollView()
     private let contentView = UIView()
 
@@ -325,20 +328,15 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
     }
 
     @objc private func editProfileTapped() {
-        let editVC = MyPageEditViewController(viewModel: viewModel.makeEditViewModel(initialProfile: currentProfile))
-        navigationController?.pushViewController(editVC, animated: true)
+        onEditProfileRequested?(currentProfile)
     }
 
     @objc private func purchaseHistoryTapped() {
-        let historyVM = viewModel.makePurchaseHistoryViewModel()
-        let historyVC = PurchaseHistoryViewController(viewModel: historyVM)
-        navigationController?.pushViewController(historyVC, animated: true)
+        onPurchaseHistoryRequested?()
     }
 
     @objc private func likedFilterTapped() {
-        let likedVM = viewModel.makeLikedFilterViewModel()
-        let likedVC = LikedFilterViewController(viewModel: likedVM)
-        navigationController?.pushViewController(likedVC, animated: true)
+        onLikedFilterRequested?()
     }
 
 }

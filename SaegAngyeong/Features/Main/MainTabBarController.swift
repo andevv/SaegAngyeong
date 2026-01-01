@@ -11,10 +11,12 @@ final class MainTabBarController: UITabBarController {
 
     private let homeCoordinator: HomeCoordinator
     private let feedCoordinator: FeedCoordinator
+    private let myPageCoordinator: MyPageCoordinator
 
     init(dependency: AppDependency) {
         self.homeCoordinator = HomeCoordinator(dependency: dependency)
         self.feedCoordinator = FeedCoordinator(dependency: dependency)
+        self.myPageCoordinator = MyPageCoordinator(dependency: dependency)
         super.init(nibName: nil, bundle: nil)
         configureAppearance()
         setupTabs(dependency: dependency)
@@ -43,15 +45,7 @@ final class MainTabBarController: UITabBarController {
         let filterMakeVC = FilterMakeViewController(viewModel: filterMakeVM)
         let filterMakeNav = BaseNavigationController(rootViewController: filterMakeVC)
 
-        let myPageVM = MyPageViewModel(
-            userRepository: dependency.userRepository,
-            orderRepository: dependency.orderRepository,
-            filterRepository: dependency.filterRepository,
-            accessTokenProvider: { dependency.tokenStore.accessToken },
-            sesacKey: AppConfig.apiKey
-        )
-        let myPageVC = MyPageViewController(viewModel: myPageVM)
-        let myPageNav = BaseNavigationController(rootViewController: myPageVC)
+        let myPageVC = myPageCoordinator.start()
 
         let dummy3 = DummyViewController(titleText: "", named: "Search_Empty", tag: 3, color: .systemGray4)
 
@@ -60,7 +54,7 @@ final class MainTabBarController: UITabBarController {
             feedVC,
             filterMakeNav,
             dummy3,
-            myPageNav
+            myPageVC
         ]
         selectedIndex = 0
     }
