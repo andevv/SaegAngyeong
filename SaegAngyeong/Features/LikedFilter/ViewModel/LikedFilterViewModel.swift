@@ -8,15 +8,6 @@
 import Foundation
 import Combine
 
-struct LikedFilterItemViewData {
-    let id: String
-    let title: String
-    let creator: String
-    let likeCountText: String
-    let thumbnailURL: URL?
-    let headers: [String: String]
-}
-
 final class LikedFilterViewModel: BaseViewModel, ViewModelType {
 
     private let filterRepository: FilterRepository
