@@ -95,28 +95,13 @@ enum FilterAdjustmentType: CaseIterable {
         }
     }
 
-    var range: ClosedRange<Double> {
-        switch self {
-        case .brightness: return -0.2...0.2
-        case .exposure: return -0.6...0.8
-        case .contrast: return 0.8...1.5
-        case .saturation: return 0.8...1.3
-        case .sharpness: return 0.0...1.0
-        case .highlights: return 0.0...0.5
-        case .shadows: return 0.0...0.6
-        case .temperature: return 3500...7000
-        case .vignette: return 0.0...0.7
-        case .noiseReduction: return 0.0...0.7
-        case .blur: return 0.0...2.0
-        case .blackPoint: return 0.0...0.15
-        }
-    }
 }
 
 final class FilterMakeEditViewModel: BaseViewModel, ViewModelType {
     private let filterRepository: FilterRepository
     private var draft: FilterMakeDraft
     private var adjustments: FilterAdjustmentValues
+    private let baselineAdjustments: FilterAdjustmentValues
     private var history: [FilterAdjustmentValues]
     private var historyIndex: Int
     private let maxHistory = 40
@@ -136,6 +121,7 @@ final class FilterMakeEditViewModel: BaseViewModel, ViewModelType {
         self.filterRepository = filterRepository
         self.draft = draft
         self.adjustments = adjustments
+        self.baselineAdjustments = .defaultValues
         self.history = [adjustments]
         self.historyIndex = 0
         super.init()
@@ -261,6 +247,23 @@ final class FilterMakeEditViewModel: BaseViewModel, ViewModelType {
 
     func snapshotOriginalImage() -> UIImage? {
         originalImage
+    }
+
+    func baselineValue(for type: FilterAdjustmentType) -> Double {
+        switch type {
+        case .brightness: return baselineAdjustments.brightness
+        case .exposure: return baselineAdjustments.exposure
+        case .contrast: return baselineAdjustments.contrast
+        case .saturation: return baselineAdjustments.saturation
+        case .sharpness: return baselineAdjustments.sharpness
+        case .highlights: return baselineAdjustments.highlights
+        case .shadows: return baselineAdjustments.shadows
+        case .temperature: return baselineAdjustments.temperature
+        case .vignette: return baselineAdjustments.vignette
+        case .noiseReduction: return baselineAdjustments.noiseReduction
+        case .blur: return baselineAdjustments.blur
+        case .blackPoint: return baselineAdjustments.blackPoint
+        }
     }
 
     private func currentValue(for type: FilterAdjustmentType) -> Double {
@@ -518,21 +521,39 @@ final class FilterMakeEditViewModel: BaseViewModel, ViewModelType {
     }
 
     private func makeFilterValues() -> FilterValues {
-        FilterValues(
-            brightness: adjustments.brightness,
-            exposure: adjustments.exposure,
-            contrast: adjustments.contrast,
-            saturation: adjustments.saturation,
-            sharpness: adjustments.sharpness,
-            noiseReduction: adjustments.noiseReduction,
+        let deltas = deltaAdjustments()
+        return FilterValues(
+            brightness: deltas.brightness,
+            exposure: deltas.exposure,
+            contrast: deltas.contrast,
+            saturation: deltas.saturation,
+            sharpness: deltas.sharpness,
+            noiseReduction: deltas.noiseReduction,
             temperature: adjustments.temperature,
-            highlight: adjustments.highlights,
-            shadow: adjustments.shadows,
-            vignette: adjustments.vignette,
+            highlight: deltas.highlights,
+            shadow: deltas.shadows,
+            vignette: deltas.vignette,
             grain: nil,
-            blur: adjustments.blur,
+            blur: deltas.blur,
             fade: nil,
-            blackPoint: adjustments.blackPoint
+            blackPoint: deltas.blackPoint
+        )
+    }
+
+    private func deltaAdjustments() -> FilterAdjustmentValues {
+        FilterAdjustmentValues(
+            brightness: adjustments.brightness - baselineAdjustments.brightness,
+            exposure: adjustments.exposure - baselineAdjustments.exposure,
+            contrast: adjustments.contrast - baselineAdjustments.contrast,
+            saturation: adjustments.saturation - baselineAdjustments.saturation,
+            sharpness: adjustments.sharpness - baselineAdjustments.sharpness,
+            highlights: adjustments.highlights - baselineAdjustments.highlights,
+            shadows: adjustments.shadows - baselineAdjustments.shadows,
+            temperature: adjustments.temperature,
+            vignette: adjustments.vignette - baselineAdjustments.vignette,
+            noiseReduction: adjustments.noiseReduction - baselineAdjustments.noiseReduction,
+            blur: adjustments.blur - baselineAdjustments.blur,
+            blackPoint: adjustments.blackPoint - baselineAdjustments.blackPoint
         )
     }
 

@@ -194,8 +194,10 @@ final class FilterMakeEditViewController: BaseViewController<FilterMakeEditViewM
 
         output.currentValue
             .sink { [weak self] value in
-                self?.updateValueLabel(value: value)
-                self?.slider.value = Float(value)
+                guard let self else { return }
+                let adjustment = self.selectedAdjustment
+                self.updateValueLabel(value: value, adjustment: adjustment)
+                self.slider.value = Float(self.sliderValue(for: adjustment, actualValue: value))
             }
             .store(in: &cancellables)
 
@@ -234,16 +236,26 @@ final class FilterMakeEditViewController: BaseViewController<FilterMakeEditViewM
     }
 
     private func updateSlider(for adjustment: FilterAdjustmentType) {
-        let range = adjustment.range
-        slider.minimumValue = Float(range.lowerBound)
-        slider.maximumValue = Float(range.upperBound)
+        if adjustment == .temperature {
+            slider.minimumValue = 3500
+            slider.maximumValue = 7500
+        } else {
+            slider.minimumValue = -10
+            slider.maximumValue = 10
+        }
     }
 
-    private func updateValueLabel(value: Double) {
+    private func updateValueLabel(value: Double, adjustment: FilterAdjustmentType) {
+        let displayValue: Double
+        if adjustment == .temperature {
+            displayValue = value
+        } else {
+            displayValue = sliderValue(for: adjustment, actualValue: value)
+        }
         let formatter = NumberFormatter()
-        formatter.maximumFractionDigits = value >= 1000 ? 0 : 1
-        formatter.minimumFractionDigits = value >= 1000 ? 0 : 1
-        let text = formatter.string(from: NSNumber(value: value)) ?? "\(value)"
+        formatter.maximumFractionDigits = displayValue >= 1000 ? 0 : 1
+        formatter.minimumFractionDigits = displayValue >= 1000 ? 0 : 1
+        let text = formatter.string(from: NSNumber(value: displayValue)) ?? "\(displayValue)"
         valueLabel.text = text
     }
 
@@ -275,11 +287,19 @@ final class FilterMakeEditViewController: BaseViewController<FilterMakeEditViewM
     }
 
     @objc private func sliderChanged(_ sender: UISlider) {
-        sliderValueChangedSubject.send(Double(sender.value))
+        let adjustment = selectedAdjustment
+        let snappedValue = snappedSliderValue(sender.value, adjustment: adjustment)
+        sender.value = snappedValue
+        let actualValue = actualValue(from: Double(snappedValue), adjustment: adjustment)
+        sliderValueChangedSubject.send(actualValue)
     }
 
     @objc private func sliderEditingEnded(_ sender: UISlider) {
-        sliderEditingEndedSubject.send(Double(sender.value))
+        let adjustment = selectedAdjustment
+        let snappedValue = snappedSliderValue(sender.value, adjustment: adjustment)
+        sender.value = snappedValue
+        let actualValue = actualValue(from: Double(snappedValue), adjustment: adjustment)
+        sliderEditingEndedSubject.send(actualValue)
     }
 
     @objc private func undoTapped() {
@@ -299,10 +319,41 @@ final class FilterMakeEditViewController: BaseViewController<FilterMakeEditViewM
     }
 
     @objc private func saveTapped() {
-        let currentValue = Double(slider.value)
-        sliderValueChangedSubject.send(currentValue)
-        sliderEditingEndedSubject.send(currentValue)
+        let adjustment = selectedAdjustment
+        let snappedValue = snappedSliderValue(slider.value, adjustment: adjustment)
+        slider.value = snappedValue
+        let actualValue = actualValue(from: Double(snappedValue), adjustment: adjustment)
+        sliderValueChangedSubject.send(actualValue)
+        sliderEditingEndedSubject.send(actualValue)
         saveTappedSubject.send(())
+    }
+
+    private func sliderValue(for adjustment: FilterAdjustmentType, actualValue: Double) -> Double {
+        if adjustment == .temperature {
+            return actualValue
+        }
+        let delta = actualValue - viewModel.baselineValue(for: adjustment)
+        return delta / scaleFactor(for: adjustment)
+    }
+
+    private func actualValue(from sliderValue: Double, adjustment: FilterAdjustmentType) -> Double {
+        if adjustment == .temperature {
+            return sliderValue
+        }
+        return viewModel.baselineValue(for: adjustment) + (sliderValue * scaleFactor(for: adjustment))
+    }
+
+    private func snappedSliderValue(_ value: Float, adjustment: FilterAdjustmentType) -> Float {
+        if adjustment == .temperature {
+            let snapped = (Double(value) / 50).rounded() * 50
+            return Float(snapped)
+        }
+        let snapped = (Double(value) * 10).rounded() / 10
+        return Float(snapped)
+    }
+
+    private func scaleFactor(for adjustment: FilterAdjustmentType) -> Double {
+        adjustment == .temperature ? 1.0 : 0.1
     }
 }
 
