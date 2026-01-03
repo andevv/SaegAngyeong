@@ -470,22 +470,33 @@ private final class StatCardView: UIView {
 }
 
 private final class MarqueeTitleView: UIView {
+    private let contentView = UIView()
     private let label = UILabel()
+    private let trailingLabel = UILabel()
+    private let spacing: CGFloat = 36
 
     var font: UIFont? {
         get { label.font }
-        set { label.font = newValue }
+        set {
+            label.font = newValue
+            trailingLabel.font = newValue
+        }
     }
 
     var textColor: UIColor? {
         get { label.textColor }
-        set { label.textColor = newValue }
+        set {
+            label.textColor = newValue
+            trailingLabel.textColor = newValue
+        }
     }
 
     override init(frame: CGRect) {
         super.init(frame: frame)
         clipsToBounds = true
-        addSubview(label)
+        addSubview(contentView)
+        contentView.addSubview(label)
+        contentView.addSubview(trailingLabel)
     }
 
     @available(*, unavailable)
@@ -495,22 +506,31 @@ private final class MarqueeTitleView: UIView {
 
     func setText(_ text: String) {
         label.text = text
+        trailingLabel.text = text
         setNeedsLayout()
     }
 
     override func layoutSubviews() {
         super.layoutSubviews()
         let labelSize = label.sizeThatFits(CGSize(width: .greatestFiniteMagnitude, height: bounds.height))
-        label.frame = CGRect(x: 0, y: (bounds.height - labelSize.height) / 2, width: labelSize.width, height: labelSize.height)
+        let y = (bounds.height - labelSize.height) / 2
+        label.frame = CGRect(x: 0, y: y, width: labelSize.width, height: labelSize.height)
+        trailingLabel.frame = CGRect(x: label.frame.maxX + spacing, y: y, width: labelSize.width, height: labelSize.height)
+        contentView.frame = CGRect(x: 0, y: 0, width: trailingLabel.frame.maxX, height: bounds.height)
         updateAnimationIfNeeded()
     }
 
     private func updateAnimationIfNeeded() {
         let overflow = label.bounds.width - bounds.width
-        label.layer.removeAllAnimations()
-        guard overflow > 8 else { return }
-
-        let distance = overflow + 16
+        contentView.layer.removeAllAnimations()
+        contentView.transform = .identity
+        guard overflow > 8 else {
+            trailingLabel.isHidden = true
+            contentView.frame = bounds
+            return
+        }
+        trailingLabel.isHidden = false
+        let distance = label.bounds.width + spacing
         let duration = Double(distance / 30)
         let animation = CABasicAnimation(keyPath: "transform.translation.x")
         animation.fromValue = 0
@@ -518,7 +538,7 @@ private final class MarqueeTitleView: UIView {
         animation.duration = max(3, duration)
         animation.timingFunction = CAMediaTimingFunction(name: .linear)
         animation.repeatCount = .infinity
-        label.layer.add(animation, forKey: "marquee")
+        contentView.layer.add(animation, forKey: "marquee")
     }
 }
 
