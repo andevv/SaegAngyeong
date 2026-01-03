@@ -158,7 +158,7 @@ final class UserRepositoryImpl: UserRepository {
 
                     return Filter(
                         id: item.filterID,
-                        category: item.category,
+                        category: item.category ?? "",
                         title: item.title,
                         introduction: item.description,
                         description: item.description,

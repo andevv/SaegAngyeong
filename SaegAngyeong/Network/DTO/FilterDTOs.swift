@@ -360,7 +360,7 @@ struct TodayAuthorAuthorDTO: Decodable {
 
 struct TodayAuthorFilterDTO: Decodable {
     let filterID: String
-    let category: String
+    let category: String?
     let title: String
     let description: String
     let files: [String]
