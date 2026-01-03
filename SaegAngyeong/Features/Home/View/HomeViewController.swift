@@ -217,6 +217,7 @@ final class HomeViewController: BaseViewController<HomeViewModel> {
     private var hotTrends: [HotTrendViewData] = []
     private var todayAuthor: TodayAuthorViewData?
     var onHotTrendSelected: ((String) -> Void)?
+    var onAuthorFilterSelected: ((String) -> Void)?
 
     override init(viewModel: HomeViewModel) {
         super.init(viewModel: viewModel)
@@ -622,6 +623,7 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
         } else if collectionView == authorFilterCollectionView {
             if let item = todayAuthor?.filters[indexPath.item] {
                 print("[Home] author filter tapped:", item.title)
+                onAuthorFilterSelected?(item.id)
             }
         } else {
             let item = hotTrends[indexPath.item]

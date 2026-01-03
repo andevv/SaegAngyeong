@@ -28,6 +28,9 @@ final class HomeCoordinator {
         viewController.onHotTrendSelected = { [weak self] filterID in
             self?.showFilterDetail(filterID: filterID)
         }
+        viewController.onAuthorFilterSelected = { [weak self] filterID in
+            self?.showFilterDetail(filterID: filterID)
+        }
         navigationController.setViewControllers([viewController], animated: false)
         return navigationController
     }
