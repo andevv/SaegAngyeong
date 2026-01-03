@@ -14,6 +14,7 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
     var onEditProfileRequested: ((UserProfile?) -> Void)?
     var onPurchaseHistoryRequested: (() -> Void)?
     var onLikedFilterRequested: (() -> Void)?
+    var onMyUploadRequested: ((String) -> Void)?
     private let scrollView = UIScrollView()
     private let contentView = UIView()
 
@@ -27,6 +28,7 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
     private let editProfileButton = UIButton(type: .system)
     private let purchaseHistoryButton = UIButton(type: .system)
     private let likedFilterButton = UIButton(type: .system)
+    private let myUploadButton = UIButton(type: .system)
 
     private let viewDidLoadSubject = PassthroughSubject<Void, Never>()
     private let refreshSubject = PassthroughSubject<Void, Never>()
@@ -146,6 +148,21 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
         }
         likedFilterButton.addTarget(self, action: #selector(likedFilterTapped), for: .touchUpInside)
 
+        myUploadButton.setTitle("내가 만든 필터", for: .normal)
+        myUploadButton.titleLabel?.font = .pretendard(.medium, size: 13)
+        myUploadButton.setTitleColor(.gray30, for: .normal)
+        myUploadButton.backgroundColor = .blackTurquoise
+        myUploadButton.layer.cornerRadius = 12
+        myUploadButton.contentHorizontalAlignment = .left
+        myUploadButton.contentEdgeInsets = UIEdgeInsets(top: 12, left: 16, bottom: 12, right: 16)
+        if let image = UIImage(named: "Icon_chevron")?.withRenderingMode(.alwaysTemplate) {
+            myUploadButton.setImage(image, for: .normal)
+            myUploadButton.tintColor = .gray60
+            myUploadButton.semanticContentAttribute = .forceRightToLeft
+            myUploadButton.imageEdgeInsets = UIEdgeInsets(top: 0, left: 8, bottom: 0, right: -8)
+        }
+        myUploadButton.addTarget(self, action: #selector(myUploadTapped), for: .touchUpInside)
+
         [
             profileImageView,
             nameLabel,
@@ -155,7 +172,8 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
             editProfileButton,
             infoStack,
             purchaseHistoryButton,
-            likedFilterButton
+            likedFilterButton,
+            myUploadButton
         ].forEach { contentView.addSubview($0) }
     }
 
@@ -217,6 +235,12 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
 
         likedFilterButton.snp.makeConstraints { make in
             make.top.equalTo(purchaseHistoryButton.snp.bottom).offset(12)
+            make.leading.trailing.equalTo(editProfileButton)
+            make.height.equalTo(48)
+        }
+
+        myUploadButton.snp.makeConstraints { make in
+            make.top.equalTo(likedFilterButton.snp.bottom).offset(12)
             make.leading.trailing.equalTo(editProfileButton)
             make.height.equalTo(48)
             make.bottom.equalToSuperview().offset(-24)
@@ -337,6 +361,20 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
 
     @objc private func likedFilterTapped() {
         onLikedFilterRequested?()
+    }
+
+    @objc private func myUploadTapped() {
+        guard let profile = currentProfile else {
+            presentMessage("프로필 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.")
+            return
+        }
+        onMyUploadRequested?(profile.id)
+    }
+
+    private func presentMessage(_ message: String) {
+        let alert = UIAlertController(title: "안내", message: message, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "확인", style: .default))
+        present(alert, animated: true)
     }
 
 }

@@ -41,6 +41,11 @@ final class MyPageCoordinator {
             let likedVC = LikedFilterViewController(viewModel: viewModel.makeLikedFilterViewModel())
             self.navigationController.pushViewController(likedVC, animated: true)
         }
+        viewController.onMyUploadRequested = { [weak self, weak viewModel] userID in
+            guard let self, let viewModel else { return }
+            let uploadVC = MyUploadViewController(viewModel: viewModel.makeMyUploadViewModel(userID: userID))
+            self.navigationController.pushViewController(uploadVC, animated: true)
+        }
         navigationController.setViewControllers([viewController], animated: false)
         return navigationController
     }

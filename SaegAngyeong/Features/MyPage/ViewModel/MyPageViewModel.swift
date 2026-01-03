@@ -79,4 +79,13 @@ extension MyPageViewModel {
             sesacKey: sesacKey
         )
     }
+
+    func makeMyUploadViewModel(userID: String) -> MyUploadViewModel {
+        MyUploadViewModel(
+            filterRepository: filterRepository,
+            userID: userID,
+            accessTokenProvider: accessTokenProvider,
+            sesacKey: sesacKey
+        )
+    }
 }
