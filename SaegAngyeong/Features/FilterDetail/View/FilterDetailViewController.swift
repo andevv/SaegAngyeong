@@ -11,6 +11,7 @@ import Combine
 import MapKit
 
 final class FilterDetailViewController: BaseViewController<FilterDetailViewModel> {
+    private let navTitleView = MarqueeTitleView()
     private let orderRepository: OrderRepository
     private let paymentRepository: PaymentRepository
     private let scrollView = UIScrollView()
@@ -71,7 +72,19 @@ final class FilterDetailViewController: BaseViewController<FilterDetailViewModel
         viewDidLoadSubject.send(())
     }
 
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        let maxWidth = max(140, view.bounds.width - 160)
+        navTitleView.bounds.size = CGSize(width: maxWidth, height: 24)
+        navTitleView.setNeedsLayout()
+        navTitleView.layoutIfNeeded()
+    }
+
     override func configureUI() {
+        navTitleView.textColor = .gray60
+        navTitleView.font = .mulgyeol(.bold, size: 20)
+        navigationItem.titleView = navTitleView
+
         scrollView.showsVerticalScrollIndicator = false
         view.addSubview(scrollView)
         scrollView.addSubview(contentView)
@@ -320,11 +333,7 @@ final class FilterDetailViewController: BaseViewController<FilterDetailViewModel
 
     private func apply(_ viewData: FilterDetailViewData) {
         currentViewData = viewData
-        let navTitleLabel = UILabel()
-        navTitleLabel.text = viewData.title
-        navTitleLabel.textColor = .gray60
-        navTitleLabel.font = .mulgyeol(.bold, size: 20)
-        navigationItem.titleView = navTitleLabel
+        navTitleView.setText(viewData.title)
         priceLabel.text = "\(viewData.price)"
         coinLabel.text = "Coin"
         compareView.setImages(original: viewData.originalImageURL, filtered: viewData.filteredImageURL, headers: viewData.headers)
@@ -457,6 +466,59 @@ private final class StatCardView: UIView {
     func configure(title: String, value: String) {
         titleLabel.text = title
         valueLabel.text = value
+    }
+}
+
+private final class MarqueeTitleView: UIView {
+    private let label = UILabel()
+
+    var font: UIFont? {
+        get { label.font }
+        set { label.font = newValue }
+    }
+
+    var textColor: UIColor? {
+        get { label.textColor }
+        set { label.textColor = newValue }
+    }
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        clipsToBounds = true
+        addSubview(label)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    func setText(_ text: String) {
+        label.text = text
+        setNeedsLayout()
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        let labelSize = label.sizeThatFits(CGSize(width: .greatestFiniteMagnitude, height: bounds.height))
+        label.frame = CGRect(x: 0, y: (bounds.height - labelSize.height) / 2, width: labelSize.width, height: labelSize.height)
+        updateAnimationIfNeeded()
+    }
+
+    private func updateAnimationIfNeeded() {
+        let overflow = label.bounds.width - bounds.width
+        label.layer.removeAllAnimations()
+        guard overflow > 8 else { return }
+
+        let distance = overflow + 16
+        let duration = Double(distance / 30)
+        let animation = CABasicAnimation(keyPath: "transform.translation.x")
+        animation.fromValue = 0
+        animation.toValue = -distance
+        animation.duration = max(3, duration)
+        animation.timingFunction = CAMediaTimingFunction(name: .linear)
+        animation.repeatCount = .infinity
+        label.layer.add(animation, forKey: "marquee")
     }
 }
 
