@@ -10,6 +10,7 @@ import UIKit
 final class MyPageCoordinator {
     private let dependency: AppDependency
     private let navigationController: BaseNavigationController
+    private var likedFilterCoordinator: LikedFilterCoordinator?
 
     init(dependency: AppDependency) {
         self.dependency = dependency
@@ -37,9 +38,13 @@ final class MyPageCoordinator {
             self.navigationController.pushViewController(historyVC, animated: true)
         }
         viewController.onLikedFilterRequested = { [weak self, weak viewModel] in
-            guard let self, let viewModel else { return }
-            let likedVC = LikedFilterViewController(viewModel: viewModel.makeLikedFilterViewModel())
-            self.navigationController.pushViewController(likedVC, animated: true)
+            guard let self else { return }
+            let coordinator = LikedFilterCoordinator(
+                dependency: self.dependency,
+                navigationController: self.navigationController
+            )
+            self.likedFilterCoordinator = coordinator
+            coordinator.start()
         }
         viewController.onMyUploadRequested = { [weak self, weak viewModel] userID in
             guard let self, let viewModel else { return }
