@@ -60,4 +60,10 @@ final class MyPageCoordinator {
         navigationController.setViewControllers([viewController], animated: false)
         return navigationController
     }
+
+    deinit {
+        #if DEBUG
+        print("[Deinit][Coordinator] \(type(of: self))")
+        #endif
+    }
 }

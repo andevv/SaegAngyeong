@@ -44,4 +44,10 @@ final class FeedCoordinator {
         )
         navigationController.pushViewController(viewController, animated: true)
     }
+
+    deinit {
+        #if DEBUG
+        print("[Deinit][Coordinator] \(type(of: self))")
+        #endif
+    }
 }

@@ -99,4 +99,10 @@ final class AuthCoordinator {
         }
         window.makeKeyAndVisible()
     }
+
+    deinit {
+        #if DEBUG
+        print("[Deinit][Coordinator] \(type(of: self))")
+        #endif
+    }
 }

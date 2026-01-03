@@ -29,6 +29,12 @@ final class LikedFilterCoordinator {
         navigationController.pushViewController(viewController, animated: true)
     }
 
+    deinit {
+        #if DEBUG
+        print("[Deinit][Coordinator] \(type(of: self))")
+        #endif
+    }
+
     private func showFilterDetail(filterID: String) {
         let viewModel = FilterDetailViewModel(
             filterID: filterID,
