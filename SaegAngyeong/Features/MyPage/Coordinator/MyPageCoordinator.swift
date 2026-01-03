@@ -11,6 +11,7 @@ final class MyPageCoordinator {
     private let dependency: AppDependency
     private let navigationController: BaseNavigationController
     private var likedFilterCoordinator: LikedFilterCoordinator?
+    private var myUploadCoordinator: MyUploadCoordinator?
 
     init(dependency: AppDependency) {
         self.dependency = dependency
@@ -47,9 +48,14 @@ final class MyPageCoordinator {
             coordinator.start()
         }
         viewController.onMyUploadRequested = { [weak self, weak viewModel] userID in
-            guard let self, let viewModel else { return }
-            let uploadVC = MyUploadViewController(viewModel: viewModel.makeMyUploadViewModel(userID: userID))
-            self.navigationController.pushViewController(uploadVC, animated: true)
+            guard let self else { return }
+            let coordinator = MyUploadCoordinator(
+                dependency: self.dependency,
+                navigationController: self.navigationController,
+                userID: userID
+            )
+            self.myUploadCoordinator = coordinator
+            coordinator.start()
         }
         navigationController.setViewControllers([viewController], animated: false)
         return navigationController

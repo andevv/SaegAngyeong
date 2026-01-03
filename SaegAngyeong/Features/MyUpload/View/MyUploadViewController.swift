@@ -10,6 +10,7 @@ import SnapKit
 import Combine
 
 final class MyUploadViewController: BaseViewController<MyUploadViewModel> {
+    var onFilterSelected: ((String) -> Void)?
     private let tableView = UITableView(frame: .zero, style: .plain)
     private let emptyLabel = UILabel()
 
@@ -130,6 +131,11 @@ extension MyUploadViewController: UITableViewDataSource, UITableViewDelegate {
         }
         cell.configure(with: items[indexPath.row])
         return cell
+    }
+
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        let item = items[indexPath.row]
+        onFilterSelected?(item.id)
     }
 
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
