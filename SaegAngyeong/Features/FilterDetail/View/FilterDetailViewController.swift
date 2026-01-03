@@ -364,7 +364,7 @@ final class FilterDetailViewController: BaseViewController<FilterDetailViewModel
         tagStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
         viewData.creatorHashTags.forEach { tag in
             let label = PaddingLabel(padding: UIEdgeInsets(top: 4, left: 10, bottom: 4, right: 10))
-            label.text = "#\(tag)"
+            label.text = tag.hasPrefix("#") ? tag : "#\(tag)"
             label.font = .pretendard(.medium, size: 11)
             label.textColor = .gray60
             label.backgroundColor = .blackTurquoise
