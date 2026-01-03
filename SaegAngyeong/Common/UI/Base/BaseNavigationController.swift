@@ -16,4 +16,10 @@ final class BaseNavigationController: UINavigationController {
         super.viewDidLoad()
         view.backgroundColor = .black
     }
+
+    deinit {
+        #if DEBUG
+        print("[Deinit][VC] \(type(of: self))")
+        #endif
+    }
 }

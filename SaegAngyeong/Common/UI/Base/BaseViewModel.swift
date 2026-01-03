@@ -26,4 +26,10 @@ class BaseViewModel {
     var cancellables = Set<AnyCancellable>()
 
     init() {}
+
+    deinit {
+        #if DEBUG
+        print("[Deinit][VM] \(type(of: self))")
+        #endif
+    }
 }

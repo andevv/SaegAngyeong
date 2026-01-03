@@ -28,6 +28,12 @@ final class MainTabBarController: UITabBarController {
         fatalError("init(coder:) is not supported")
     }
 
+    deinit {
+        #if DEBUG
+        print("[Deinit][VC] \(type(of: self))")
+        #endif
+    }
+
     private func configureAppearance() {
         tabBar.tintColor = .gray15
         tabBar.unselectedItemTintColor = .gray45
@@ -79,5 +85,11 @@ private final class DummyViewController: UIViewController {
     @available(*, unavailable)
     required init?(coder: NSCoder) {
         fatalError("init(coder:) is not supported")
+    }
+
+    deinit {
+        #if DEBUG
+        print("[Deinit][VC] \(type(of: self))")
+        #endif
     }
 }

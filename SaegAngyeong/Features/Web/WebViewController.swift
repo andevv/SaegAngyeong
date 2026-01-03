@@ -28,6 +28,12 @@ final class WebViewController: UIViewController, WKScriptMessageHandler {
         fatalError("init(coder:) has not been implemented")
     }
 
+    deinit {
+        #if DEBUG
+        print("[Deinit][VC] \(type(of: self))")
+        #endif
+    }
+
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .black

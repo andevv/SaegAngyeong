@@ -25,6 +25,12 @@ class BaseViewController<ViewModel: ViewModelType>: UIViewController {
         fatalError("init(coder:) is not supported")
     }
 
+    deinit {
+        #if DEBUG
+        print("[Deinit][VC] \(type(of: self))")
+        #endif
+    }
+
     // MARK: - Life Cycle
     override func viewDidLoad() {
         super.viewDidLoad()
