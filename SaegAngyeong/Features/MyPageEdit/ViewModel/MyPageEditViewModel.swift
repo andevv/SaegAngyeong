@@ -20,11 +20,28 @@ struct MyPageEditDraft {
 final class MyPageEditViewModel: BaseViewModel, ViewModelType {
     private let userRepository: UserRepository
     private let initialProfile: UserProfile?
+    private let accessTokenProvider: () -> String?
+    private let sesacKey: String
 
-    init(userRepository: UserRepository, initialProfile: UserProfile?) {
+    init(
+        userRepository: UserRepository,
+        initialProfile: UserProfile?,
+        accessTokenProvider: @escaping () -> String?,
+        sesacKey: String
+    ) {
         self.userRepository = userRepository
         self.initialProfile = initialProfile
+        self.accessTokenProvider = accessTokenProvider
+        self.sesacKey = sesacKey
         super.init()
+    }
+
+    var imageHeaders: [String: String] {
+        var headers: [String: String] = ["SeSACKey": sesacKey]
+        if let token = accessTokenProvider(), token.isEmpty == false {
+            headers["Authorization"] = token
+        }
+        return headers
     }
 
     struct Input {

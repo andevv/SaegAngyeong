@@ -316,20 +316,22 @@ final class MyPageEditViewController: BaseViewController<MyPageEditViewModel> {
         if let url = profile.profileImageURL {
             profileImageURL = url
             let displayURL = shouldForceRefreshImage ? cacheBustedURL(from: url) : url
+            let modifier = KingfisherHelper.modifier(headers: viewModel.imageHeaders)
+            var options: KingfisherOptionsInfo = [
+                .requestModifier(modifier),
+                .cacheOriginalImage,
+                .keepCurrentImageWhileLoading,
+                .retryStrategy(retryStrategy)
+            ]
             if shouldForceRefreshImage {
-                profileImageView.kf.setImage(
-                    with: displayURL,
-                    placeholder: fallback,
-                    options: [.forceRefresh, .cacheOriginalImage, .keepCurrentImageWhileLoading, .retryStrategy(retryStrategy)]
-                )
+                options.append(.forceRefresh)
                 shouldForceRefreshImage = false
-            } else {
-                profileImageView.kf.setImage(
-                    with: displayURL,
-                    placeholder: fallback,
-                    options: [.keepCurrentImageWhileLoading, .retryStrategy(retryStrategy)]
-                )
             }
+            profileImageView.kf.setImage(
+                with: displayURL,
+                placeholder: fallback,
+                options: options
+            )
         } else {
             profileImageView.image = fallback
         }

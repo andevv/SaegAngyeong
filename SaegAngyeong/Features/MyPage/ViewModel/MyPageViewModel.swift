@@ -128,7 +128,12 @@ final class MyPageViewModel: BaseViewModel, ViewModelType {
 
 extension MyPageViewModel {
     func makeEditViewModel(initialProfile: UserProfile?) -> MyPageEditViewModel {
-        MyPageEditViewModel(userRepository: userRepository, initialProfile: initialProfile)
+        MyPageEditViewModel(
+            userRepository: userRepository,
+            initialProfile: initialProfile,
+            accessTokenProvider: accessTokenProvider,
+            sesacKey: sesacKey
+        )
     }
 
     func makePurchaseHistoryViewModel() -> PurchaseHistoryViewModel {
