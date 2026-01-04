@@ -7,6 +7,7 @@
 
 import UIKit
 import iamport_ios
+import Combine
 
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     
@@ -14,6 +15,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     var authCoordinator: AuthCoordinator?
     private var appDependency: AppDependency?
     private var fcmTokenObserver: NSObjectProtocol?
+    private var cancellables = Set<AnyCancellable>()
     
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
         guard let windowScene = (scene as? UIWindowScene) else { return }
@@ -85,6 +87,24 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             #if DEBUG
             print("[FCM] Stored device token: \(token)")
             #endif
+            self?.updateDeviceTokenIfNeeded(token)
         }
+    }
+
+    private func updateDeviceTokenIfNeeded(_ token: String) {
+        guard let appDependency else { return }
+        guard let accessToken = appDependency.tokenStore.accessToken,
+              accessToken.isEmpty == false else {
+            return
+        }
+        appDependency.authRepository.updateDeviceToken(token)
+            .sink { completion in
+                #if DEBUG
+                if case let .failure(error) = completion {
+                    print("[FCM] Failed to update device token: \(error)")
+                }
+                #endif
+            } receiveValue: { _ in }
+            .store(in: &cancellables)
     }
 }
