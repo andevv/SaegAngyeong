@@ -74,6 +74,25 @@ final class LoginViewController: BaseViewController<LoginViewModel> {
         passwordField.addTarget(self, action: #selector(textFieldDidChange), for: .editingChanged)
     }
 
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        let appearance = UINavigationBarAppearance()
+        appearance.configureWithTransparentBackground()
+        appearance.titleTextAttributes = [
+            .foregroundColor: UIColor.gray60
+        ]
+        navigationController?.navigationBar.standardAppearance = appearance
+        navigationController?.navigationBar.scrollEdgeAppearance = appearance
+        navigationController?.navigationBar.compactAppearance = appearance
+        navigationController?.navigationBar.tintColor = .gray60
+        navigationController?.navigationBar.barStyle = .black
+        setNeedsStatusBarAppearanceUpdate()
+    }
+
+    override var preferredStatusBarStyle: UIStatusBarStyle {
+        .lightContent
+    }
+
     // MARK: - BaseViewController Overrides
     override func configureUI() {
         view.backgroundColor = .black

@@ -12,14 +12,14 @@ final class AuthCoordinator {
 
     // MARK: - Properties
     private let dependency: AppDependency
-    let navigationController: UINavigationController
+    let navigationController: BaseNavigationController
     private var window: UIWindow?
     private var cancellables = Set<AnyCancellable>()
 
     init(window: UIWindow?, dependency: AppDependency) {
         self.window = window
         self.dependency = dependency
-        self.navigationController = UINavigationController()
+        self.navigationController = BaseNavigationController()
         bindTokenInvalidation()
     }
 
