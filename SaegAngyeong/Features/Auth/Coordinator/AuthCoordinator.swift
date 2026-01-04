@@ -69,8 +69,25 @@ final class AuthCoordinator {
             self?.dependency.tokenStore.refreshToken = session.tokens.refreshToken
             self?.showHome(animated: true)
         }
+        loginVC.onJoinRequested = { [weak self] in
+            self?.showJoin()
+        }
         navigationController.setViewControllers([loginVC], animated: animated)
         setRootViewController(navigationController, animated: animated)
+    }
+
+    private func showJoin() {
+        let viewModel = JoinViewModel(
+            authRepository: dependency.authRepository,
+            deviceTokenProvider: { self.dependency.tokenStore.deviceToken }
+        )
+        let joinVC = JoinViewController(viewModel: viewModel)
+        joinVC.onJoinSuccess = { [weak self] session in
+            self?.dependency.tokenStore.accessToken = session.tokens.accessToken
+            self?.dependency.tokenStore.refreshToken = session.tokens.refreshToken
+            self?.showHome(animated: true)
+        }
+        navigationController.pushViewController(joinVC, animated: true)
     }
 
     private func showHome(animated: Bool) {

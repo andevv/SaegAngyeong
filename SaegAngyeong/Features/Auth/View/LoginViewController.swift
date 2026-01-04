@@ -37,20 +37,39 @@ final class LoginViewController: BaseViewController<LoginViewModel> {
         return button
     }()
 
+    private let joinButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setTitle("이메일로 회원가입", for: .normal)
+        button.titleLabel?.font = .pretendard(.medium, size: 13)
+        button.setTitleColor(.white, for: .normal)
+        button.backgroundColor = .deepTurquoise
+        button.layer.cornerRadius = 12
+        return button
+    }()
+
+    private let buttonStack = UIStackView()
+
     // MARK: - Properties
     private let appleIDTokenSubject = PassthroughSubject<String, Never>()
     var onLoginSuccess: ((AuthSession) -> Void)?
+    var onJoinRequested: (() -> Void)?
 
     // MARK: - Life Cycle
     override func viewDidLoad() {
         super.viewDidLoad()
+        joinButton.addTarget(self, action: #selector(joinTapped), for: .touchUpInside)
         appleButton.addTarget(self, action: #selector(appleLoginTapped), for: .touchUpInside)
     }
 
     // MARK: - BaseViewController Overrides
     override func configureUI() {
         view.backgroundColor = .systemBackground
-        [titleLabel, descriptionLabel, appleButton].forEach { view.addSubview($0) }
+        buttonStack.axis = .vertical
+        buttonStack.spacing = 12
+        buttonStack.addArrangedSubview(joinButton)
+        buttonStack.addArrangedSubview(appleButton)
+
+        [titleLabel, descriptionLabel, buttonStack].forEach { view.addSubview($0) }
     }
 
     override func configureLayout() {
@@ -64,11 +83,18 @@ final class LoginViewController: BaseViewController<LoginViewModel> {
             make.horizontalEdges.equalToSuperview().inset(24)
         }
 
-        appleButton.snp.makeConstraints { make in
+        buttonStack.snp.makeConstraints { make in
             make.top.greaterThanOrEqualTo(descriptionLabel.snp.bottom).offset(32)
             make.horizontalEdges.equalToSuperview().inset(24)
-            make.height.equalTo(52)
             make.bottom.equalTo(view.safeAreaLayoutGuide).offset(-40)
+        }
+        
+        joinButton.snp.makeConstraints { make in
+            make.height.equalTo(48)
+        }
+
+        appleButton.snp.makeConstraints { make in
+            make.height.equalTo(52)
         }
     }
 
@@ -105,6 +131,11 @@ final class LoginViewController: BaseViewController<LoginViewModel> {
         controller.delegate = self
         controller.presentationContextProvider = self
         controller.performRequests()
+    }
+
+    @objc
+    private func joinTapped() {
+        onJoinRequested?()
     }
 
     private func presentError(_ error: Error) {
