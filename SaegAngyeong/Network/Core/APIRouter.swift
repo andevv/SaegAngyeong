@@ -168,7 +168,12 @@ final class NetworkProvider: NetworkProviding {
         return session.request(router)
             .validate()
             .publishResponse(using: serializer)
-            .tryMap { _ in () }
+            .tryMap { response in
+                if let error = response.error {
+                    throw error
+                }
+                return ()
+            }
             .mapError { error in
                 if let afError = error as? AFError {
                     return NetworkError(afError)
