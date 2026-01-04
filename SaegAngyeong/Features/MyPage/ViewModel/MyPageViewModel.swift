@@ -34,6 +34,14 @@ final class MyPageViewModel: BaseViewModel, ViewModelType {
         super.init()
     }
 
+    var imageHeaders: [String: String] {
+        var headers: [String: String] = ["SeSACKey": sesacKey]
+        if let token = accessTokenProvider(), token.isEmpty == false {
+            headers["Authorization"] = token
+        }
+        return headers
+    }
+
     struct Input {
         let viewDidLoad: AnyPublisher<Void, Never>
         let refresh: AnyPublisher<Void, Never>

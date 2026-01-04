@@ -317,10 +317,17 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
             }
         }
 
+        let placeholder = UIImage(named: "Profile_Empty")
         if let url = profile.profileImageURL {
-            profileImageView.kf.setImage(with: url)
+            KingfisherHelper.setImage(
+                profileImageView,
+                url: url,
+                headers: viewModel.imageHeaders,
+                placeholder: placeholder,
+                logLabel: "mypage-profile"
+            )
         } else {
-            profileImageView.image = UIImage(named: "Profile_Empty")
+            profileImageView.image = placeholder
         }
     }
 
