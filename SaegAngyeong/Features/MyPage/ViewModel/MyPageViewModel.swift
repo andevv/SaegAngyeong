@@ -70,7 +70,9 @@ final class MyPageViewModel: BaseViewModel, ViewModelType {
             .flatMap { [weak self] _ -> AnyPublisher<Void, DomainError> in
                 guard let self else { return Empty().eraseToAnyPublisher() }
                 self.isLoading.send(true)
-                return self.authRepository.logout()
+                return self.authRepository.updateDeviceToken("Logout")
+                    .flatMap { self.authRepository.logout() }
+                    .eraseToAnyPublisher()
             }
             .receive(on: DispatchQueue.main)
             .sink { [weak self] completion in
