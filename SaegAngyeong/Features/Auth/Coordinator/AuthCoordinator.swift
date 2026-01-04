@@ -67,6 +67,7 @@ final class AuthCoordinator {
         loginVC.onLoginSuccess = { [weak self] session in
             self?.dependency.tokenStore.accessToken = session.tokens.accessToken
             self?.dependency.tokenStore.refreshToken = session.tokens.refreshToken
+            self?.sendDeviceTokenIfNeeded()
             self?.showHome(animated: true)
         }
         loginVC.onJoinRequested = { [weak self] in
@@ -85,6 +86,7 @@ final class AuthCoordinator {
         joinVC.onJoinSuccess = { [weak self] session in
             self?.dependency.tokenStore.accessToken = session.tokens.accessToken
             self?.dependency.tokenStore.refreshToken = session.tokens.refreshToken
+            self?.sendDeviceTokenIfNeeded()
             self?.showHome(animated: true)
         }
         navigationController.pushViewController(joinVC, animated: true)
@@ -102,6 +104,13 @@ final class AuthCoordinator {
                 self?.dependency.tokenStore.clear()
                 self?.showLogin(animated: true)
             }
+            .store(in: &cancellables)
+    }
+
+    private func sendDeviceTokenIfNeeded() {
+        guard let token = dependency.tokenStore.deviceToken, token.isEmpty == false else { return }
+        dependency.authRepository.updateDeviceToken(token)
+            .sink(receiveCompletion: { _ in }, receiveValue: { _ in })
             .store(in: &cancellables)
     }
 
