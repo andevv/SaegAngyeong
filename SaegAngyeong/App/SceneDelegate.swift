@@ -12,6 +12,8 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     
     var window: UIWindow?
     var authCoordinator: AuthCoordinator?
+    private var appDependency: AppDependency?
+    private var fcmTokenObserver: NSObjectProtocol?
     
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
         guard let windowScene = (scene as? UIWindowScene) else { return }
@@ -22,7 +24,9 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         coordinator.start()
         
         self.authCoordinator = coordinator
+        self.appDependency = dependency
         self.window = window
+        registerFCMTokenObserver()
     }
     
     func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
@@ -58,6 +62,29 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // Use this method to save data, release shared resources, and store enough scene-specific state information
         // to restore the scene back to its current state.
     }
-    
-    
+
+    deinit {
+        if let observer = fcmTokenObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
+        #if DEBUG
+        print("[Deinit][SceneDelegate] \(type(of: self))")
+        #endif
+    }
+
+    private func registerFCMTokenObserver() {
+        guard fcmTokenObserver == nil else { return }
+        fcmTokenObserver = NotificationCenter.default.addObserver(
+            forName: Notification.Name("FCMToken"),
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            guard let token = notification.userInfo?["token"] as? String,
+                  token.isEmpty == false else { return }
+            self?.appDependency?.tokenStore.deviceToken = token
+            #if DEBUG
+            print("[FCM] Stored device token: \(token)")
+            #endif
+        }
+    }
 }
