@@ -159,9 +159,22 @@ final class NetworkProvider: NetworkProviding {
     }
 
     func requestVoid(_ endpoint: APIEndpoint) -> AnyPublisher<Void, NetworkError> {
-        let publisher: AnyPublisher<EmptyResponse, NetworkError> = request(endpoint)
-        return publisher
-            .map { _ in () }
+        let router = APIRouter(
+            endpoint: endpoint,
+            accessTokenProvider: accessTokenProvider,
+            sesacKey: sesacKey
+        )
+        let serializer = DataResponseSerializer(emptyResponseCodes: [200, 204, 205])
+        return session.request(router)
+            .validate()
+            .publishResponse(using: serializer)
+            .tryMap { _ in () }
+            .mapError { error in
+                if let afError = error as? AFError {
+                    return NetworkError(afError)
+                }
+                return NetworkError(.responseSerializationFailed(reason: .customSerializationFailed(error: error)))
+            }
             .eraseToAnyPublisher()
     }
     

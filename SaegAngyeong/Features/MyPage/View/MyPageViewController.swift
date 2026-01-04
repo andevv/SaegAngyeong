@@ -29,9 +29,11 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
     private let purchaseHistoryButton = UIButton(type: .system)
     private let likedFilterButton = UIButton(type: .system)
     private let myUploadButton = UIButton(type: .system)
+    private let logoutButton = UIButton(type: .system)
 
     private let viewDidLoadSubject = PassthroughSubject<Void, Never>()
     private let refreshSubject = PassthroughSubject<Void, Never>()
+    private let logoutSubject = PassthroughSubject<Void, Never>()
     private var currentProfile: UserProfile?
 
     override init(viewModel: MyPageViewModel) {
@@ -163,6 +165,15 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
         }
         myUploadButton.addTarget(self, action: #selector(myUploadTapped), for: .touchUpInside)
 
+        logoutButton.setTitle("로그아웃", for: .normal)
+        logoutButton.titleLabel?.font = .pretendard(.medium, size: 13)
+        logoutButton.setTitleColor(.gray60, for: .normal)
+        logoutButton.backgroundColor = .gray15.withAlphaComponent(0.2)
+        logoutButton.layer.cornerRadius = 12
+        logoutButton.layer.borderWidth = 1
+        logoutButton.layer.borderColor = UIColor.gray90.withAlphaComponent(0.2).cgColor
+        logoutButton.addTarget(self, action: #selector(logoutTapped), for: .touchUpInside)
+
         [
             profileImageView,
             nameLabel,
@@ -173,7 +184,8 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
             infoStack,
             purchaseHistoryButton,
             likedFilterButton,
-            myUploadButton
+            myUploadButton,
+            logoutButton
         ].forEach { contentView.addSubview($0) }
     }
 
@@ -243,6 +255,12 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
             make.top.equalTo(likedFilterButton.snp.bottom).offset(12)
             make.leading.trailing.equalTo(editProfileButton)
             make.height.equalTo(48)
+        }
+
+        logoutButton.snp.makeConstraints { make in
+            make.top.equalTo(myUploadButton.snp.bottom).offset(16)
+            make.leading.trailing.equalTo(editProfileButton)
+            make.height.equalTo(48)
             make.bottom.equalToSuperview().offset(-24)
         }
     }
@@ -250,7 +268,8 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
     override func bindViewModel() {
         let input = MyPageViewModel.Input(
             viewDidLoad: viewDidLoadSubject.eraseToAnyPublisher(),
-            refresh: refreshSubject.eraseToAnyPublisher()
+            refresh: refreshSubject.eraseToAnyPublisher(),
+            logoutTapped: logoutSubject.eraseToAnyPublisher()
         )
         let output = viewModel.transform(input: input)
 
@@ -264,6 +283,13 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] error in
                 self?.presentError(error)
+            }
+            .store(in: &cancellables)
+
+        output.logoutCompleted
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] in
+                self?.presentLogoutCompleted()
             }
             .store(in: &cancellables)
     }
@@ -371,9 +397,26 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
         onMyUploadRequested?(profile.id)
     }
 
+    @objc private func logoutTapped() {
+        let alert = UIAlertController(title: "로그아웃", message: "정말 로그아웃 하시겠어요?", preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "취소", style: .cancel))
+        alert.addAction(UIAlertAction(title: "확인", style: .destructive, handler: { [weak self] _ in
+            self?.logoutSubject.send(())
+        }))
+        present(alert, animated: true)
+    }
+
     private func presentMessage(_ message: String) {
         let alert = UIAlertController(title: "안내", message: message, preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "확인", style: .default))
+        present(alert, animated: true)
+    }
+
+    private func presentLogoutCompleted() {
+        let alert = UIAlertController(title: "로그아웃", message: "로그아웃이 완료되었습니다.", preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "확인", style: .default, handler: { _ in
+            NotificationCenter.default.post(name: .tokenInvalidated, object: nil)
+        }))
         present(alert, animated: true)
     }
 

@@ -20,6 +20,7 @@ final class MyPageCoordinator {
 
     func start() -> UIViewController {
         let viewModel = MyPageViewModel(
+            authRepository: dependency.authRepository,
             userRepository: dependency.userRepository,
             orderRepository: dependency.orderRepository,
             filterRepository: dependency.filterRepository,

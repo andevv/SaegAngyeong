@@ -7,8 +7,10 @@
 
 import Foundation
 import Combine
+import Kingfisher
 
 final class MyPageViewModel: BaseViewModel, ViewModelType {
+    private let authRepository: AuthRepository
     private let userRepository: UserRepository
     private let orderRepository: OrderRepository
     private let filterRepository: FilterRepository
@@ -16,12 +18,14 @@ final class MyPageViewModel: BaseViewModel, ViewModelType {
     private let sesacKey: String
 
     init(
+        authRepository: AuthRepository,
         userRepository: UserRepository,
         orderRepository: OrderRepository,
         filterRepository: FilterRepository,
         accessTokenProvider: @escaping () -> String?,
         sesacKey: String
     ) {
+        self.authRepository = authRepository
         self.userRepository = userRepository
         self.orderRepository = orderRepository
         self.filterRepository = filterRepository
@@ -33,14 +37,17 @@ final class MyPageViewModel: BaseViewModel, ViewModelType {
     struct Input {
         let viewDidLoad: AnyPublisher<Void, Never>
         let refresh: AnyPublisher<Void, Never>
+        let logoutTapped: AnyPublisher<Void, Never>
     }
 
     struct Output {
         let profile: AnyPublisher<UserProfile?, Never>
+        let logoutCompleted: AnyPublisher<Void, Never>
     }
 
     func transform(input: Input) -> Output {
         let profileSubject = CurrentValueSubject<UserProfile?, Never>(nil)
+        let logoutSubject = PassthroughSubject<Void, Never>()
 
         Publishers.Merge(input.viewDidLoad, input.refresh)
             .flatMap { [weak self] _ -> AnyPublisher<UserProfile, DomainError> in
@@ -59,7 +66,53 @@ final class MyPageViewModel: BaseViewModel, ViewModelType {
             }
             .store(in: &cancellables)
 
-        return Output(profile: profileSubject.eraseToAnyPublisher())
+        input.logoutTapped
+            .flatMap { [weak self] _ -> AnyPublisher<Void, DomainError> in
+                guard let self else { return Empty().eraseToAnyPublisher() }
+                self.isLoading.send(true)
+                return self.authRepository.logout()
+            }
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] completion in
+                guard let self else { return }
+                self.isLoading.send(false)
+                if case let .failure(error) = completion {
+                    self.error.send(error)
+                }
+            } receiveValue: { [weak self] in
+                guard let self else { return }
+                self.clearLocalData()
+                logoutSubject.send(())
+            }
+            .store(in: &cancellables)
+
+        return Output(
+            profile: profileSubject.eraseToAnyPublisher(),
+            logoutCompleted: logoutSubject.eraseToAnyPublisher()
+        )
+    }
+
+    private func clearLocalData() {
+        let defaults = UserDefaults.standard
+        if let bundleID = Bundle.main.bundleIdentifier {
+            defaults.removePersistentDomain(forName: bundleID)
+        }
+        defaults.synchronize()
+
+        URLCache.shared.removeAllCachedResponses()
+        ImageCache.default.clearMemoryCache()
+        ImageCache.default.clearDiskCache()
+
+        let fileManager = FileManager.default
+        let cacheURLs = [
+            fileManager.urls(for: .cachesDirectory, in: .userDomainMask).first,
+            fileManager.temporaryDirectory
+        ].compactMap { $0 }
+
+        cacheURLs.forEach { url in
+            let contents = (try? fileManager.contentsOfDirectory(at: url, includingPropertiesForKeys: nil)) ?? []
+            contents.forEach { try? fileManager.removeItem(at: $0) }
+        }
     }
 }
 
