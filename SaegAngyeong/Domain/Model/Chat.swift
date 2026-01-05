@@ -12,6 +12,8 @@ struct ChatRoom {
     let name: String?
     let participants: [UserSummary]
     let lastMessage: ChatMessage?
+    let createdAt: Date
+    let updatedAt: Date
 }
 
 struct ChatMessage {
