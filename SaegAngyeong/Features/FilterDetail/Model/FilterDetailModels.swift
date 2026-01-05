@@ -24,6 +24,7 @@ struct FilterDetailViewData {
     let creatorIntroduction: String
     let creatorHashTags: [String]
     let creatorProfileURL: URL?
+    let isOwnedByMe: Bool
     let metadataTitle: String
     let metadataLine1: String
     let metadataLine2: String
@@ -54,6 +55,7 @@ struct FilterDetailViewData {
             creatorIntroduction: creatorIntroduction,
             creatorHashTags: creatorHashTags,
             creatorProfileURL: creatorProfileURL,
+            isOwnedByMe: isOwnedByMe,
             metadataTitle: metadataTitle,
             metadataLine1: metadataLine1,
             metadataLine2: metadataLine2,
@@ -86,6 +88,7 @@ struct FilterDetailViewData {
             creatorIntroduction: creatorIntroduction,
             creatorHashTags: creatorHashTags,
             creatorProfileURL: creatorProfileURL,
+            isOwnedByMe: isOwnedByMe,
             metadataTitle: metadataTitle,
             metadataLine1: metadataLine1,
             metadataLine2: metadataLine2,

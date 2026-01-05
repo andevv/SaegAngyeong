@@ -13,18 +13,23 @@ final class FilterDetailViewModel: BaseViewModel, ViewModelType {
 
     private let filterID: String
     private let filterRepository: FilterRepository
+    private let userRepository: UserRepository
     private let accessTokenProvider: () -> String?
     private let sesacKey: String
     private let geocoder = CLGeocoder()
+    private var currentUserID: String?
+    private var currentFilter: Filter?
 
     init(
         filterID: String,
         filterRepository: FilterRepository,
+        userRepository: UserRepository,
         accessTokenProvider: @escaping () -> String?,
         sesacKey: String
     ) {
         self.filterID = filterID
         self.filterRepository = filterRepository
+        self.userRepository = userRepository
         self.accessTokenProvider = accessTokenProvider
         self.sesacKey = sesacKey
         super.init()
@@ -34,14 +39,38 @@ final class FilterDetailViewModel: BaseViewModel, ViewModelType {
         let viewDidLoad: AnyPublisher<Void, Never>
         let likeToggle: AnyPublisher<Void, Never>
         let refresh: AnyPublisher<Void, Never>
+        let deleteTapped: AnyPublisher<Void, Never>
     }
 
     struct Output {
         let detail: AnyPublisher<FilterDetailViewData, Never>
+        let deleteCompleted: AnyPublisher<Void, Never>
     }
 
     func transform(input: Input) -> Output {
         let detailSubject = CurrentValueSubject<FilterDetailViewData?, Never>(nil)
+        let deleteSubject = PassthroughSubject<Void, Never>()
+
+        input.viewDidLoad
+            .flatMap { [weak self] _ -> AnyPublisher<UserProfile, DomainError> in
+                guard let self else { return Empty().eraseToAnyPublisher() }
+                return self.userRepository.fetchMyProfile()
+            }
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] completion in
+                if case let .failure(error) = completion {
+                    self?.error.send(error)
+                }
+            } receiveValue: { [weak self] profile in
+                guard let self else { return }
+                self.currentUserID = profile.id
+                if let filter = self.currentFilter {
+                    let viewData = self.makeViewData(from: filter, currentUserID: self.currentUserID)
+                    detailSubject.send(viewData)
+                    self.resolveAddressIfNeeded(from: viewData, subject: detailSubject)
+                }
+            }
+            .store(in: &cancellables)
 
         Publishers.Merge(input.viewDidLoad, input.refresh)
             .flatMap { [weak self] _ -> AnyPublisher<Filter, DomainError> in
@@ -57,7 +86,8 @@ final class FilterDetailViewModel: BaseViewModel, ViewModelType {
                 }
             } receiveValue: { [weak self] filter in
                 guard let self else { return }
-                let viewData = self.makeViewData(from: filter)
+                self.currentFilter = filter
+                let viewData = self.makeViewData(from: filter, currentUserID: self.currentUserID)
                 detailSubject.send(viewData)
                 self.resolveAddressIfNeeded(from: viewData, subject: detailSubject)
             }
@@ -83,12 +113,30 @@ final class FilterDetailViewModel: BaseViewModel, ViewModelType {
             }
             .store(in: &cancellables)
 
+        input.deleteTapped
+            .flatMap { [weak self] _ -> AnyPublisher<Void, DomainError> in
+                guard let self else { return Empty().eraseToAnyPublisher() }
+                self.isLoading.send(true)
+                return self.filterRepository.delete(id: self.filterID)
+            }
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] completion in
+                self?.isLoading.send(false)
+                if case let .failure(error) = completion {
+                    self?.error.send(error)
+                }
+            } receiveValue: { _ in
+                deleteSubject.send(())
+            }
+            .store(in: &cancellables)
+
         return Output(
-            detail: detailSubject.compactMap { $0 }.eraseToAnyPublisher()
+            detail: detailSubject.compactMap { $0 }.eraseToAnyPublisher(),
+            deleteCompleted: deleteSubject.eraseToAnyPublisher()
         )
     }
 
-    private func makeViewData(from filter: Filter) -> FilterDetailViewData {
+    private func makeViewData(from filter: Filter, currentUserID: String?) -> FilterDetailViewData {
         let metadataTitle = filter.photoMetadata?.camera ?? "촬영 정보"
         let metadataLine1: String = {
             var parts: [String] = []
@@ -150,6 +198,7 @@ final class FilterDetailViewModel: BaseViewModel, ViewModelType {
             creatorIntroduction: filter.creator.introduction ?? "",
             creatorHashTags: filter.creator.hashTags,
             creatorProfileURL: filter.creator.profileImageURL,
+            isOwnedByMe: currentUserID == filter.creator.id,
             metadataTitle: metadataTitle,
             metadataLine1: metadataLine1,
             metadataLine2: metadataLine2,

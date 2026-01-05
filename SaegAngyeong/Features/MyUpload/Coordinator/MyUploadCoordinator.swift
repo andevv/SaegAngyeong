@@ -36,6 +36,7 @@ final class MyUploadCoordinator {
         let viewModel = FilterDetailViewModel(
             filterID: filterID,
             filterRepository: dependency.filterRepository,
+            userRepository: dependency.userRepository,
             accessTokenProvider: { [weak self] in self?.dependency.tokenStore.accessToken },
             sesacKey: AppConfig.apiKey
         )

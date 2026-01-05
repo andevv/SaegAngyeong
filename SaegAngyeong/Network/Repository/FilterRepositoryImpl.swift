@@ -185,7 +185,9 @@ final class FilterRepositoryImpl: FilterRepository {
     }
 
     func delete(id: String) -> AnyPublisher<Void, DomainError> {
-        Fail(error: DomainError.unknown(message: "Not implemented")).eraseToAnyPublisher()
+        network.requestVoid(FilterAPI.delete(id: id))
+            .mapError { _ in DomainError.network }
+            .eraseToAnyPublisher()
     }
 
     func like(id: String, status: Bool) -> AnyPublisher<Void, DomainError> {

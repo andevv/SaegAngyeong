@@ -41,6 +41,11 @@ final class FilterDetailViewController: BaseViewController<FilterDetailViewModel
     private let tagStackView = UIStackView()
     private let filterDescriptionLabel = UILabel()
     private let purchaseButton = UIButton(type: .system)
+    private let ownerActionStack = UIStackView()
+    private let editButton = UIButton(type: .system)
+    private let deleteButton = UIButton(type: .system)
+    private var ownerActionTopConstraint: Constraint?
+    private var ownerActionHeightConstraint: Constraint?
 
     private let likeButton = UIButton(type: .system)
 
@@ -50,6 +55,7 @@ final class FilterDetailViewController: BaseViewController<FilterDetailViewModel
     private let viewDidLoadSubject = PassthroughSubject<Void, Never>()
     private let likeToggleSubject = PassthroughSubject<Void, Never>()
     private let refreshSubject = PassthroughSubject<Void, Never>()
+    private let deleteSubject = PassthroughSubject<Void, Never>()
 
     init(
         viewModel: FilterDetailViewModel,
@@ -163,6 +169,25 @@ final class FilterDetailViewController: BaseViewController<FilterDetailViewModel
         purchaseButton.layer.cornerRadius = 12
         purchaseButton.addTarget(self, action: #selector(purchaseTapped), for: .touchUpInside)
 
+        ownerActionStack.axis = .horizontal
+        ownerActionStack.spacing = 12
+        ownerActionStack.distribution = .fillEqually
+        ownerActionStack.isHidden = true
+
+        editButton.setTitle("필터 수정", for: .normal)
+        editButton.titleLabel?.font = .pretendard(.medium, size: 14)
+        editButton.setTitleColor(.gray30, for: .normal)
+        editButton.backgroundColor = UIColor.brightTurquoise.withAlphaComponent(0.9)
+        editButton.layer.cornerRadius = 12
+        editButton.addTarget(self, action: #selector(editTapped), for: .touchUpInside)
+
+        deleteButton.setTitle("필터 삭제", for: .normal)
+        deleteButton.titleLabel?.font = .pretendard(.medium, size: 14)
+        deleteButton.setTitleColor(.gray30, for: .normal)
+        deleteButton.backgroundColor = UIColor.gray90.withAlphaComponent(0.9)
+        deleteButton.layer.cornerRadius = 12
+        deleteButton.addTarget(self, action: #selector(deleteTapped), for: .touchUpInside)
+
         [
             compareContainerView,
             compareBar,
@@ -180,7 +205,8 @@ final class FilterDetailViewController: BaseViewController<FilterDetailViewModel
             messageButton,
             tagStackView,
             filterDescriptionLabel,
-            purchaseButton
+            purchaseButton,
+            ownerActionStack
         ].forEach { contentView.addSubview($0) }
 
         compareContainerView.addSubview(compareView)
@@ -188,6 +214,8 @@ final class FilterDetailViewController: BaseViewController<FilterDetailViewModel
         statsStack.addArrangedSubview(downloadCard)
         statsStack.addArrangedSubview(likeCard)
         navigationItem.rightBarButtonItem = UIBarButtonItem(customView: likeButton)
+        ownerActionStack.addArrangedSubview(editButton)
+        ownerActionStack.addArrangedSubview(deleteButton)
 
         let pan = UIPanGestureRecognizer(target: self, action: #selector(handleComparePan(_:)))
         compareBar.addGestureRecognizer(pan)
@@ -304,6 +332,12 @@ final class FilterDetailViewController: BaseViewController<FilterDetailViewModel
         filterDescriptionLabel.snp.makeConstraints { make in
             make.top.equalTo(tagStackView.snp.bottom).offset(12)
             make.leading.trailing.equalTo(compareContainerView)
+        }
+
+        ownerActionStack.snp.makeConstraints { make in
+            ownerActionTopConstraint = make.top.equalTo(filterDescriptionLabel.snp.bottom).offset(0).constraint
+            make.leading.trailing.equalTo(compareContainerView)
+            ownerActionHeightConstraint = make.height.equalTo(0).constraint
             make.bottom.equalToSuperview().offset(-24)
         }
     }
@@ -312,7 +346,8 @@ final class FilterDetailViewController: BaseViewController<FilterDetailViewModel
         let input = FilterDetailViewModel.Input(
             viewDidLoad: viewDidLoadSubject.eraseToAnyPublisher(),
             likeToggle: likeToggleSubject.eraseToAnyPublisher(),
-            refresh: refreshSubject.eraseToAnyPublisher()
+            refresh: refreshSubject.eraseToAnyPublisher(),
+            deleteTapped: deleteSubject.eraseToAnyPublisher()
         )
         let output = viewModel.transform(input: input)
 
@@ -320,6 +355,13 @@ final class FilterDetailViewController: BaseViewController<FilterDetailViewModel
             .receive(on: DispatchQueue.main)
             .sink { [weak self] viewData in
                 self?.apply(viewData)
+            }
+            .store(in: &cancellables)
+
+        output.deleteCompleted
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] in
+                self?.navigationController?.popViewController(animated: true)
             }
             .store(in: &cancellables)
 
@@ -353,6 +395,7 @@ final class FilterDetailViewController: BaseViewController<FilterDetailViewModel
         )
         presetsCard.configure(items: viewData.presets, locked: viewData.requiresPurchase && !viewData.isPurchased)
         purchaseButton.isHidden = !viewData.requiresPurchase
+        updateOwnerActions(isOwnedByMe: viewData.isOwnedByMe)
         if viewData.requiresPurchase {
             if viewData.isPurchased {
                 purchaseButton.setTitle("구매완료", for: .normal)
@@ -382,6 +425,12 @@ final class FilterDetailViewController: BaseViewController<FilterDetailViewModel
             tagStackView.addArrangedSubview(label)
         }
         KingfisherHelper.setImage(authorProfileImageView, url: viewData.creatorProfileURL, headers: viewData.headers, logLabel: "creator-profile")
+    }
+
+    private func updateOwnerActions(isOwnedByMe: Bool) {
+        ownerActionStack.isHidden = !isOwnedByMe
+        ownerActionTopConstraint?.update(offset: isOwnedByMe ? 20 : 0)
+        ownerActionHeightConstraint?.update(offset: isOwnedByMe ? 48 : 0)
     }
 
     @objc private func handleComparePan(_ gesture: UIPanGestureRecognizer) {
@@ -421,6 +470,19 @@ final class FilterDetailViewController: BaseViewController<FilterDetailViewModel
             self?.refreshSubject.send(())
         }
         navigationController?.pushViewController(paymentViewController, animated: true)
+    }
+
+    @objc private func editTapped() {
+        print("[FilterDetail] edit tapped")
+    }
+
+    @objc private func deleteTapped() {
+        let alert = UIAlertController(title: "필터 삭제", message: "이 필터를 삭제할까요?", preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "취소", style: .cancel))
+        alert.addAction(UIAlertAction(title: "삭제", style: .destructive, handler: { [weak self] _ in
+            self?.deleteSubject.send(())
+        }))
+        present(alert, animated: true)
     }
 
     private func presentError(_ error: Error) {
