@@ -24,6 +24,7 @@ final class MyPageCoordinator {
             userRepository: dependency.userRepository,
             orderRepository: dependency.orderRepository,
             filterRepository: dependency.filterRepository,
+            chatRepository: dependency.chatRepository,
             accessTokenProvider: { [weak self] in self?.dependency.tokenStore.accessToken },
             sesacKey: AppConfig.apiKey
         )
@@ -57,6 +58,11 @@ final class MyPageCoordinator {
             )
             self.myUploadCoordinator = coordinator
             coordinator.start()
+        }
+        viewController.onMyChattingListRequested = { [weak self, weak viewModel] in
+            guard let self, let viewModel else { return }
+            let chatVC = MyChattingListViewController(viewModel: viewModel.makeMyChattingListViewModel())
+            self.navigationController.pushViewController(chatVC, animated: true)
         }
         navigationController.setViewControllers([viewController], animated: false)
         return navigationController

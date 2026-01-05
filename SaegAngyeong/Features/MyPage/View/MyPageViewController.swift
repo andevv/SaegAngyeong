@@ -15,6 +15,7 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
     var onPurchaseHistoryRequested: (() -> Void)?
     var onLikedFilterRequested: (() -> Void)?
     var onMyUploadRequested: ((String) -> Void)?
+    var onMyChattingListRequested: (() -> Void)?
     private let scrollView = UIScrollView()
     private let contentView = UIView()
 
@@ -29,6 +30,7 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
     private let purchaseHistoryButton = UIButton(type: .system)
     private let likedFilterButton = UIButton(type: .system)
     private let myUploadButton = UIButton(type: .system)
+    private let myChattingListButton = UIButton(type: .system)
     private let logoutButton = UIButton(type: .system)
 
     private let viewDidLoadSubject = PassthroughSubject<Void, Never>()
@@ -165,6 +167,21 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
         }
         myUploadButton.addTarget(self, action: #selector(myUploadTapped), for: .touchUpInside)
 
+        myChattingListButton.setTitle("나의 채팅 목록", for: .normal)
+        myChattingListButton.titleLabel?.font = .pretendard(.medium, size: 13)
+        myChattingListButton.setTitleColor(.gray30, for: .normal)
+        myChattingListButton.backgroundColor = .blackTurquoise
+        myChattingListButton.layer.cornerRadius = 12
+        myChattingListButton.contentHorizontalAlignment = .left
+        myChattingListButton.contentEdgeInsets = UIEdgeInsets(top: 12, left: 16, bottom: 12, right: 16)
+        if let image = UIImage(named: "Icon_chevron")?.withRenderingMode(.alwaysTemplate) {
+            myChattingListButton.setImage(image, for: .normal)
+            myChattingListButton.tintColor = .gray60
+            myChattingListButton.semanticContentAttribute = .forceRightToLeft
+            myChattingListButton.imageEdgeInsets = UIEdgeInsets(top: 0, left: 8, bottom: 0, right: -8)
+        }
+        myChattingListButton.addTarget(self, action: #selector(myChattingListTapped), for: .touchUpInside)
+
         logoutButton.setTitle("로그아웃", for: .normal)
         logoutButton.titleLabel?.font = .pretendard(.medium, size: 13)
         logoutButton.setTitleColor(.gray60, for: .normal)
@@ -185,6 +202,7 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
             purchaseHistoryButton,
             likedFilterButton,
             myUploadButton,
+            myChattingListButton,
             logoutButton
         ].forEach { contentView.addSubview($0) }
     }
@@ -257,8 +275,14 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
             make.height.equalTo(48)
         }
 
+        myChattingListButton.snp.makeConstraints { make in
+            make.top.equalTo(myUploadButton.snp.bottom).offset(12)
+            make.leading.trailing.equalTo(editProfileButton)
+            make.height.equalTo(48)
+        }
+
         logoutButton.snp.makeConstraints { make in
-            make.top.equalTo(myUploadButton.snp.bottom).offset(16)
+            make.top.equalTo(myChattingListButton.snp.bottom).offset(16)
             make.leading.trailing.equalTo(editProfileButton)
             make.height.equalTo(48)
             make.bottom.equalToSuperview().offset(-24)
@@ -402,6 +426,10 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
             return
         }
         onMyUploadRequested?(profile.id)
+    }
+
+    @objc private func myChattingListTapped() {
+        onMyChattingListRequested?()
     }
 
     @objc private func logoutTapped() {

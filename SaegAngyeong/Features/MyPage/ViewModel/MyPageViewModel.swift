@@ -14,6 +14,7 @@ final class MyPageViewModel: BaseViewModel, ViewModelType {
     private let userRepository: UserRepository
     private let orderRepository: OrderRepository
     private let filterRepository: FilterRepository
+    private let chatRepository: ChatRepository
     private let accessTokenProvider: () -> String?
     private let sesacKey: String
 
@@ -22,6 +23,7 @@ final class MyPageViewModel: BaseViewModel, ViewModelType {
         userRepository: UserRepository,
         orderRepository: OrderRepository,
         filterRepository: FilterRepository,
+        chatRepository: ChatRepository,
         accessTokenProvider: @escaping () -> String?,
         sesacKey: String
     ) {
@@ -29,6 +31,7 @@ final class MyPageViewModel: BaseViewModel, ViewModelType {
         self.userRepository = userRepository
         self.orderRepository = orderRepository
         self.filterRepository = filterRepository
+        self.chatRepository = chatRepository
         self.accessTokenProvider = accessTokenProvider
         self.sesacKey = sesacKey
         super.init()
@@ -152,6 +155,14 @@ extension MyPageViewModel {
         MyUploadViewModel(
             filterRepository: filterRepository,
             userID: userID,
+            accessTokenProvider: accessTokenProvider,
+            sesacKey: sesacKey
+        )
+    }
+
+    func makeMyChattingListViewModel() -> MyChattingListViewModel {
+        MyChattingListViewModel(
+            chatRepository: chatRepository,
             accessTokenProvider: accessTokenProvider,
             sesacKey: sesacKey
         )
