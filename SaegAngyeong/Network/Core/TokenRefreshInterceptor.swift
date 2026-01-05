@@ -100,7 +100,7 @@ final class TokenRefreshInterceptor: RequestInterceptor {
                         self.finishRetrying(with: .doNotRetryWithError(error))
                     }
                 case .failure(let error):
-                    if response.response?.statusCode == 418 {
+                    if response.response?.statusCode == 418 || response.response?.statusCode == 401 {
                         self.onForceLogout()
                     }
                     self.finishRetrying(with: .doNotRetryWithError(error))

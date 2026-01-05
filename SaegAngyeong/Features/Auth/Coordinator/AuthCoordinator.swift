@@ -28,7 +28,7 @@ final class AuthCoordinator {
             showLogin(animated: false)
             return
         }
-        attemptRefreshOrLogin()
+        showHome(animated: false)
     }
 
     // MARK: - Private
@@ -36,26 +36,6 @@ final class AuthCoordinator {
     private var hasAccessToken: Bool {
         guard let token = dependency.tokenStore.accessToken else { return false }
         return !token.isEmpty
-    }
-
-    private func attemptRefreshOrLogin() {
-        guard let refreshToken = dependency.tokenStore.refreshToken else {
-            showHome(animated: false)
-            return
-        }
-
-        dependency.authRepository.refresh(refreshToken: refreshToken)
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] completion in
-                if case .failure = completion {
-                    self?.showLogin(animated: false)
-                }
-            } receiveValue: { [weak self] tokens in
-                self?.dependency.tokenStore.accessToken = tokens.accessToken
-                self?.dependency.tokenStore.refreshToken = tokens.refreshToken
-                self?.showHome(animated: false)
-            }
-            .store(in: &cancellables)
     }
 
     private func showLogin(animated: Bool) {
