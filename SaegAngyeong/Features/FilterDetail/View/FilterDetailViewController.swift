@@ -517,16 +517,18 @@ private final class MarqueeTitleView: UIView {
         label.frame = CGRect(x: 0, y: y, width: labelSize.width, height: labelSize.height)
         trailingLabel.frame = CGRect(x: label.frame.maxX + spacing, y: y, width: labelSize.width, height: labelSize.height)
         contentView.frame = CGRect(x: 0, y: 0, width: trailingLabel.frame.maxX, height: bounds.height)
-        updateAnimationIfNeeded()
+        updateAnimationIfNeeded(labelSize: labelSize, y: y)
     }
 
-    private func updateAnimationIfNeeded() {
+    private func updateAnimationIfNeeded(labelSize: CGSize, y: CGFloat) {
         let overflow = label.bounds.width - bounds.width
         contentView.layer.removeAllAnimations()
         contentView.transform = .identity
         guard overflow > 8 else {
             trailingLabel.isHidden = true
             contentView.frame = bounds
+            let centeredX = max(0, (bounds.width - labelSize.width) / 2)
+            label.frame = CGRect(x: centeredX, y: y, width: labelSize.width, height: labelSize.height)
             return
         }
         trailingLabel.isHidden = false
