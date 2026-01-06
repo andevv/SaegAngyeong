@@ -10,6 +10,7 @@
 		FE2648EC2F05002E00096A9E /* iamport-ios in Frameworks */ = {isa = PBXBuildFile; productRef = FE2648EB2F05002E00096A9E /* iamport-ios */; };
 		FE2649632F0CFA5100096A9E /* RealmSwift in Frameworks */ = {isa = PBXBuildFile; productRef = FE2649622F0CFA5100096A9E /* RealmSwift */; };
 		FE2649642F0CFCEB00096A9E /* RealmSwift in Embed Frameworks */ = {isa = PBXBuildFile; productRef = FE2649622F0CFA5100096A9E /* RealmSwift */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		FE2649702F0D03E500096A9E /* SocketIO in Frameworks */ = {isa = PBXBuildFile; productRef = FE26496F2F0D03E500096A9E /* SocketIO */; };
 		FE2D5D062EEEA866004AB8F8 /* SnapKit in Frameworks */ = {isa = PBXBuildFile; productRef = FE2D5D052EEEA866004AB8F8 /* SnapKit */; };
 		FE2D5D092EEEA8A7004AB8F8 /* Alamofire in Frameworks */ = {isa = PBXBuildFile; productRef = FE2D5D082EEEA8A7004AB8F8 /* Alamofire */; };
 		FE2D5D0C2EEEA8F9004AB8F8 /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = FE2D5D0B2EEEA8F9004AB8F8 /* Kingfisher */; };
@@ -66,6 +67,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				FE2D5D062EEEA866004AB8F8 /* SnapKit in Frameworks */,
+				FE2649702F0D03E500096A9E /* SocketIO in Frameworks */,
 				FE2D5D092EEEA8A7004AB8F8 /* Alamofire in Frameworks */,
 				FE2649632F0CFA5100096A9E /* RealmSwift in Frameworks */,
 				FEE034232EE94600008B74AB /* FirebaseMessaging in Frameworks */,
@@ -123,6 +125,7 @@
 				FE2D5D0B2EEEA8F9004AB8F8 /* Kingfisher */,
 				FE2648EB2F05002E00096A9E /* iamport-ios */,
 				FE2649622F0CFA5100096A9E /* RealmSwift */,
+				FE26496F2F0D03E500096A9E /* SocketIO */,
 			);
 			productName = SaegAngyeong;
 			productReference = FEE034022EE9330E008B74AB /* SaegAngyeong.app */;
@@ -159,6 +162,7 @@
 				FE2D5D0A2EEEA8F9004AB8F8 /* XCRemoteSwiftPackageReference "Kingfisher" */,
 				FE2648EA2F05002E00096A9E /* XCRemoteSwiftPackageReference "iamport-ios" */,
 				FE2649612F0CFA5100096A9E /* XCRemoteSwiftPackageReference "realm-swift" */,
+				FE26496E2F0D03E500096A9E /* XCRemoteSwiftPackageReference "socket.io-client-swift" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = FEE034032EE9330E008B74AB /* Products */;
@@ -435,6 +439,14 @@
 				kind = branch;
 			};
 		};
+		FE26496E2F0D03E500096A9E /* XCRemoteSwiftPackageReference "socket.io-client-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/socketio/socket.io-client-swift.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 16.1.1;
+			};
+		};
 		FE2D5D042EEEA866004AB8F8 /* XCRemoteSwiftPackageReference "SnapKit" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/SnapKit/SnapKit";
@@ -479,6 +491,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = FE2649612F0CFA5100096A9E /* XCRemoteSwiftPackageReference "realm-swift" */;
 			productName = RealmSwift;
+		};
+		FE26496F2F0D03E500096A9E /* SocketIO */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FE26496E2F0D03E500096A9E /* XCRemoteSwiftPackageReference "socket.io-client-swift" */;
+			productName = SocketIO;
 		};
 		FE2D5D052EEEA866004AB8F8 /* SnapKit */ = {
 			isa = XCSwiftPackageProductDependency;
