@@ -82,7 +82,7 @@ final class ChatRoomViewModel: BaseViewModel, ViewModelType {
 
         input.viewDidDisappear
             .sink { [weak self] in
-                self?.socketClient.disconnect()
+                self?.socketClient.shutdown()
             }
             .store(in: &cancellables)
 
@@ -329,7 +329,7 @@ final class ChatRoomViewModel: BaseViewModel, ViewModelType {
 
     deinit {
         messageToken?.invalidate()
-        socketClient.disconnect()
+        socketClient.shutdown()
     }
 }
 

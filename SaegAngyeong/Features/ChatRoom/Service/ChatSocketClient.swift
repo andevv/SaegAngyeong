@@ -73,6 +73,17 @@ final class ChatSocketClient {
         socket.disconnect()
     }
 
+    func shutdown() {
+        currentRoomID = nil
+        #if DEBUG
+        print("[ChatSocket] shutdown()")
+        #endif
+        manager.reconnects = false
+        socket.removeAllHandlers()
+        socket.disconnect()
+        manager.disconnect()
+    }
+
     func join(roomID: String) {
         currentRoomID = roomID
         emitJoin(roomID: roomID)
