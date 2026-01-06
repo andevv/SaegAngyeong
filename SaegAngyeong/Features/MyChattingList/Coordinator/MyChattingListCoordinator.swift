@@ -31,7 +31,8 @@ final class MyChattingListCoordinator {
     }
 
     private func showChatRoom(roomID: String) {
-        guard let baseURL = URL(string: AppConfig.baseURL) else { return }
+        let socketURLString = AppConfig.baseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        guard let baseURL = URL(string: "\(socketURLString)/chats-\(roomID)") else { return }
         let socketClient = ChatSocketClient(
             baseURL: baseURL,
             tokenProvider: { [weak self] in self?.dependency.tokenStore.accessToken }
