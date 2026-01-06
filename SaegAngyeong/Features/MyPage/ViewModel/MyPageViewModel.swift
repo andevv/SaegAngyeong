@@ -163,6 +163,7 @@ extension MyPageViewModel {
     func makeMyChattingListViewModel() -> MyChattingListViewModel {
         MyChattingListViewModel(
             chatRepository: chatRepository,
+            userRepository: userRepository,
             accessTokenProvider: accessTokenProvider,
             sesacKey: sesacKey
         )

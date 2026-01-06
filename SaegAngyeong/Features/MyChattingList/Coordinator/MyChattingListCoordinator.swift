@@ -19,6 +19,7 @@ final class MyChattingListCoordinator {
     func start() {
         let viewModel = MyChattingListViewModel(
             chatRepository: dependency.chatRepository,
+            userRepository: dependency.userRepository,
             accessTokenProvider: { [weak self] in self?.dependency.tokenStore.accessToken },
             sesacKey: AppConfig.apiKey
         )

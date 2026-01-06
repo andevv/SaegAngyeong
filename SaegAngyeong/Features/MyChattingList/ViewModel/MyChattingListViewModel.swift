@@ -19,15 +19,19 @@ final class MyChattingListViewModel: BaseViewModel, ViewModelType {
     }
 
     private let chatRepository: ChatRepository
+    private let userRepository: UserRepository
     private let accessTokenProvider: () -> String?
     private let sesacKey: String
+    private var currentUserID: String?
 
     init(
         chatRepository: ChatRepository,
+        userRepository: UserRepository,
         accessTokenProvider: @escaping () -> String?,
         sesacKey: String
     ) {
         self.chatRepository = chatRepository
+        self.userRepository = userRepository
         self.accessTokenProvider = accessTokenProvider
         self.sesacKey = sesacKey
         super.init()
@@ -43,6 +47,21 @@ final class MyChattingListViewModel: BaseViewModel, ViewModelType {
 
     func transform(input: Input) -> Output {
         let itemsSubject = CurrentValueSubject<[MyChattingListItemViewData], Never>([])
+
+        input.viewDidLoad
+            .flatMap { [weak self] _ -> AnyPublisher<UserProfile, DomainError> in
+                guard let self else { return Empty().eraseToAnyPublisher() }
+                return self.userRepository.fetchMyProfile()
+            }
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] completion in
+                if case let .failure(error) = completion {
+                    self?.error.send(error)
+                }
+            } receiveValue: { [weak self] profile in
+                self?.currentUserID = profile.id
+            }
+            .store(in: &cancellables)
 
         Publishers.Merge(input.viewDidLoad, input.refresh)
             .flatMap { [weak self] _ -> AnyPublisher<[ChatRoom], DomainError> in
@@ -61,7 +80,7 @@ final class MyChattingListViewModel: BaseViewModel, ViewModelType {
                 let formatter = DateFormatter()
                 formatter.dateFormat = "yyyy.MM.dd"
                 let items = rooms.map { room in
-                    let participant = room.participants.first
+                    let participant = room.participants.first { $0.id != self.currentUserID } ?? room.participants.first
                     let title = participant?.name ?? participant?.nick ?? "알 수 없음"
                     let lastMessage: String
                     if let content = room.lastMessage?.content, content.isEmpty == false {
@@ -74,7 +93,6 @@ final class MyChattingListViewModel: BaseViewModel, ViewModelType {
                     return MyChattingListItemViewData(
                         roomID: room.id,
                         title: title,
-                        subtitle: room.lastMessage?.sender.nick ?? "-",
                         lastMessage: lastMessage,
                         updatedAtText: formatter.string(from: room.updatedAt),
                         profileImageURL: participant?.profileImageURL,
@@ -92,7 +110,6 @@ final class MyChattingListViewModel: BaseViewModel, ViewModelType {
 struct MyChattingListItemViewData {
     let roomID: String
     let title: String
-    let subtitle: String
     let lastMessage: String
     let updatedAtText: String
     let profileImageURL: URL?

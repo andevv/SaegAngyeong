@@ -267,7 +267,7 @@ final class ChatRoomViewModel: BaseViewModel, ViewModelType {
         if normalized.hasPrefix("/") {
             normalized.removeFirst()
         }
-        if normalized.hasPrefix("data/") || normalized.hasPrefix("v1/") {
+        if normalized.hasPrefix("v1/") {
             return base.appendingPathComponent(normalized)
         }
         return base.appendingPathComponent("v1/" + normalized)

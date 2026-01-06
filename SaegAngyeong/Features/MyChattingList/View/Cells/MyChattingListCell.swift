@@ -15,7 +15,6 @@ final class MyChattingListCell: UITableViewCell {
     private let cardView = UIView()
     private let profileImageView = UIImageView()
     private let titleLabel = UILabel()
-    private let subtitleLabel = UILabel()
     private let messageLabel = UILabel()
     private let dateLabel = UILabel()
 
@@ -30,14 +29,11 @@ final class MyChattingListCell: UITableViewCell {
 
         profileImageView.contentMode = .scaleAspectFill
         profileImageView.clipsToBounds = true
-        profileImageView.layer.cornerRadius = 18
+        profileImageView.layer.cornerRadius = 28
         profileImageView.backgroundColor = .gray15
 
         titleLabel.font = .pretendard(.bold, size: 14)
         titleLabel.textColor = .gray30
-
-        subtitleLabel.font = .pretendard(.medium, size: 11)
-        subtitleLabel.textColor = .gray75
 
         messageLabel.font = .pretendard(.regular, size: 12)
         messageLabel.textColor = .gray60
@@ -49,7 +45,6 @@ final class MyChattingListCell: UITableViewCell {
         contentView.addSubview(cardView)
         cardView.addSubview(profileImageView)
         cardView.addSubview(titleLabel)
-        cardView.addSubview(subtitleLabel)
         cardView.addSubview(messageLabel)
         cardView.addSubview(dateLabel)
 
@@ -75,14 +70,8 @@ final class MyChattingListCell: UITableViewCell {
             make.trailing.equalToSuperview().inset(12)
         }
 
-        subtitleLabel.snp.makeConstraints { make in
-            make.top.equalTo(titleLabel.snp.bottom).offset(6)
-            make.leading.equalTo(titleLabel)
-            make.trailing.equalToSuperview().inset(12)
-        }
-
         messageLabel.snp.makeConstraints { make in
-            make.top.equalTo(subtitleLabel.snp.bottom).offset(6)
+            make.top.equalTo(titleLabel.snp.bottom).offset(8)
             make.leading.equalTo(titleLabel)
             make.trailing.equalToSuperview().inset(12)
             make.bottom.lessThanOrEqualToSuperview().inset(14)
@@ -100,7 +89,6 @@ final class MyChattingListCell: UITableViewCell {
 
     func configure(with item: MyChattingListItemViewData) {
         titleLabel.text = item.title
-        subtitleLabel.text = item.subtitle
         messageLabel.text = item.lastMessage
         dateLabel.text = item.updatedAtText
         if let url = item.profileImageURL {
