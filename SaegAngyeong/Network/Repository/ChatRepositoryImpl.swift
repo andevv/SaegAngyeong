@@ -75,7 +75,30 @@ final class ChatRepositoryImpl: ChatRepository {
     }
 
     func sendMessage(roomID: String, draft: ChatMessageDraft) -> AnyPublisher<ChatMessage, DomainError> {
-        Fail(error: DomainError.unknown(message: "Not implemented"))
+        let files = draft.fileURLs.map { mapFilePath(from: $0) }
+        let body = ChatMessageSendRequestDTO(content: draft.content, files: files)
+        return network.request(ChatMessageDTO.self, endpoint: ChatAPI.sendMessage(roomID: roomID, body: body))
+            .mapError { _ in DomainError.network }
+            .map { [weak self] dto in
+                guard let self else {
+                    return ChatMessage(
+                        id: dto.chatID,
+                        roomID: dto.roomID,
+                        sender: UserSummary(
+                            id: dto.sender.userID,
+                            nick: dto.sender.nick,
+                            profileImageURL: nil,
+                            name: dto.sender.name,
+                            introduction: dto.sender.introduction,
+                            hashTags: dto.sender.hashTags
+                        ),
+                        content: dto.content,
+                        fileURLs: [],
+                        createdAt: Date()
+                    )
+                }
+                return self.mapMessage(dto)
+            }
             .eraseToAnyPublisher()
     }
 
@@ -140,6 +163,14 @@ private extension ChatRepositoryImpl {
     func parseISODate(_ value: String) -> Date {
         let formatter = ISO8601DateFormatter()
         return formatter.date(from: value) ?? Date()
+    }
+
+    func mapFilePath(from url: URL) -> String {
+        var path = url.path
+        if path.hasPrefix("/v1/") {
+            path.removeFirst(3)
+        }
+        return path
     }
 
     func buildURL(from path: String) -> URL? {

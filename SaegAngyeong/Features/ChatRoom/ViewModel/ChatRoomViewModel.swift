@@ -232,7 +232,20 @@ final class ChatRoomViewModel: BaseViewModel, ViewModelType {
     private func send(text: String) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, let roomID else { return }
-        socketClient.send(roomID: roomID, content: trimmed)
+        let draft = ChatMessageDraft(content: trimmed, fileURLs: [])
+        chatRepository.sendMessage(roomID: roomID, draft: draft)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] completion in
+                if case let .failure(error) = completion {
+                    self?.error.send(error)
+                }
+            } receiveValue: { [weak self] message in
+                guard let self else { return }
+                if !self.localStore.contains(messageID: message.id) {
+                    self.localStore.save(messages: [message])
+                }
+            }
+            .store(in: &cancellables)
     }
 
     private func mapToViewData(from messages: [ChatMessage]) -> [ChatMessageViewData] {

@@ -19,6 +19,11 @@ struct ChatRoomCreateRequestDTO: Encodable {
     }
 }
 
+struct ChatMessageSendRequestDTO: Encodable {
+    let content: String?
+    let files: [String]
+}
+
 struct ChatRoomDTO: Decodable {
     let roomID: String
     let createdAt: String
