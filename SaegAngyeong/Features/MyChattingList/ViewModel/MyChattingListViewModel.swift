@@ -48,26 +48,20 @@ final class MyChattingListViewModel: BaseViewModel, ViewModelType {
     func transform(input: Input) -> Output {
         let itemsSubject = CurrentValueSubject<[MyChattingListItemViewData], Never>([])
 
-        input.viewDidLoad
-            .flatMap { [weak self] _ -> AnyPublisher<UserProfile, DomainError> in
-                guard let self else { return Empty().eraseToAnyPublisher() }
-                return self.userRepository.fetchMyProfile()
-            }
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] completion in
-                if case let .failure(error) = completion {
-                    self?.error.send(error)
-                }
-            } receiveValue: { [weak self] profile in
-                self?.currentUserID = profile.id
-            }
-            .store(in: &cancellables)
-
         Publishers.Merge(input.viewDidLoad, input.refresh)
-            .flatMap { [weak self] _ -> AnyPublisher<[ChatRoom], DomainError> in
+            .flatMap { [weak self] _ -> AnyPublisher<(String, [ChatRoom]), DomainError> in
                 guard let self else { return Empty().eraseToAnyPublisher() }
                 self.isLoading.send(true)
-                return self.chatRepository.fetchRooms()
+                return self.userRepository.fetchMyProfile()
+                    .map { $0.id }
+                    .flatMap { [weak self] userID -> AnyPublisher<(String, [ChatRoom]), DomainError> in
+                        guard let self else { return Empty().eraseToAnyPublisher() }
+                        self.currentUserID = userID
+                        return self.chatRepository.fetchRooms()
+                            .map { (userID, $0) }
+                            .eraseToAnyPublisher()
+                    }
+                    .eraseToAnyPublisher()
             }
             .receive(on: DispatchQueue.main)
             .sink { [weak self] completion in
@@ -75,12 +69,12 @@ final class MyChattingListViewModel: BaseViewModel, ViewModelType {
                 if case let .failure(error) = completion {
                     self?.error.send(error)
                 }
-            } receiveValue: { [weak self] rooms in
+            } receiveValue: { [weak self] userID, rooms in
                 guard let self else { return }
                 let formatter = DateFormatter()
                 formatter.dateFormat = "yyyy.MM.dd"
                 let items = rooms.map { room in
-                    let participant = room.participants.first { $0.id != self.currentUserID } ?? room.participants.first
+                    let participant = room.participants.first { $0.id != userID } ?? room.participants.first
                     let title = participant?.name ?? participant?.nick ?? "알 수 없음"
                     let lastMessage: String
                     if let content = room.lastMessage?.content, content.isEmpty == false {
