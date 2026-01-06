@@ -172,7 +172,8 @@ final class ChatRoomViewModel: BaseViewModel, ViewModelType {
     private func syncLatestMessages() {
         guard let roomID else { return }
         isSyncing = true
-        let cursor = localStore.lastMessageID(roomID: roomID)
+        let cursorDate = localStore.lastMessageCreatedAt(roomID: roomID)
+        let cursor = cursorDate.map { formattedCursor(from: $0) }
         chatRepository.fetchMessages(roomID: roomID, next: cursor)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] completion in
@@ -284,6 +285,12 @@ final class ChatRoomViewModel: BaseViewModel, ViewModelType {
             return base.appendingPathComponent(normalized)
         }
         return base.appendingPathComponent("v1/" + normalized)
+    }
+
+    private func formattedCursor(from date: Date) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter.string(from: date)
     }
 
     deinit {

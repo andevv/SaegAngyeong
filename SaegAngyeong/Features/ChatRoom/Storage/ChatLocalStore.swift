@@ -56,14 +56,14 @@ final class ChatLocalStore {
             .object(ofType: ChatMessageObject.self, forPrimaryKey: messageID)) != nil
     }
 
-    func lastMessageID(roomID: String) -> String? {
+    func lastMessageCreatedAt(roomID: String) -> Date? {
         do {
             let realm = try Realm(configuration: configuration)
             let result = realm.objects(ChatMessageObject.self)
                 .where { $0.roomID == roomID }
                 .sorted(byKeyPath: "createdAt", ascending: true)
                 .last
-            return result?.id
+            return result?.createdAt
         } catch {
             return nil
         }
