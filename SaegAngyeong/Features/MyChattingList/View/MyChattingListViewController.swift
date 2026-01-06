@@ -10,6 +10,7 @@ import SnapKit
 import Combine
 
 final class MyChattingListViewController: BaseViewController<MyChattingListViewModel> {
+    var onRoomSelected: ((String) -> Void)?
     private let tableView = UITableView(frame: .zero, style: .plain)
     private let emptyLabel = UILabel()
 
@@ -131,5 +132,9 @@ extension MyChattingListViewController: UITableViewDataSource, UITableViewDelega
         }
         cell.configure(with: items[indexPath.row])
         return cell
+    }
+
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        onRoomSelected?(items[indexPath.row].roomID)
     }
 }

@@ -11,6 +11,14 @@ struct ChatRoomListResponseDTO: Decodable {
     let data: [ChatRoomDTO]
 }
 
+struct ChatRoomCreateRequestDTO: Encodable {
+    let opponentID: String
+
+    enum CodingKeys: String, CodingKey {
+        case opponentID = "opponent_id"
+    }
+}
+
 struct ChatRoomDTO: Decodable {
     let roomID: String
     let createdAt: String
@@ -62,5 +70,15 @@ struct ChatMessageDTO: Decodable {
         case updatedAt
         case sender
         case files
+    }
+}
+
+struct ChatMessageListResponseDTO: Decodable {
+    let data: [ChatMessageDTO]
+    let nextCursor: String?
+
+    enum CodingKeys: String, CodingKey {
+        case data
+        case nextCursor = "next_cursor"
     }
 }

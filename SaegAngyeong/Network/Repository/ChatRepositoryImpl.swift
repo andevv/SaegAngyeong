@@ -15,8 +15,16 @@ final class ChatRepositoryImpl: ChatRepository {
         self.network = network
     }
 
-    func createRoom(name: String?) -> AnyPublisher<ChatRoom, DomainError> {
-        Fail(error: DomainError.unknown(message: "Not implemented"))
+    func createRoom(opponentID: String) -> AnyPublisher<ChatRoom, DomainError> {
+        let body = ChatRoomCreateRequestDTO(opponentID: opponentID)
+        return network.request(ChatRoomDTO.self, endpoint: ChatAPI.createRoom(body: body))
+            .mapError { _ in DomainError.network }
+            .map { [weak self] dto in
+                guard let self else {
+                    return ChatRoom(id: dto.roomID, name: nil, participants: [], lastMessage: nil, createdAt: Date(), updatedAt: Date())
+                }
+                return self.mapRoom(dto)
+            }
             .eraseToAnyPublisher()
     }
 
@@ -72,7 +80,13 @@ final class ChatRepositoryImpl: ChatRepository {
     }
 
     func fetchMessages(roomID: String, next: String?) -> AnyPublisher<Paginated<ChatMessage>, DomainError> {
-        Fail(error: DomainError.unknown(message: "Not implemented"))
+        network.request(ChatMessageListResponseDTO.self, endpoint: ChatAPI.fetchMessages(roomID: roomID, next: next))
+            .mapError { _ in DomainError.network }
+            .map { [weak self] dto in
+                guard let self else { return Paginated(items: [], nextCursor: nil) }
+                let items = dto.data.map { self.mapMessage($0) }
+                return Paginated(items: items, nextCursor: dto.nextCursor)
+            }
             .eraseToAnyPublisher()
     }
 
@@ -83,6 +97,46 @@ final class ChatRepositoryImpl: ChatRepository {
 }
 
 private extension ChatRepositoryImpl {
+    func mapRoom(_ room: ChatRoomDTO) -> ChatRoom {
+        let participants = room.participants.map { user in
+            UserSummary(
+                id: user.userID,
+                nick: user.nick,
+                profileImageURL: user.profileImage.flatMap { buildURL(from: $0) },
+                name: user.name,
+                introduction: user.introduction,
+                hashTags: user.hashTags
+            )
+        }
+        let lastMessage = room.lastChat.map { mapMessage($0) }
+        return ChatRoom(
+            id: room.roomID,
+            name: nil,
+            participants: participants,
+            lastMessage: lastMessage,
+            createdAt: parseISODate(room.createdAt),
+            updatedAt: parseISODate(room.updatedAt)
+        )
+    }
+
+    func mapMessage(_ message: ChatMessageDTO) -> ChatMessage {
+        ChatMessage(
+            id: message.chatID,
+            roomID: message.roomID,
+            sender: UserSummary(
+                id: message.sender.userID,
+                nick: message.sender.nick,
+                profileImageURL: message.sender.profileImage.flatMap { buildURL(from: $0) },
+                name: message.sender.name,
+                introduction: message.sender.introduction,
+                hashTags: message.sender.hashTags
+            ),
+            content: message.content,
+            fileURLs: message.files.compactMap { buildURL(from: $0) },
+            createdAt: parseISODate(message.createdAt)
+        )
+    }
+
     func parseISODate(_ value: String) -> Date {
         let formatter = ISO8601DateFormatter()
         return formatter.date(from: value) ?? Date()

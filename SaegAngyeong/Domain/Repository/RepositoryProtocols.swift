@@ -73,7 +73,7 @@ protocol PostRepository {
 // MARK: - Chat
 
 protocol ChatRepository {
-    func createRoom(name: String?) -> AnyPublisher<ChatRoom, DomainError>
+    func createRoom(opponentID: String) -> AnyPublisher<ChatRoom, DomainError>
     func fetchRooms() -> AnyPublisher<[ChatRoom], DomainError>
     func sendMessage(roomID: String, draft: ChatMessageDraft) -> AnyPublisher<ChatMessage, DomainError>
     func fetchMessages(roomID: String, next: String?) -> AnyPublisher<Paginated<ChatMessage>, DomainError>

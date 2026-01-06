@@ -12,6 +12,7 @@ final class MyPageCoordinator {
     private let navigationController: BaseNavigationController
     private var likedFilterCoordinator: LikedFilterCoordinator?
     private var myUploadCoordinator: MyUploadCoordinator?
+    private var myChattingListCoordinator: MyChattingListCoordinator?
 
     init(dependency: AppDependency) {
         self.dependency = dependency
@@ -59,10 +60,14 @@ final class MyPageCoordinator {
             self.myUploadCoordinator = coordinator
             coordinator.start()
         }
-        viewController.onMyChattingListRequested = { [weak self, weak viewModel] in
-            guard let self, let viewModel else { return }
-            let chatVC = MyChattingListViewController(viewModel: viewModel.makeMyChattingListViewModel())
-            self.navigationController.pushViewController(chatVC, animated: true)
+        viewController.onMyChattingListRequested = { [weak self] in
+            guard let self else { return }
+            let coordinator = MyChattingListCoordinator(
+                dependency: self.dependency,
+                navigationController: self.navigationController
+            )
+            self.myChattingListCoordinator = coordinator
+            coordinator.start()
         }
         navigationController.setViewControllers([viewController], animated: false)
         return navigationController
