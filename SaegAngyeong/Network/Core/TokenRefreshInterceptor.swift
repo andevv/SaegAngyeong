@@ -48,7 +48,7 @@ final class TokenRefreshInterceptor: RequestInterceptor {
     func retry(_ request: Request, for session: Session, dueTo error: Error, completion: @escaping (RetryResult) -> Void) {
         guard
             let response = request.response,
-            response.statusCode == 401,
+            response.statusCode == 401 || response.statusCode == 419,
             request.request?.url?.path.contains("v1/auth/refresh") == false
         else {
             if let response = request.response, response.statusCode == 418 {
