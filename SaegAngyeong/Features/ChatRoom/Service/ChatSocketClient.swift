@@ -11,10 +11,11 @@ import SocketIO
 final class ChatSocketClient {
     private let manager: SocketManager
     private let socket: SocketIOClient
+    private var currentRoomID: String?
 
     var onMessage: ((ChatMessageDTO) -> Void)?
 
-    init(baseURL: URL, tokenProvider: @escaping () -> String?) {
+    init(baseURL: URL, namespace: String, tokenProvider: @escaping () -> String?) {
         let config: SocketIOClientConfiguration = [
             .compress,
             .log(false),
@@ -25,9 +26,32 @@ final class ChatSocketClient {
             ])
         ]
         manager = SocketManager(socketURL: baseURL, config: config)
-        socket = manager.defaultSocket
+        socket = manager.socket(forNamespace: namespace)
 
-        socket.on("message") { [weak self] data, _ in
+        socket.on(clientEvent: .connect) { _, _ in
+            #if DEBUG
+            print("[ChatSocket] connected")
+            #endif
+            if let roomID = self.currentRoomID {
+                self.emitJoin(roomID: roomID)
+            }
+        }
+        socket.on(clientEvent: .disconnect) { data, _ in
+            #if DEBUG
+            print("[ChatSocket] disconnected \(data)")
+            #endif
+        }
+        socket.on(clientEvent: .error) { data, _ in
+            #if DEBUG
+            print("[ChatSocket] error \(data)")
+            #endif
+        }
+        #if DEBUG
+        socket.onAny { event in
+            print("[ChatSocket] event \(event.event) items=\(event.items ?? [])")
+        }
+        #endif
+        socket.on("chat") { [weak self] data, _ in
             guard let payload = data.first else { return }
             if let dto = self?.decodeMessage(from: payload) {
                 self?.onMessage?(dto)
@@ -36,19 +60,37 @@ final class ChatSocketClient {
     }
 
     func connect() {
+        #if DEBUG
+        print("[ChatSocket] connect()")
+        #endif
         socket.connect()
     }
 
     func disconnect() {
+        #if DEBUG
+        print("[ChatSocket] disconnect()")
+        #endif
         socket.disconnect()
     }
 
     func join(roomID: String) {
-        socket.emit("join", ["room_id": roomID])
+        currentRoomID = roomID
+        emitJoin(roomID: roomID)
     }
 
     func send(roomID: String, content: String) {
+        #if DEBUG
+        print("[ChatSocket] send room=\(roomID)")
+        #endif
         socket.emit("send", ["room_id": roomID, "content": content])
+    }
+
+    private func emitJoin(roomID: String) {
+        guard socket.status == .connected else { return }
+        #if DEBUG
+        print("[ChatSocket] join room=\(roomID)")
+        #endif
+        socket.emit("join", ["room_id": roomID])
     }
 
     private func decodeMessage(from payload: Any) -> ChatMessageDTO? {

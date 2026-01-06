@@ -31,10 +31,10 @@ final class MyChattingListCoordinator {
     }
 
     private func showChatRoom(roomID: String) {
-        let socketURLString = AppConfig.baseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-        guard let baseURL = URL(string: "\(socketURLString)/chats-\(roomID)") else { return }
+        guard let baseURL = URL(string: AppConfig.baseURL) else { return }
         let socketClient = ChatSocketClient(
             baseURL: baseURL,
+            namespace: "/chats-\(roomID)",
             tokenProvider: { [weak self] in self?.dependency.tokenStore.accessToken }
         )
         let viewModel = ChatRoomViewModel(

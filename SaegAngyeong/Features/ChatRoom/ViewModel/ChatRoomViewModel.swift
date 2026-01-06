@@ -118,6 +118,9 @@ final class ChatRoomViewModel: BaseViewModel, ViewModelType {
         messageToken?.invalidate()
         messageToken = localStore.observeMessages(roomID: roomID) { [weak self] messages in
             guard let self else { return }
+            #if DEBUG
+            print("[ChatRoom] Local messages updated: \(messages.count)")
+            #endif
             self.cachedMessages = messages
             messagesSubject.send(self.mapToViewData(from: messages))
         }
@@ -169,11 +172,14 @@ final class ChatRoomViewModel: BaseViewModel, ViewModelType {
         return opponent?.name ?? opponent?.nick ?? "채팅"
     }
 
-    private func syncLatestMessages() {
+    private func syncLatestMessages(onComplete: (() -> Void)? = nil) {
         guard let roomID else { return }
         isSyncing = true
         let cursorDate = localStore.lastMessageCreatedAt(roomID: roomID)
         let cursor = cursorDate.map { formattedCursor(from: $0) }
+        #if DEBUG
+        print("[ChatRoom] Sync start room=\(roomID) next=\(cursor ?? "nil")")
+        #endif
         chatRepository.fetchMessages(roomID: roomID, next: cursor)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] completion in
@@ -182,7 +188,14 @@ final class ChatRoomViewModel: BaseViewModel, ViewModelType {
                 }
                 self?.isSyncing = false
                 self?.flushPendingMessages()
+                #if DEBUG
+                print("[ChatRoom] Sync end")
+                #endif
+                onComplete?()
             } receiveValue: { [weak self] page in
+                #if DEBUG
+                print("[ChatRoom] Sync received: \(page.items.count)")
+                #endif
                 self?.localStore.save(messages: page.items)
             }
             .store(in: &cancellables)
@@ -190,6 +203,9 @@ final class ChatRoomViewModel: BaseViewModel, ViewModelType {
 
     private func connectSocket() {
         guard let roomID else { return }
+        #if DEBUG
+        print("[ChatRoom] Socket connect start room=\(roomID)")
+        #endif
         socketClient.onMessage = { [weak self] dto in
             self?.handleIncoming(dto)
         }
@@ -214,11 +230,20 @@ final class ChatRoomViewModel: BaseViewModel, ViewModelType {
             createdAt: ISO8601DateFormatter().date(from: dto.createdAt) ?? Date()
         )
         if localStore.contains(messageID: message.id) {
+            #if DEBUG
+            print("[ChatRoom] Incoming duplicate ignored id=\(message.id)")
+            #endif
             return
         }
         if isSyncing {
+            #if DEBUG
+            print("[ChatRoom] Incoming buffered id=\(message.id)")
+            #endif
             pendingMessages.append(message)
         } else {
+            #if DEBUG
+            print("[ChatRoom] Incoming saved id=\(message.id)")
+            #endif
             localStore.save(messages: [message])
         }
     }
@@ -227,12 +252,18 @@ final class ChatRoomViewModel: BaseViewModel, ViewModelType {
         guard !pendingMessages.isEmpty else { return }
         let messages = pendingMessages
         pendingMessages.removeAll()
+        #if DEBUG
+        print("[ChatRoom] Flush buffered: \(messages.count)")
+        #endif
         localStore.save(messages: messages)
     }
 
     private func send(text: String) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, let roomID else { return }
+        #if DEBUG
+        print("[ChatRoom] Send start room=\(roomID)")
+        #endif
         let draft = ChatMessageDraft(content: trimmed, fileURLs: [])
         chatRepository.sendMessage(roomID: roomID, draft: draft)
             .receive(on: DispatchQueue.main)
@@ -243,6 +274,9 @@ final class ChatRoomViewModel: BaseViewModel, ViewModelType {
             } receiveValue: { [weak self] message in
                 guard let self else { return }
                 if !self.localStore.contains(messageID: message.id) {
+                    #if DEBUG
+                    print("[ChatRoom] Send saved id=\(message.id)")
+                    #endif
                     self.localStore.save(messages: [message])
                 }
             }
