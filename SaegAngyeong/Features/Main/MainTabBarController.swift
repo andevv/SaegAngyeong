@@ -43,6 +43,11 @@ final class MainTabBarController: UITabBarController {
         selectedViewController
     }
 
+    func routeToChatRoom(roomID: String) {
+        selectedIndex = 4
+        myPageCoordinator.routeToChatRoom(roomID: roomID)
+    }
+
     private func setupTabs(dependency: AppDependency) {
         let homeVC = homeCoordinator.start()
         let feedVC = feedCoordinator.start()

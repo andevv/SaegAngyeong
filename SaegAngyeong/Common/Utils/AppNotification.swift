@@ -9,4 +9,5 @@ import Foundation
 
 extension Notification.Name {
     static let tokenInvalidated = Notification.Name("TokenInvalidatedNotification")
+    static let chatRoomRequested = Notification.Name("ChatRoomRequestedNotification")
 }

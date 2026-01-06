@@ -15,6 +15,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     var authCoordinator: AuthCoordinator?
     private var appDependency: AppDependency?
     private var fcmTokenObserver: NSObjectProtocol?
+    private var chatRoomObserver: NSObjectProtocol?
     private var cancellables = Set<AnyCancellable>()
     
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
@@ -29,6 +30,11 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         self.appDependency = dependency
         self.window = window
         registerFCMTokenObserver()
+        registerChatRoomObserver()
+
+        if let response = connectionOptions.notificationResponse {
+            routeToChatRoom(from: response.notification.request.content.userInfo)
+        }
     }
     
     func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
@@ -69,6 +75,9 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         if let observer = fcmTokenObserver {
             NotificationCenter.default.removeObserver(observer)
         }
+        if let observer = chatRoomObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
         #if DEBUG
         print("[Deinit][SceneDelegate] \(type(of: self))")
         #endif
@@ -89,6 +98,24 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             #endif
             self?.updateDeviceTokenIfNeeded(token)
         }
+    }
+
+    private func registerChatRoomObserver() {
+        guard chatRoomObserver == nil else { return }
+        chatRoomObserver = NotificationCenter.default.addObserver(
+            forName: .chatRoomRequested,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            guard let roomID = notification.userInfo?["roomID"] as? String else { return }
+            self?.authCoordinator?.routeToChatRoom(roomID: roomID)
+        }
+    }
+
+    private func routeToChatRoom(from userInfo: [AnyHashable: Any]) {
+        let roomID = userInfo["room_id"] as? String ?? userInfo["roomId"] as? String
+        guard let roomID, roomID.isEmpty == false else { return }
+        authCoordinator?.routeToChatRoom(roomID: roomID)
     }
 
     private func updateDeviceTokenIfNeeded(_ token: String) {

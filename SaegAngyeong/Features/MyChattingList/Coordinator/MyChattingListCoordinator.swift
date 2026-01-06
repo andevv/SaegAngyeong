@@ -30,6 +30,10 @@ final class MyChattingListCoordinator {
         navigationController.pushViewController(viewController, animated: true)
     }
 
+    func routeToChatRoom(roomID: String) {
+        showChatRoom(roomID: roomID)
+    }
+
     private func showChatRoom(roomID: String) {
         guard let baseURL = URL(string: AppConfig.baseURL) else { return }
         let socketClient = ChatSocketClient(

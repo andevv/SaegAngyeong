@@ -73,6 +73,23 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
         Messaging.messaging().apnsToken = deviceToken
     }
+
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
+        let userInfo = response.notification.request.content.userInfo
+        let roomID = userInfo["room_id"] as? String ?? userInfo["roomId"] as? String
+        if let roomID, roomID.isEmpty == false {
+            NotificationCenter.default.post(
+                name: .chatRoomRequested,
+                object: nil,
+                userInfo: ["roomID": roomID]
+            )
+        }
+        completionHandler()
+    }
 }
 
 extension AppDelegate: MessagingDelegate {

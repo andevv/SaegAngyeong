@@ -15,6 +15,7 @@ final class AuthCoordinator {
     let navigationController: BaseNavigationController
     private var window: UIWindow?
     private var cancellables = Set<AnyCancellable>()
+    private weak var mainTabBarController: MainTabBarController?
 
     init(window: UIWindow?, dependency: AppDependency) {
         self.window = window
@@ -74,7 +75,23 @@ final class AuthCoordinator {
 
     private func showHome(animated: Bool) {
         let tabBar = MainTabBarController(dependency: dependency)
+        mainTabBarController = tabBar
         setRootViewController(tabBar, animated: animated)
+    }
+
+    func routeToChatRoom(roomID: String) {
+        guard hasAccessToken else {
+            showLogin(animated: false)
+            return
+        }
+        if let tabBar = window?.rootViewController as? MainTabBarController {
+            mainTabBarController = tabBar
+        } else if mainTabBarController == nil {
+            showHome(animated: false)
+        }
+        DispatchQueue.main.async { [weak self] in
+            self?.mainTabBarController?.routeToChatRoom(roomID: roomID)
+        }
     }
 
     private func bindTokenInvalidation() {

@@ -73,6 +73,20 @@ final class MyPageCoordinator {
         return navigationController
     }
 
+    func routeToChatRoom(roomID: String) {
+        let coordinator: MyChattingListCoordinator
+        if let existing = myChattingListCoordinator {
+            coordinator = existing
+        } else {
+            coordinator = MyChattingListCoordinator(
+                dependency: dependency,
+                navigationController: navigationController
+            )
+            myChattingListCoordinator = coordinator
+        }
+        coordinator.routeToChatRoom(roomID: roomID)
+    }
+
     deinit {
         #if DEBUG
         print("[Deinit][Coordinator] \(type(of: self))")
