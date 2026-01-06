@@ -8,7 +8,7 @@
 import Foundation
 import Alamofire
 
-/// 401 응답 시 리프레시 토큰으로 재발급 후 재시도하는 인터셉터
+/// 401, 419 응답 시 리프레시 토큰으로 재발급 후 재시도하는 인터셉터
 final class TokenRefreshInterceptor: RequestInterceptor {
 
     private let tokenStore: TokenStore
