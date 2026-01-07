@@ -24,17 +24,25 @@ final class ChatRoomViewController: BaseViewController<ChatRoomViewModel> {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        hidesBottomBarWhenPushed = true
         view.backgroundColor = .black
         viewDidLoadSubject.send(())
     }
 
     override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
+        tabBarController?.tabBar.isHidden = false
         viewDidDisappearSubject.send(())
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        tabBarController?.tabBar.isHidden = false
     }
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        tabBarController?.tabBar.isHidden = true
         let appearance = UINavigationBarAppearance()
         appearance.configureWithTransparentBackground()
         appearance.titleTextAttributes = [
