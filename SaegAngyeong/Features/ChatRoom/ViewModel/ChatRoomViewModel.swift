@@ -285,7 +285,8 @@ final class ChatRoomViewModel: BaseViewModel, ViewModelType {
 
     private func mapToViewData(from messages: [ChatMessage]) -> [ChatMessageViewData] {
         let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
+        formatter.locale = Locale(identifier: "ko_KR")
+        formatter.dateFormat = "a h:mm"
         return messages.map { message in
             let isMine = message.sender.id == currentUserID
             let text: String
