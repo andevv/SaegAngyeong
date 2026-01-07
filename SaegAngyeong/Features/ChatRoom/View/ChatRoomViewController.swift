@@ -15,6 +15,7 @@ final class ChatRoomViewController: BaseViewController<ChatRoomViewModel> {
     private let inputContainer = UIView()
     private let messageField = UITextField()
     private let sendButton = UIButton(type: .system)
+    private var keyboardObservers: [NSObjectProtocol] = []
 
     private var items: [ChatRoomItem] = []
     private let viewDidLoadSubject = PassthroughSubject<Void, Never>()
@@ -29,9 +30,16 @@ final class ChatRoomViewController: BaseViewController<ChatRoomViewModel> {
         viewDidLoadSubject.send(())
     }
 
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        startKeyboardObservers()
+        updateMessageInsets(keyboardHeight: 0)
+    }
+
     override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
         tabBarController?.tabBar.isHidden = false
+        stopKeyboardObservers()
         viewDidDisappearSubject.send(())
     }
 
@@ -67,6 +75,7 @@ final class ChatRoomViewController: BaseViewController<ChatRoomViewModel> {
         tableView.register(ChatDateSeparatorCell.self, forCellReuseIdentifier: ChatDateSeparatorCell.reuseID)
         tableView.rowHeight = UITableView.automaticDimension
         tableView.estimatedRowHeight = 60
+        tableView.keyboardDismissMode = .none
 
         let refreshControl = UIRefreshControl()
         refreshControl.tintColor = .gray60
@@ -101,6 +110,10 @@ final class ChatRoomViewController: BaseViewController<ChatRoomViewModel> {
         view.addSubview(inputContainer)
         inputContainer.addSubview(messageField)
         inputContainer.addSubview(sendButton)
+
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(dismissKeyboard))
+        tapGesture.cancelsTouchesInView = false
+        view.addGestureRecognizer(tapGesture)
     }
 
     override func configureLayout() {
@@ -185,6 +198,60 @@ final class ChatRoomViewController: BaseViewController<ChatRoomViewModel> {
         let alert = UIAlertController(title: "오류", message: error.localizedDescription, preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "확인", style: .default))
         present(alert, animated: true)
+    }
+
+    @objc private func dismissKeyboard() {
+        view.endEditing(true)
+    }
+
+    private func startKeyboardObservers() {
+        guard keyboardObservers.isEmpty else { return }
+        let center = NotificationCenter.default
+        let willShow = center.addObserver(
+            forName: UIResponder.keyboardWillShowNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            self?.handleKeyboard(notification: notification, isShowing: true)
+        }
+        let willHide = center.addObserver(
+            forName: UIResponder.keyboardWillHideNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            self?.handleKeyboard(notification: notification, isShowing: false)
+        }
+        keyboardObservers = [willShow, willHide]
+    }
+
+    private func stopKeyboardObservers() {
+        keyboardObservers.forEach { NotificationCenter.default.removeObserver($0) }
+        keyboardObservers.removeAll()
+    }
+
+    private func handleKeyboard(notification: Notification, isShowing: Bool) {
+        guard let info = notification.userInfo,
+              let frameValue = info[UIResponder.keyboardFrameEndUserInfoKey] as? NSValue,
+              let duration = info[UIResponder.keyboardAnimationDurationUserInfoKey] as? TimeInterval,
+              let curveValue = info[UIResponder.keyboardAnimationCurveUserInfoKey] as? UInt else {
+            return
+        }
+        let keyboardFrame = frameValue.cgRectValue
+        let keyboardHeight = isShowing ? keyboardFrame.height - view.safeAreaInsets.bottom : 0
+        let options = UIView.AnimationOptions(rawValue: curveValue << 16)
+        UIView.animate(withDuration: duration, delay: 0, options: options) {
+            self.updateMessageInsets(keyboardHeight: keyboardHeight)
+            if isShowing {
+                self.scrollToBottom()
+            }
+        }
+    }
+
+    private func updateMessageInsets(keyboardHeight: CGFloat) {
+        view.layoutIfNeeded()
+        let bottomInset: CGFloat = 12
+        tableView.contentInset.bottom = bottomInset
+        tableView.verticalScrollIndicatorInsets.bottom = bottomInset
     }
 }
 
