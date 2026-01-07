@@ -16,6 +16,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     private var appDependency: AppDependency?
     private var fcmTokenObserver: NSObjectProtocol?
     private var chatRoomObserver: NSObjectProtocol?
+    private var lastChatRoute: (roomID: String, date: Date)?
     private var cancellables = Set<AnyCancellable>()
     
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
@@ -108,14 +109,30 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             queue: .main
         ) { [weak self] notification in
             guard let roomID = notification.userInfo?["roomID"] as? String else { return }
-            self?.authCoordinator?.routeToChatRoom(roomID: roomID)
+            self?.routeToChatRoom(roomID: roomID)
         }
     }
 
     private func routeToChatRoom(from userInfo: [AnyHashable: Any]) {
         let roomID = userInfo["room_id"] as? String ?? userInfo["roomId"] as? String
         guard let roomID, roomID.isEmpty == false else { return }
+        routeToChatRoom(roomID: roomID)
+    }
+
+    private func routeToChatRoom(roomID: String) {
+        guard shouldHandleChatRoute(roomID: roomID) else { return }
         authCoordinator?.routeToChatRoom(roomID: roomID)
+    }
+
+    private func shouldHandleChatRoute(roomID: String) -> Bool {
+        let now = Date()
+        if let last = lastChatRoute,
+           last.roomID == roomID,
+           now.timeIntervalSince(last.date) < 1.0 {
+            return false
+        }
+        lastChatRoute = (roomID, now)
+        return true
     }
 
     private func updateDeviceTokenIfNeeded(_ token: String) {
