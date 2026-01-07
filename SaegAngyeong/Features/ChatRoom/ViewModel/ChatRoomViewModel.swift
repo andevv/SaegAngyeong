@@ -25,7 +25,7 @@ final class ChatRoomViewModel: BaseViewModel, ViewModelType {
 
     struct Output {
         let title: AnyPublisher<String, Never>
-        let messages: AnyPublisher<[ChatMessageViewData], Never>
+        let messages: AnyPublisher<[ChatRoomItem], Never>
     }
 
     private let context: ChatRoomContext
@@ -58,7 +58,7 @@ final class ChatRoomViewModel: BaseViewModel, ViewModelType {
 
     func transform(input: Input) -> Output {
         let titleSubject = CurrentValueSubject<String, Never>("채팅")
-        let messagesSubject = CurrentValueSubject<[ChatMessageViewData], Never>([])
+        let messagesSubject = CurrentValueSubject<[ChatRoomItem], Never>([])
 
         input.viewDidLoad
             .sink { [weak self] in
@@ -92,7 +92,7 @@ final class ChatRoomViewModel: BaseViewModel, ViewModelType {
         )
     }
 
-    private func fetchCurrentUserID(messagesSubject: CurrentValueSubject<[ChatMessageViewData], Never>) {
+    private func fetchCurrentUserID(messagesSubject: CurrentValueSubject<[ChatRoomItem], Never>) {
         userRepository.fetchMyProfile()
             .receive(on: DispatchQueue.main)
             .sink { [weak self] completion in
@@ -113,7 +113,7 @@ final class ChatRoomViewModel: BaseViewModel, ViewModelType {
 
     private var cachedMessages: [ChatMessage] = []
 
-    private func bindLocalMessages(messagesSubject: CurrentValueSubject<[ChatMessageViewData], Never>) {
+    private func bindLocalMessages(messagesSubject: CurrentValueSubject<[ChatRoomItem], Never>) {
         guard let roomID = roomID else { return }
         messageToken?.invalidate()
         messageToken = localStore.observeMessages(roomID: roomID) { [weak self] messages in
@@ -130,7 +130,7 @@ final class ChatRoomViewModel: BaseViewModel, ViewModelType {
 
     private func prepareRoom(
         titleSubject: CurrentValueSubject<String, Never>,
-        messagesSubject: CurrentValueSubject<[ChatMessageViewData], Never>
+        messagesSubject: CurrentValueSubject<[ChatRoomItem], Never>
     ) {
         self.titleSubject = titleSubject
         resolveRoomID()
@@ -283,11 +283,23 @@ final class ChatRoomViewModel: BaseViewModel, ViewModelType {
             .store(in: &cancellables)
     }
 
-    private func mapToViewData(from messages: [ChatMessage]) -> [ChatMessageViewData] {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "ko_KR")
-        formatter.dateFormat = "a h:mm"
-        return messages.map { message in
+    private func mapToViewData(from messages: [ChatMessage]) -> [ChatRoomItem] {
+        let timeFormatter = DateFormatter()
+        timeFormatter.locale = Locale(identifier: "ko_KR")
+        timeFormatter.dateFormat = "a h:mm"
+        let dateFormatter = DateFormatter()
+        dateFormatter.locale = Locale(identifier: "ko_KR")
+        dateFormatter.dateFormat = "yyyy년 M월 d일"
+
+        var items: [ChatRoomItem] = []
+        var lastDate: Date?
+
+        for message in messages {
+            let messageDate = Calendar.current.startOfDay(for: message.createdAt)
+            if lastDate == nil || lastDate != messageDate {
+                items.append(.date(dateFormatter.string(from: message.createdAt)))
+                lastDate = messageDate
+            }
             let isMine = message.sender.id == currentUserID
             let text: String
             if let content = message.content, !content.isEmpty {
@@ -297,14 +309,16 @@ final class ChatRoomViewModel: BaseViewModel, ViewModelType {
             } else {
                 text = ""
             }
-            return ChatMessageViewData(
+            let viewData = ChatMessageViewData(
                 id: message.id,
                 text: text,
-                timeText: formatter.string(from: message.createdAt),
+                timeText: timeFormatter.string(from: message.createdAt),
                 isMine: isMine,
                 avatarURL: message.sender.profileImageURL
             )
+            items.append(.message(viewData))
         }
+        return items
     }
 
     private func resolveURL(from path: String) -> URL? {
@@ -356,4 +370,9 @@ struct ChatMessageViewData {
     let timeText: String
     let isMine: Bool
     let avatarURL: URL?
+}
+
+enum ChatRoomItem {
+    case date(String)
+    case message(ChatMessageViewData)
 }

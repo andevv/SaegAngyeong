@@ -16,7 +16,7 @@ final class ChatRoomViewController: BaseViewController<ChatRoomViewModel> {
     private let messageField = UITextField()
     private let sendButton = UIButton(type: .system)
 
-    private var items: [ChatMessageViewData] = []
+    private var items: [ChatRoomItem] = []
     private let viewDidLoadSubject = PassthroughSubject<Void, Never>()
     private let refreshSubject = PassthroughSubject<Void, Never>()
     private let sendSubject = PassthroughSubject<String, Never>()
@@ -56,6 +56,7 @@ final class ChatRoomViewController: BaseViewController<ChatRoomViewModel> {
         tableView.dataSource = self
         tableView.delegate = self
         tableView.register(ChatMessageCell.self, forCellReuseIdentifier: ChatMessageCell.reuseID)
+        tableView.register(ChatDateSeparatorCell.self, forCellReuseIdentifier: ChatDateSeparatorCell.reuseID)
         tableView.rowHeight = UITableView.automaticDimension
         tableView.estimatedRowHeight = 60
 
@@ -185,11 +186,62 @@ extension ChatRoomViewController: UITableViewDataSource, UITableViewDelegate {
     }
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        guard let cell = tableView.dequeueReusableCell(withIdentifier: ChatMessageCell.reuseID, for: indexPath) as? ChatMessageCell else {
-            return UITableViewCell()
+        switch items[indexPath.row] {
+        case .message(let message):
+            guard let cell = tableView.dequeueReusableCell(withIdentifier: ChatMessageCell.reuseID, for: indexPath) as? ChatMessageCell else {
+                return UITableViewCell()
+            }
+            cell.configure(with: message)
+            return cell
+        case .date(let text):
+            guard let cell = tableView.dequeueReusableCell(withIdentifier: ChatDateSeparatorCell.reuseID, for: indexPath) as? ChatDateSeparatorCell else {
+                return UITableViewCell()
+            }
+            cell.configure(text: text)
+            return cell
         }
-        cell.configure(with: items[indexPath.row])
-        return cell
+    }
+}
+
+private final class ChatDateSeparatorCell: UITableViewCell {
+    static let reuseID = "ChatDateSeparatorCell"
+
+    private let backgroundContainer = UIView()
+    private let dateLabel = UILabel()
+
+    override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
+        super.init(style: style, reuseIdentifier: reuseIdentifier)
+        selectionStyle = .none
+        backgroundColor = .clear
+        contentView.backgroundColor = .clear
+
+        backgroundContainer.backgroundColor = .gray90.withAlphaComponent(0.6)
+        backgroundContainer.layer.cornerRadius = 10
+
+        dateLabel.font = .pretendard(.regular, size: 11)
+        dateLabel.textColor = .gray60
+        dateLabel.textAlignment = .center
+
+        contentView.addSubview(backgroundContainer)
+        backgroundContainer.addSubview(dateLabel)
+
+        backgroundContainer.snp.makeConstraints { make in
+            make.centerX.equalToSuperview()
+            make.top.equalToSuperview().offset(8)
+            make.bottom.equalToSuperview().offset(-8)
+        }
+
+        dateLabel.snp.makeConstraints { make in
+            make.edges.equalToSuperview().inset(UIEdgeInsets(top: 4, left: 10, bottom: 4, right: 10))
+        }
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    func configure(text: String) {
+        dateLabel.text = text
     }
 }
 
