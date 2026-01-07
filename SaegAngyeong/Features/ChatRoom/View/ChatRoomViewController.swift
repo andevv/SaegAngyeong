@@ -242,7 +242,7 @@ final class ChatRoomViewController: BaseViewController<ChatRoomViewModel> {
         UIView.animate(withDuration: duration, delay: 0, options: options) {
             self.updateMessageInsets(keyboardHeight: keyboardHeight)
             if isShowing {
-                self.scrollToBottom()
+                self.scrollToBottomSync()
             }
         }
     }
@@ -252,6 +252,15 @@ final class ChatRoomViewController: BaseViewController<ChatRoomViewModel> {
         let bottomInset: CGFloat = 12
         tableView.contentInset.bottom = bottomInset
         tableView.verticalScrollIndicatorInsets.bottom = bottomInset
+    }
+
+    private func scrollToBottomSync() {
+        tableView.layoutIfNeeded()
+        let contentHeight = tableView.contentSize.height
+        let boundsHeight = tableView.bounds.height
+        let inset = tableView.adjustedContentInset
+        let maxOffsetY = max(-inset.top, contentHeight - boundsHeight + inset.bottom)
+        tableView.setContentOffset(CGPoint(x: 0, y: maxOffsetY), animated: false)
     }
 }
 
