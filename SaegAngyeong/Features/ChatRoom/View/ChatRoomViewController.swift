@@ -22,6 +22,8 @@ final class ChatRoomViewController: BaseViewController<ChatRoomViewModel> {
     private let refreshSubject = PassthroughSubject<Void, Never>()
     private let sendSubject = PassthroughSubject<String, Never>()
     private let viewDidDisappearSubject = PassthroughSubject<Void, Never>()
+    private var didInitialScroll = false
+    private var isRefreshing = false
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -160,10 +162,22 @@ final class ChatRoomViewController: BaseViewController<ChatRoomViewModel> {
         output.messages
             .receive(on: DispatchQueue.main)
             .sink { [weak self] items in
-                self?.items = items
-                self?.tableView.reloadData()
-                self?.tableView.refreshControl?.endRefreshing()
-                self?.scrollToBottom()
+                guard let self else { return }
+                self.items = items
+                self.tableView.refreshControl?.endRefreshing()
+                if self.didInitialScroll == false, items.isEmpty == false {
+                    UIView.performWithoutAnimation {
+                        self.tableView.reloadData()
+                        self.tableView.layoutIfNeeded()
+                        self.scrollToBottomSync()
+                    }
+                    self.didInitialScroll = true
+                } else {
+                    self.tableView.reloadData()
+                    if items.isEmpty == false {
+                        self.scrollToBottom()
+                    }
+                }
             }
             .store(in: &cancellables)
 
@@ -174,9 +188,26 @@ final class ChatRoomViewController: BaseViewController<ChatRoomViewModel> {
                 self?.presentError(error)
             }
             .store(in: &cancellables)
+
+        viewModel.isLoading
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] isLoading in
+                guard let self else { return }
+                if isLoading == false {
+                    self.tableView.refreshControl?.endRefreshing()
+                    if self.isRefreshing {
+                        let generator = UIImpactFeedbackGenerator(style: .light)
+                        generator.prepare()
+                        generator.impactOccurred()
+                        self.isRefreshing = false
+                    }
+                }
+            }
+            .store(in: &cancellables)
     }
 
     @objc private func handleRefresh() {
+        isRefreshing = true
         refreshSubject.send(())
     }
 

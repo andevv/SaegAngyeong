@@ -175,6 +175,7 @@ final class ChatRoomViewModel: BaseViewModel, ViewModelType {
     private func syncLatestMessages(onComplete: (() -> Void)? = nil) {
         guard let roomID else { return }
         isSyncing = true
+        isLoading.send(true)
         let cursorDate = localStore.lastMessageCreatedAt(roomID: roomID)
         let cursor = cursorDate.map { formattedCursor(from: $0) }
         #if DEBUG
@@ -187,6 +188,7 @@ final class ChatRoomViewModel: BaseViewModel, ViewModelType {
                     self?.error.send(error)
                 }
                 self?.isSyncing = false
+                self?.isLoading.send(false)
                 self?.flushPendingMessages()
                 #if DEBUG
                 print("[ChatRoom] Sync end")
