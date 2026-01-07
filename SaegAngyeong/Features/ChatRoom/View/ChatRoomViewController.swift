@@ -331,6 +331,7 @@ private final class ChatMessageCell: UITableViewCell {
     static let reuseID = "ChatMessageCell"
 
     private let bubbleView = UIView()
+    private let nameLabel = UILabel()
     private let messageLabel = UILabel()
     private let timeLabel = UILabel()
     private let avatarImageView = UIImageView()
@@ -347,6 +348,9 @@ private final class ChatMessageCell: UITableViewCell {
         bubbleView.layer.cornerRadius = 16
         bubbleView.backgroundColor = .blackTurquoise
 
+        nameLabel.font = .pretendard(.medium, size: 10)
+        nameLabel.textColor = .gray60
+
         messageLabel.font = .pretendard(.regular, size: 13)
         messageLabel.textColor = .gray30
         messageLabel.numberOfLines = 0
@@ -358,18 +362,18 @@ private final class ChatMessageCell: UITableViewCell {
 
         avatarImageView.contentMode = .scaleAspectFill
         avatarImageView.clipsToBounds = true
-        avatarImageView.layer.cornerRadius = 14
+        avatarImageView.layer.cornerRadius = 16
         avatarImageView.backgroundColor = .gray15
 
         contentView.addSubview(bubbleView)
+        contentView.addSubview(nameLabel)
         contentView.addSubview(timeLabel)
         contentView.addSubview(avatarImageView)
         bubbleView.addSubview(messageLabel)
 
         avatarImageView.snp.makeConstraints { make in
             make.leading.equalToSuperview().offset(16)
-            make.bottom.equalTo(bubbleView)
-            make.width.height.equalTo(28)
+            make.width.height.equalTo(32)
         }
 
         bubbleView.snp.makeConstraints { make in
@@ -400,12 +404,22 @@ private final class ChatMessageCell: UITableViewCell {
         messageLabel.text = item.text.isEmpty ? "사진을 보냈습니다." : item.text
         timeLabel.text = item.timeText
         let isMine = item.isMine
+        nameLabel.text = isMine ? nil : item.senderName
+        nameLabel.isHidden = isMine
         avatarImageView.isHidden = isMine
         bubbleView.backgroundColor = isMine ? UIColor.brightTurquoise.withAlphaComponent(0.9) : .blackTurquoise
         messageLabel.textColor = isMine ? .gray30 : .gray30
         if isMine {
+            avatarImageView.snp.remakeConstraints { make in
+                make.leading.equalToSuperview().offset(16)
+                make.width.height.equalTo(32)
+            }
+            nameLabel.snp.remakeConstraints { make in
+                make.top.equalToSuperview().offset(4)
+                make.trailing.equalTo(bubbleView)
+            }
             bubbleView.snp.remakeConstraints { make in
-                make.top.equalToSuperview().offset(6)
+                make.top.equalToSuperview().offset(0)
                 make.bottom.equalToSuperview().offset(-6)
                 make.trailing.equalToSuperview().inset(16)
                 make.leading.greaterThanOrEqualToSuperview().offset(72)
@@ -416,8 +430,18 @@ private final class ChatMessageCell: UITableViewCell {
                 make.bottom.equalTo(bubbleView).offset(-2)
             }
         } else {
+            avatarImageView.snp.remakeConstraints { make in
+                make.leading.equalToSuperview().offset(16)
+                make.top.equalToSuperview().offset(4)
+                make.width.height.equalTo(32)
+            }
+            nameLabel.snp.remakeConstraints { make in
+                make.top.equalToSuperview().offset(4)
+                make.leading.equalTo(avatarImageView.snp.trailing).offset(12)
+                make.trailing.lessThanOrEqualToSuperview().inset(72)
+            }
             bubbleView.snp.remakeConstraints { make in
-                make.top.equalToSuperview().offset(6)
+                make.top.equalTo(nameLabel.snp.bottom).offset(4)
                 make.bottom.equalToSuperview().offset(-6)
                 make.leading.equalTo(avatarImageView.snp.trailing).offset(8)
                 make.trailing.lessThanOrEqualToSuperview().inset(72)

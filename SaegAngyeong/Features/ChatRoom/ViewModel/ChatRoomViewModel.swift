@@ -314,7 +314,8 @@ final class ChatRoomViewModel: BaseViewModel, ViewModelType {
                 text: text,
                 timeText: timeFormatter.string(from: message.createdAt),
                 isMine: isMine,
-                avatarURL: message.sender.profileImageURL
+                avatarURL: message.sender.profileImageURL,
+                senderName: message.sender.name ?? message.sender.nick
             )
             items.append(.message(viewData))
         }
@@ -370,6 +371,7 @@ struct ChatMessageViewData {
     let timeText: String
     let isMine: Bool
     let avatarURL: URL?
+    let senderName: String
 }
 
 enum ChatRoomItem {
