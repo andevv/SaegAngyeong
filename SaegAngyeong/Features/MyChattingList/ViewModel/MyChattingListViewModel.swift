@@ -72,7 +72,9 @@ final class MyChattingListViewModel: BaseViewModel, ViewModelType {
             } receiveValue: { [weak self] userID, rooms in
                 guard let self else { return }
                 let formatter = DateFormatter()
-                formatter.dateFormat = "yyyy.MM.dd"
+                formatter.locale = Locale(identifier: "ko_KR")
+                formatter.dateFormat = "a h:mm"
+                let calendar = Calendar.current
                 let items = rooms.map { room in
                     let participant = room.participants.first { $0.id != userID } ?? room.participants.first
                     let title = participant?.name ?? participant?.nick ?? "알 수 없음"
@@ -84,11 +86,21 @@ final class MyChattingListViewModel: BaseViewModel, ViewModelType {
                     } else {
                         lastMessage = "대화를 시작해보세요."
                     }
+                    let updatedAtText: String
+                    if calendar.isDateInToday(room.updatedAt) {
+                        updatedAtText = formatter.string(from: room.updatedAt)
+                    } else if calendar.isDateInYesterday(room.updatedAt) {
+                        updatedAtText = "어제"
+                    } else {
+                        let dateFormatter = DateFormatter()
+                        dateFormatter.dateFormat = "yyyy.MM.dd"
+                        updatedAtText = dateFormatter.string(from: room.updatedAt)
+                    }
                     return MyChattingListItemViewData(
                         roomID: room.id,
                         title: title,
                         lastMessage: lastMessage,
-                        updatedAtText: formatter.string(from: room.updatedAt),
+                        updatedAtText: updatedAtText,
                         profileImageURL: participant?.profileImageURL,
                         headers: self.imageHeaders
                     )
