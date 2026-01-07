@@ -216,6 +216,8 @@ private final class ChatMessageCell: UITableViewCell {
         messageLabel.font = .pretendard(.regular, size: 13)
         messageLabel.textColor = .gray30
         messageLabel.numberOfLines = 0
+        messageLabel.setContentHuggingPriority(.required, for: .horizontal)
+        messageLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
 
         timeLabel.font = .pretendard(.regular, size: 10)
         timeLabel.textColor = .gray60
@@ -239,8 +241,6 @@ private final class ChatMessageCell: UITableViewCell {
         bubbleView.snp.makeConstraints { make in
             make.top.equalToSuperview().offset(6)
             make.bottom.equalToSuperview().offset(-6)
-            leadingConstraint = make.leading.equalTo(avatarImageView.snp.trailing).offset(8).constraint
-            trailingConstraint = make.trailing.equalToSuperview().inset(72).constraint
         }
 
         messageLabel.snp.makeConstraints { make in
@@ -270,17 +270,27 @@ private final class ChatMessageCell: UITableViewCell {
         bubbleView.backgroundColor = isMine ? UIColor.brightTurquoise.withAlphaComponent(0.9) : .blackTurquoise
         messageLabel.textColor = isMine ? .gray30 : .gray30
         if isMine {
-            leadingConstraint?.update(offset: 72)
-            trailingConstraint?.update(offset: -16)
+            bubbleView.snp.remakeConstraints { make in
+                make.top.equalToSuperview().offset(6)
+                make.bottom.equalToSuperview().offset(-6)
+                make.trailing.equalToSuperview().inset(16)
+                make.leading.greaterThanOrEqualToSuperview().offset(72)
+                make.width.lessThanOrEqualToSuperview().multipliedBy(0.7)
+            }
             timeLabel.snp.remakeConstraints { make in
-                make.leading.equalTo(bubbleView.snp.trailing).offset(6)
+                make.trailing.equalTo(bubbleView.snp.leading).offset(-6)
                 make.bottom.equalTo(bubbleView).offset(-2)
             }
         } else {
-            leadingConstraint?.update(offset: 8)
-            trailingConstraint?.update(offset: -72)
+            bubbleView.snp.remakeConstraints { make in
+                make.top.equalToSuperview().offset(6)
+                make.bottom.equalToSuperview().offset(-6)
+                make.leading.equalTo(avatarImageView.snp.trailing).offset(8)
+                make.trailing.lessThanOrEqualToSuperview().inset(72)
+                make.width.lessThanOrEqualToSuperview().multipliedBy(0.7)
+            }
             timeLabel.snp.remakeConstraints { make in
-                make.trailing.equalTo(bubbleView.snp.leading).offset(-6)
+                make.leading.equalTo(bubbleView.snp.trailing).offset(6)
                 make.bottom.equalTo(bubbleView).offset(-2)
             }
             if let url = item.avatarURL {
