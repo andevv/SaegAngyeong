@@ -296,13 +296,17 @@ final class ChatRoomViewModel: BaseViewModel, ViewModelType {
         var items: [ChatRoomItem] = []
         var lastDate: Date?
 
-        for message in messages {
+        for (index, message) in messages.enumerated() {
             let messageDate = Calendar.current.startOfDay(for: message.createdAt)
             if lastDate == nil || lastDate != messageDate {
                 items.append(.date(dateFormatter.string(from: message.createdAt)))
                 lastDate = messageDate
             }
             let isMine = message.sender.id == currentUserID
+            let prev = index > 0 ? messages[index - 1] : nil
+            let next = index + 1 < messages.count ? messages[index + 1] : nil
+            let isGroupStart = isSameGroup(prev, message) == false
+            let isGroupEnd = isSameGroup(next, message) == false
             let text: String
             if let content = message.content, !content.isEmpty {
                 text = content
@@ -317,11 +321,24 @@ final class ChatRoomViewModel: BaseViewModel, ViewModelType {
                 timeText: timeFormatter.string(from: message.createdAt),
                 isMine: isMine,
                 avatarURL: message.sender.profileImageURL,
-                senderName: message.sender.name ?? message.sender.nick
+                senderName: message.sender.name ?? message.sender.nick,
+                showAvatar: isMine == false && isGroupStart,
+                showName: isMine == false && isGroupStart,
+                showTime: isGroupEnd,
+                isGroupStart: isGroupStart
             )
             items.append(.message(viewData))
         }
         return items
+    }
+
+    private func isSameGroup(_ lhs: ChatMessage?, _ rhs: ChatMessage) -> Bool {
+        guard let lhs else { return false }
+        guard lhs.sender.id == rhs.sender.id else { return false }
+        let calendar = Calendar.current
+        let lhsComponents = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: lhs.createdAt)
+        let rhsComponents = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: rhs.createdAt)
+        return lhsComponents == rhsComponents
     }
 
     private func resolveURL(from path: String) -> URL? {
@@ -374,6 +391,10 @@ struct ChatMessageViewData {
     let isMine: Bool
     let avatarURL: URL?
     let senderName: String
+    let showAvatar: Bool
+    let showName: Bool
+    let showTime: Bool
+    let isGroupStart: Bool
 }
 
 enum ChatRoomItem {

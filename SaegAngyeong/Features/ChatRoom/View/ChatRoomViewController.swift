@@ -436,21 +436,25 @@ private final class ChatMessageCell: UITableViewCell {
         timeLabel.text = item.timeText
         let isMine = item.isMine
         nameLabel.text = isMine ? nil : item.senderName
-        nameLabel.isHidden = isMine
-        avatarImageView.isHidden = isMine
+        nameLabel.isHidden = !(item.showName)
+        avatarImageView.isHidden = !(item.showAvatar)
+        timeLabel.isHidden = !(item.showTime)
         bubbleView.backgroundColor = isMine ? UIColor.brightTurquoise.withAlphaComponent(0.9) : .blackTurquoise
         messageLabel.textColor = isMine ? .gray30 : .gray30
+        let groupSpacing: CGFloat = item.isGroupStart ? 4 : 0
+        let bubbleTopOffset: CGFloat = groupSpacing
+        let nameTopOffset: CGFloat = 4 + groupSpacing
         if isMine {
             avatarImageView.snp.remakeConstraints { make in
                 make.leading.equalToSuperview().offset(16)
                 make.width.height.equalTo(32)
             }
             nameLabel.snp.remakeConstraints { make in
-                make.top.equalToSuperview().offset(4)
+                make.top.equalToSuperview().offset(nameTopOffset)
                 make.trailing.equalTo(bubbleView)
             }
             bubbleView.snp.remakeConstraints { make in
-                make.top.equalToSuperview().offset(0)
+                make.top.equalToSuperview().offset(bubbleTopOffset)
                 make.bottom.equalToSuperview().offset(-6)
                 make.trailing.equalToSuperview().inset(16)
                 make.leading.greaterThanOrEqualToSuperview().offset(72)
@@ -467,12 +471,16 @@ private final class ChatMessageCell: UITableViewCell {
                 make.width.height.equalTo(32)
             }
             nameLabel.snp.remakeConstraints { make in
-                make.top.equalToSuperview().offset(4)
+                make.top.equalToSuperview().offset(nameTopOffset)
                 make.leading.equalTo(avatarImageView.snp.trailing).offset(12)
                 make.trailing.lessThanOrEqualToSuperview().inset(72)
             }
             bubbleView.snp.remakeConstraints { make in
-                make.top.equalTo(nameLabel.snp.bottom).offset(4)
+                if item.showName {
+                    make.top.equalTo(nameLabel.snp.bottom).offset(4)
+                } else {
+                    make.top.equalToSuperview().offset(bubbleTopOffset)
+                }
                 make.bottom.equalToSuperview().offset(-6)
                 make.leading.equalTo(avatarImageView.snp.trailing).offset(8)
                 make.trailing.lessThanOrEqualToSuperview().inset(72)
