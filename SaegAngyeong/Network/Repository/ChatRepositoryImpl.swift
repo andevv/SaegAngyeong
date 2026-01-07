@@ -161,8 +161,19 @@ private extension ChatRepositoryImpl {
     }
 
     func parseISODate(_ value: String) -> Date {
-        let formatter = ISO8601DateFormatter()
-        return formatter.date(from: value) ?? Date()
+        let isoFormatter = ISO8601DateFormatter()
+        isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = isoFormatter.date(from: value) {
+            return date
+        }
+        let fallbackFormatter = DateFormatter()
+        fallbackFormatter.locale = Locale(identifier: "en_US_POSIX")
+        fallbackFormatter.timeZone = TimeZone(secondsFromGMT: 0)
+        fallbackFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss.SSS Z"
+        if let date = fallbackFormatter.date(from: value) {
+            return date
+        }
+        return Date()
     }
 
     func mapFilePath(from url: URL) -> String {

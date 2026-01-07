@@ -227,7 +227,7 @@ final class ChatRoomViewModel: BaseViewModel, ViewModelType {
             ),
             content: dto.content,
             fileURLs: dto.files.compactMap { resolveURL(from: $0) },
-            createdAt: ISO8601DateFormatter().date(from: dto.createdAt) ?? Date()
+            createdAt: parseISODate(dto.createdAt)
         )
         if localStore.contains(messageID: message.id) {
             #if DEBUG
@@ -320,6 +320,22 @@ final class ChatRoomViewModel: BaseViewModel, ViewModelType {
             return base.appendingPathComponent(normalized)
         }
         return base.appendingPathComponent("v1/" + normalized)
+    }
+
+    private func parseISODate(_ value: String) -> Date {
+        let isoFormatter = ISO8601DateFormatter()
+        isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = isoFormatter.date(from: value) {
+            return date
+        }
+        let fallbackFormatter = DateFormatter()
+        fallbackFormatter.locale = Locale(identifier: "en_US_POSIX")
+        fallbackFormatter.timeZone = TimeZone(secondsFromGMT: 0)
+        fallbackFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss.SSS Z"
+        if let date = fallbackFormatter.date(from: value) {
+            return date
+        }
+        return Date()
     }
 
     private func formattedCursor(from date: Date) -> String {
