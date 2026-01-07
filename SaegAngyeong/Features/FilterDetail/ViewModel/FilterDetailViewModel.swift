@@ -195,6 +195,7 @@ final class FilterDetailViewModel: BaseViewModel, ViewModelType {
             filteredImageURL: filter.files.dropFirst().first,
             creatorName: filter.creator.name ?? filter.creator.nick,
             creatorNick: filter.creator.nick,
+            creatorUserID: filter.creator.id,
             creatorIntroduction: filter.creator.introduction ?? "",
             creatorHashTags: filter.creator.hashTags,
             creatorProfileURL: filter.creator.profileImageURL,

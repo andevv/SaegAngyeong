@@ -21,6 +21,7 @@ struct FilterDetailViewData {
     let filteredImageURL: URL?
     let creatorName: String
     let creatorNick: String
+    let creatorUserID: String
     let creatorIntroduction: String
     let creatorHashTags: [String]
     let creatorProfileURL: URL?
@@ -52,6 +53,7 @@ struct FilterDetailViewData {
             filteredImageURL: filteredImageURL,
             creatorName: creatorName,
             creatorNick: creatorNick,
+            creatorUserID: creatorUserID,
             creatorIntroduction: creatorIntroduction,
             creatorHashTags: creatorHashTags,
             creatorProfileURL: creatorProfileURL,
@@ -85,6 +87,7 @@ struct FilterDetailViewData {
             filteredImageURL: filteredImageURL,
             creatorName: creatorName,
             creatorNick: creatorNick,
+            creatorUserID: creatorUserID,
             creatorIntroduction: creatorIntroduction,
             creatorHashTags: creatorHashTags,
             creatorProfileURL: creatorProfileURL,

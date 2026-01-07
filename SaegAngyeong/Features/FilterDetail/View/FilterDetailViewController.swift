@@ -57,6 +57,8 @@ final class FilterDetailViewController: BaseViewController<FilterDetailViewModel
     private let refreshSubject = PassthroughSubject<Void, Never>()
     private let deleteSubject = PassthroughSubject<Void, Never>()
 
+    var onMessageRequested: ((String) -> Void)?
+
     init(
         viewModel: FilterDetailViewModel,
         orderRepository: OrderRepository,
@@ -395,6 +397,7 @@ final class FilterDetailViewController: BaseViewController<FilterDetailViewModel
         )
         presetsCard.configure(items: viewData.presets, locked: viewData.requiresPurchase && !viewData.isPurchased)
         purchaseButton.isHidden = !viewData.requiresPurchase
+        messageButton.isHidden = viewData.isOwnedByMe
         updateOwnerActions(isOwnedByMe: viewData.isOwnedByMe)
         if viewData.requiresPurchase {
             if viewData.isPurchased {
@@ -453,7 +456,9 @@ final class FilterDetailViewController: BaseViewController<FilterDetailViewModel
     }
 
     @objc private func messageTapped() {
-        print("[FilterDetail] message tapped")
+        guard let viewData = currentViewData else { return }
+        guard viewData.isOwnedByMe == false else { return }
+        onMessageRequested?(viewData.creatorUserID)
     }
 
     @objc private func purchaseTapped() {
