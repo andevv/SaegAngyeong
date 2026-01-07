@@ -83,8 +83,6 @@ final class ChatRoomViewController: BaseViewController<ChatRoomViewModel> {
         tableView.refreshControl = refreshControl
 
         inputContainer.backgroundColor = .black
-        inputContainer.layer.borderWidth = 1
-        inputContainer.layer.borderColor = UIColor.gray90.withAlphaComponent(0.2).cgColor
 
         messageField.textColor = .gray30
         messageField.font = .pretendard(.regular, size: 13)
