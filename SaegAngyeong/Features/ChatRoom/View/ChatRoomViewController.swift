@@ -22,6 +22,7 @@ final class ChatRoomViewController: BaseViewController<ChatRoomViewModel> {
     private let refreshSubject = PassthroughSubject<Void, Never>()
     private let sendSubject = PassthroughSubject<String, Never>()
     private let viewDidDisappearSubject = PassthroughSubject<Void, Never>()
+    private lazy var tapGesture = UITapGestureRecognizer(target: self, action: #selector(dismissKeyboard))
     private var didInitialScroll = false
     private var isRefreshing = false
 
@@ -111,8 +112,8 @@ final class ChatRoomViewController: BaseViewController<ChatRoomViewModel> {
         inputContainer.addSubview(messageField)
         inputContainer.addSubview(sendButton)
 
-        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(dismissKeyboard))
         tapGesture.cancelsTouchesInView = false
+        tapGesture.delegate = self
         view.addGestureRecognizer(tapGesture)
     }
 
@@ -290,6 +291,15 @@ final class ChatRoomViewController: BaseViewController<ChatRoomViewModel> {
         let inset = tableView.adjustedContentInset
         let maxOffsetY = max(-inset.top, contentHeight - boundsHeight + inset.bottom)
         tableView.setContentOffset(CGPoint(x: 0, y: maxOffsetY), animated: false)
+    }
+}
+
+extension ChatRoomViewController: UIGestureRecognizerDelegate {
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+        if touch.view?.isDescendant(of: inputContainer) == true {
+            return false
+        }
+        return true
     }
 }
 
