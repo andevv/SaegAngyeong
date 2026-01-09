@@ -417,9 +417,10 @@ private final class FilterAdjustmentCell: UICollectionViewCell {
     }
 
     func configure(iconName: String, title: String, isSelected: Bool) {
-        iconView.image = UIImage(named: iconName)
+        iconView.image = UIImage(named: iconName)?.withRenderingMode(.alwaysTemplate)
         titleLabel.text = title
         titleLabel.textColor = isSelected ? .gray30 : .gray60
         iconView.tintColor = isSelected ? .brightTurquoise : .gray60
+        iconView.alpha = 1.0
     }
 }
