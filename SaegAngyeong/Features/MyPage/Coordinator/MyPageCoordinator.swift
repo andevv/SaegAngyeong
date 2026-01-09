@@ -13,6 +13,7 @@ final class MyPageCoordinator {
     private var likedFilterCoordinator: LikedFilterCoordinator?
     private var myUploadCoordinator: MyUploadCoordinator?
     private var myChattingListCoordinator: MyChattingListCoordinator?
+    private var streamingCoordinator: StreamingCoordinator?
 
     init(dependency: AppDependency) {
         self.dependency = dependency
@@ -67,6 +68,12 @@ final class MyPageCoordinator {
                 navigationController: self.navigationController
             )
             self.myChattingListCoordinator = coordinator
+            coordinator.start()
+        }
+        viewController.onStreamingRequested = { [weak self] in
+            guard let self else { return }
+            let coordinator = StreamingCoordinator(navigationController: self.navigationController)
+            self.streamingCoordinator = coordinator
             coordinator.start()
         }
         navigationController.setViewControllers([viewController], animated: false)

@@ -16,6 +16,7 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
     var onLikedFilterRequested: (() -> Void)?
     var onMyUploadRequested: ((String) -> Void)?
     var onMyChattingListRequested: (() -> Void)?
+    var onStreamingRequested: (() -> Void)?
     private let scrollView = UIScrollView()
     private let contentView = UIView()
 
@@ -31,6 +32,7 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
     private let likedFilterButton = UIButton(type: .system)
     private let myUploadButton = UIButton(type: .system)
     private let myChattingListButton = UIButton(type: .system)
+    private let streamingButton = UIButton(type: .system)
     private let logoutButton = UIButton(type: .system)
 
     private let viewDidLoadSubject = PassthroughSubject<Void, Never>()
@@ -182,6 +184,21 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
         }
         myChattingListButton.addTarget(self, action: #selector(myChattingListTapped), for: .touchUpInside)
 
+        streamingButton.setTitle("라이브 스트리밍", for: .normal)
+        streamingButton.titleLabel?.font = .pretendard(.medium, size: 13)
+        streamingButton.setTitleColor(.gray30, for: .normal)
+        streamingButton.backgroundColor = .blackTurquoise
+        streamingButton.layer.cornerRadius = 12
+        streamingButton.contentHorizontalAlignment = .left
+        streamingButton.contentEdgeInsets = UIEdgeInsets(top: 12, left: 16, bottom: 12, right: 16)
+        if let image = UIImage(named: "Icon_chevron")?.withRenderingMode(.alwaysTemplate) {
+            streamingButton.setImage(image, for: .normal)
+            streamingButton.tintColor = .gray60
+            streamingButton.semanticContentAttribute = .forceRightToLeft
+            streamingButton.imageEdgeInsets = UIEdgeInsets(top: 0, left: 8, bottom: 0, right: -8)
+        }
+        streamingButton.addTarget(self, action: #selector(streamingTapped), for: .touchUpInside)
+
         logoutButton.setTitle("로그아웃", for: .normal)
         logoutButton.titleLabel?.font = .pretendard(.medium, size: 13)
         logoutButton.setTitleColor(.gray60, for: .normal)
@@ -203,6 +220,7 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
             likedFilterButton,
             myUploadButton,
             myChattingListButton,
+            streamingButton,
             logoutButton
         ].forEach { contentView.addSubview($0) }
     }
@@ -282,10 +300,16 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
         }
 
         logoutButton.snp.makeConstraints { make in
-            make.top.equalTo(myChattingListButton.snp.bottom).offset(16)
+            make.top.equalTo(streamingButton.snp.bottom).offset(16)
             make.leading.trailing.equalTo(editProfileButton)
             make.height.equalTo(48)
             make.bottom.equalToSuperview().offset(-24)
+        }
+
+        streamingButton.snp.makeConstraints { make in
+            make.top.equalTo(myChattingListButton.snp.bottom).offset(12)
+            make.leading.trailing.equalTo(editProfileButton)
+            make.height.equalTo(48)
         }
     }
 
@@ -430,6 +454,10 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
 
     @objc private func myChattingListTapped() {
         onMyChattingListRequested?()
+    }
+
+    @objc private func streamingTapped() {
+        onStreamingRequested?()
     }
 
     @objc private func logoutTapped() {
