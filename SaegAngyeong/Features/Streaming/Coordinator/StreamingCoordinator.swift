@@ -41,14 +41,9 @@ final class StreamingCoordinator {
     }
 
     private func showStreaming(videoID: String) {
-        videoRepository.streamInfo(videoID: videoID)
-            .receive(on: DispatchQueue.main)
-            .sink { _ in } receiveValue: { [weak self] info in
-                let viewModel = StreamingViewModel(streamURL: info.streamURL)
-                let viewController = StreamingViewController(viewModel: viewModel)
-                self?.navigationController.pushViewController(viewController, animated: true)
-            }
-            .store(in: &cancellables)
+        let viewModel = StreamingViewModel(videoID: videoID, videoRepository: videoRepository)
+        let viewController = StreamingViewController(viewModel: viewModel)
+        navigationController.pushViewController(viewController, animated: true)
     }
 
     deinit {

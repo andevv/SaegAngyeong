@@ -48,14 +48,33 @@ struct VideoDTO: Decodable {
 struct VideoStreamResponseDTO: Decodable {
     let videoID: String
     let streamURL: String
-    let qualities: [String]?
-    let subtitles: [String]?
+    let qualities: [VideoStreamQualityDTO]?
+    let subtitles: [VideoStreamSubtitleDTO]?
 
     enum CodingKeys: String, CodingKey {
         case videoID = "video_id"
         case streamURL = "stream_url"
         case qualities
         case subtitles
+    }
+}
+
+struct VideoStreamQualityDTO: Decodable {
+    let quality: String
+    let url: String
+}
+
+struct VideoStreamSubtitleDTO: Decodable {
+    let language: String
+    let name: String
+    let isDefault: Bool
+    let url: String
+
+    enum CodingKeys: String, CodingKey {
+        case language
+        case name
+        case isDefault = "is_default"
+        case url
     }
 }
 

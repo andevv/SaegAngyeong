@@ -18,6 +18,8 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
     private let viewDidLoadSubject = PassthroughSubject<Void, Never>()
     private var player: AVPlayer?
     private var playerLayer: AVPlayerLayer?
+    private var itemObservation: NSKeyValueObservation?
+    private var shouldAutoPlay = false
 
     override init(viewModel: StreamingViewModel) {
         super.init(viewModel: viewModel)
@@ -88,7 +90,38 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
     }
 
     private func setupPlayer(url: URL) {
-        let player = AVPlayer(url: url)
+        #if DEBUG
+        print("[Streaming] stream URL: \(url.absoluteString)")
+        #endif
+        let assetOptions: [String: Any] = [
+            AVURLAssetAllowsCellularAccessKey: true
+        ]
+        let asset = AVURLAsset(url: url, options: assetOptions)
+        let item = AVPlayerItem(asset: asset)
+        itemObservation = item.observe(\.status, options: [.initial, .new]) { [weak self] item, _ in
+            guard let self else { return }
+            switch item.status {
+            case .readyToPlay:
+                #if DEBUG
+                print("[Streaming] item ready")
+                #endif
+                if self.shouldAutoPlay {
+                    self.player?.play()
+                }
+            case .failed:
+                #if DEBUG
+                if let error = item.error as NSError? {
+                    print("[Streaming] player item failed: \(error.domain) \(error.code) \(error.localizedDescription)")
+                } else {
+                    print("[Streaming] player item failed: unknown")
+                }
+                #endif
+            default:
+                break
+            }
+        }
+        item.addObserver(self, forKeyPath: "loadedTimeRanges", options: [.new], context: nil)
+        let player = AVPlayer(playerItem: item)
         self.player = player
         let layer = AVPlayerLayer(player: player)
         layer.videoGravity = .resizeAspect
@@ -99,11 +132,23 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
 
     @objc private func playTapped() {
         guard let player else { return }
+        shouldAutoPlay = true
+        do {
+            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback, options: [])
+            try AVAudioSession.sharedInstance().setActive(true)
+        } catch {
+            #if DEBUG
+            print("[Streaming] audio session error: \(error)")
+            #endif
+        }
         if player.timeControlStatus == .playing {
             player.pause()
             playButton.setTitle("재생", for: .normal)
+            shouldAutoPlay = false
         } else {
-            player.play()
+            if player.currentItem?.status == .readyToPlay {
+                player.play()
+            }
             playButton.setTitle("일시정지", for: .normal)
         }
     }
@@ -111,5 +156,25 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
     override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
         player?.pause()
+        shouldAutoPlay = false
+        if let item = player?.currentItem {
+            item.removeObserver(self, forKeyPath: "loadedTimeRanges")
+        }
+    }
+
+    override func observeValue(
+        forKeyPath keyPath: String?,
+        of object: Any?,
+        change: [NSKeyValueChangeKey : Any]?,
+        context: UnsafeMutableRawPointer?
+    ) {
+        guard keyPath == "loadedTimeRanges",
+              let item = object as? AVPlayerItem,
+              let range = item.loadedTimeRanges.first?.timeRangeValue else { return }
+        #if DEBUG
+        let start = CMTimeGetSeconds(range.start)
+        let duration = CMTimeGetSeconds(range.duration)
+        print("[Streaming] buffered: \(start) + \(duration)")
+        #endif
     }
 }

@@ -29,15 +29,17 @@ final class VideoRepositoryImpl: VideoRepository {
 
     func streamInfo(videoID: String) -> AnyPublisher<StreamInfo, DomainError> {
         network.request(VideoStreamResponseDTO.self, endpoint: VideoAPI.stream(videoID: videoID))
-            .mapError { _ in DomainError.network }
-            .map { [weak self] dto in
-                guard let self else {
-                    return StreamInfo(videoID: videoID, streamURL: URL(fileURLWithPath: "/"), qualities: [], subtitles: [])
+            .tryMap { [weak self] dto in
+                guard let self else { throw DomainError.decoding }
+                guard let streamURL = self.buildURL(from: dto.streamURL) else {
+                    throw DomainError.decoding
                 }
-                let streamURL = self.buildURL(from: dto.streamURL) ?? URL(fileURLWithPath: "/")
-                let qualities = dto.qualities?.compactMap { self.buildURL(from: $0) } ?? []
-                let subtitles = dto.subtitles?.compactMap { self.buildURL(from: $0) } ?? []
+                let qualities = dto.qualities?.compactMap { self.buildURL(from: $0.url) } ?? []
+                let subtitles = dto.subtitles?.compactMap { self.buildURL(from: $0.url) } ?? []
                 return StreamInfo(videoID: dto.videoID, streamURL: streamURL, qualities: qualities, subtitles: subtitles)
+            }
+            .mapError { error in
+                (error as? DomainError) ?? DomainError.network
             }
             .eraseToAnyPublisher()
     }
@@ -91,9 +93,10 @@ private extension VideoRepositoryImpl {
         if normalized.hasPrefix("/") {
             normalized.removeFirst()
         }
+        let baseString = base.absoluteString.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         if normalized.hasPrefix("v1/") {
-            return base.appendingPathComponent(normalized)
+            return URL(string: baseString + "/" + normalized)
         }
-        return base.appendingPathComponent("v1/" + normalized)
+        return URL(string: baseString + "/v1/" + normalized)
     }
 }
