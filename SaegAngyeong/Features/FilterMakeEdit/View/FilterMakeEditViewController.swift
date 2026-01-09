@@ -76,8 +76,6 @@ final class FilterMakeEditViewController: BaseViewController<FilterMakeEditViewM
         navigationItem.rightBarButtonItem = UIBarButtonItem(customView: saveButton)
 
         imageContainer.backgroundColor = .blackTurquoise
-        imageContainer.layer.cornerRadius = 14
-        imageContainer.clipsToBounds = true
 
         imageView.contentMode = .scaleAspectFill
         imageView.clipsToBounds = true
@@ -117,8 +115,8 @@ final class FilterMakeEditViewController: BaseViewController<FilterMakeEditViewM
     override func configureLayout() {
         imageContainer.snp.makeConstraints { make in
             make.top.equalTo(view.safeAreaLayoutGuide).offset(16)
-            make.leading.trailing.equalToSuperview().inset(20)
-            make.height.equalTo(imageContainer.snp.width)
+            make.leading.trailing.equalToSuperview()
+            make.height.equalTo(imageContainer.snp.width).multipliedBy(4.0 / 3.0)
         }
 
         imageView.snp.makeConstraints { make in
@@ -144,17 +142,17 @@ final class FilterMakeEditViewController: BaseViewController<FilterMakeEditViewM
         }
 
         valueLabel.snp.makeConstraints { make in
-            make.top.equalTo(imageContainer.snp.bottom).offset(16)
+            make.top.equalTo(imageContainer.snp.bottom).offset(24)
             make.centerX.equalToSuperview()
         }
 
         slider.snp.makeConstraints { make in
-            make.top.equalTo(valueLabel.snp.bottom).offset(8)
+            make.top.equalTo(valueLabel.snp.bottom).offset(12)
             make.leading.trailing.equalToSuperview().inset(24)
         }
 
         adjustmentCollectionView.snp.makeConstraints { make in
-            make.top.equalTo(slider.snp.bottom).offset(16)
+            make.top.equalTo(slider.snp.bottom).offset(20)
             make.leading.trailing.equalToSuperview()
             make.height.equalTo(72)
             make.bottom.lessThanOrEqualTo(view.safeAreaLayoutGuide).offset(-16)
