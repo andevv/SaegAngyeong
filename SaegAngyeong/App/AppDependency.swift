@@ -17,6 +17,7 @@ struct AppDependency {
     let bannerRepository: BannerRepository
     let userRepository: UserRepository
     let chatRepository: ChatRepository
+    let videoRepository: VideoRepository
     let orderRepository: OrderRepository
     let paymentRepository: PaymentRepository
 
@@ -46,6 +47,7 @@ struct AppDependency {
         let bannerRepository = BannerRepositoryImpl(network: provider)
         let userRepository = UserRepositoryImpl(network: provider)
         let chatRepository = ChatRepositoryImpl(network: provider)
+        let videoRepository = VideoRepositoryImpl(network: provider)
         let orderRepository = OrderRepositoryImpl(network: provider)
         let paymentRepository = PaymentRepositoryImpl(network: provider)
         return AppDependency(
@@ -56,6 +58,7 @@ struct AppDependency {
             bannerRepository: bannerRepository,
             userRepository: userRepository,
             chatRepository: chatRepository,
+            videoRepository: videoRepository,
             orderRepository: orderRepository,
             paymentRepository: paymentRepository
         )

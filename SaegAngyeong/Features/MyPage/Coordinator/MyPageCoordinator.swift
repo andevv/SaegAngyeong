@@ -72,7 +72,12 @@ final class MyPageCoordinator {
         }
         viewController.onStreamingRequested = { [weak self] in
             guard let self else { return }
-            let coordinator = StreamingCoordinator(navigationController: self.navigationController)
+            let coordinator = StreamingCoordinator(
+                navigationController: self.navigationController,
+                videoRepository: self.dependency.videoRepository,
+                accessTokenProvider: { [weak self] in self?.dependency.tokenStore.accessToken },
+                sesacKey: AppConfig.apiKey
+            )
             self.streamingCoordinator = coordinator
             coordinator.start()
         }

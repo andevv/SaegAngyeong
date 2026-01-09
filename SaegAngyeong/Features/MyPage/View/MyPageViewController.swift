@@ -184,7 +184,7 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
         }
         myChattingListButton.addTarget(self, action: #selector(myChattingListTapped), for: .touchUpInside)
 
-        streamingButton.setTitle("라이브 스트리밍", for: .normal)
+        streamingButton.setTitle("비디오 스트리밍", for: .normal)
         streamingButton.titleLabel?.font = .pretendard(.medium, size: 13)
         streamingButton.setTitleColor(.gray30, for: .normal)
         streamingButton.backgroundColor = .blackTurquoise

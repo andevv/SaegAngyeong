@@ -6,19 +6,49 @@
 //
 
 import UIKit
+import Combine
 
 final class StreamingCoordinator {
     private let navigationController: BaseNavigationController
+    private let videoRepository: VideoRepository
+    private let accessTokenProvider: () -> String?
+    private let sesacKey: String
+    private var cancellables = Set<AnyCancellable>()
 
-    init(navigationController: BaseNavigationController) {
+    init(
+        navigationController: BaseNavigationController,
+        videoRepository: VideoRepository,
+        accessTokenProvider: @escaping () -> String?,
+        sesacKey: String
+    ) {
         self.navigationController = navigationController
+        self.videoRepository = videoRepository
+        self.accessTokenProvider = accessTokenProvider
+        self.sesacKey = sesacKey
     }
 
     func start() {
-        guard let url = URL(string: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8") else { return }
-        let viewModel = StreamingViewModel(streamURL: url)
-        let viewController = StreamingViewController(viewModel: viewModel)
+        let viewModel = StreamingListViewModel(
+            videoRepository: videoRepository,
+            accessTokenProvider: accessTokenProvider,
+            sesacKey: sesacKey
+        )
+        let viewController = StreamingListViewController(viewModel: viewModel)
+        viewController.onVideoSelected = { [weak self] videoID in
+            self?.showStreaming(videoID: videoID)
+        }
         navigationController.pushViewController(viewController, animated: true)
+    }
+
+    private func showStreaming(videoID: String) {
+        videoRepository.streamInfo(videoID: videoID)
+            .receive(on: DispatchQueue.main)
+            .sink { _ in } receiveValue: { [weak self] info in
+                let viewModel = StreamingViewModel(streamURL: info.streamURL)
+                let viewController = StreamingViewController(viewModel: viewModel)
+                self?.navigationController.pushViewController(viewController, animated: true)
+            }
+            .store(in: &cancellables)
     }
 
     deinit {
