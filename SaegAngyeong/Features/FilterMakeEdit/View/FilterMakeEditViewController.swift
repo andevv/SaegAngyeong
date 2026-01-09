@@ -88,14 +88,23 @@ final class FilterMakeEditViewController: BaseViewController<FilterMakeEditViewM
 
         undoButton.setImage(UIImage(named: "Icon_Undo"), for: .normal)
         undoButton.tintColor = .gray60
+        undoButton.backgroundColor = UIColor.gray100.withAlphaComponent(0.35)
+        undoButton.layer.cornerRadius = 10
+        undoButton.contentEdgeInsets = UIEdgeInsets(top: 6, left: 6, bottom: 6, right: 6)
         undoButton.addTarget(self, action: #selector(undoTapped), for: .touchUpInside)
 
         redoButton.setImage(UIImage(named: "Icon_Redo"), for: .normal)
         redoButton.tintColor = .gray60
+        redoButton.backgroundColor = UIColor.gray100.withAlphaComponent(0.35)
+        redoButton.layer.cornerRadius = 10
+        redoButton.contentEdgeInsets = UIEdgeInsets(top: 6, left: 6, bottom: 6, right: 6)
         redoButton.addTarget(self, action: #selector(redoTapped), for: .touchUpInside)
 
         compareButton.setImage(UIImage(named: "Icon_Compare"), for: .normal)
         compareButton.tintColor = .gray60
+        compareButton.backgroundColor = UIColor.gray100.withAlphaComponent(0.35)
+        compareButton.layer.cornerRadius = 10
+        compareButton.contentEdgeInsets = UIEdgeInsets(top: 6, left: 6, bottom: 6, right: 6)
         compareButton.addTarget(self, action: #selector(compareTouchDown), for: .touchDown)
         compareButton.addTarget(self, action: #selector(compareTouchUp), for: [.touchUpInside, .touchUpOutside, .touchCancel])
 
@@ -132,19 +141,19 @@ final class FilterMakeEditViewController: BaseViewController<FilterMakeEditViewM
         undoButton.snp.makeConstraints { make in
             make.leading.equalToSuperview().offset(12)
             make.bottom.equalToSuperview().inset(12)
-            make.width.height.equalTo(30)
+            make.width.height.equalTo(36)
         }
 
         redoButton.snp.makeConstraints { make in
             make.leading.equalTo(undoButton.snp.trailing).offset(10)
             make.centerY.equalTo(undoButton)
-            make.width.height.equalTo(30)
+            make.width.height.equalTo(36)
         }
 
         compareButton.snp.makeConstraints { make in
             make.trailing.equalToSuperview().inset(12)
             make.centerY.equalTo(undoButton)
-            make.width.height.equalTo(30)
+            make.width.height.equalTo(36)
         }
 
         valueLabel.snp.makeConstraints { make in
@@ -158,7 +167,7 @@ final class FilterMakeEditViewController: BaseViewController<FilterMakeEditViewM
         }
 
         adjustmentCollectionView.snp.makeConstraints { make in
-            make.top.equalTo(slider.snp.bottom).offset(20)
+            make.top.equalTo(slider.snp.bottom).offset(32)
             make.leading.trailing.equalToSuperview()
             make.height.equalTo(72)
             make.bottom.lessThanOrEqualTo(view.safeAreaLayoutGuide).offset(-16)
