@@ -20,6 +20,8 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
     private var playerLayer: AVPlayerLayer?
     private var itemObservation: NSKeyValueObservation?
     private var shouldAutoPlay = false
+    private let tokenStore = TokenStore()
+    private var resourceLoader: StreamingResourceLoader?
 
     override init(viewModel: StreamingViewModel) {
         super.init(viewModel: viewModel)
@@ -96,7 +98,25 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         let assetOptions: [String: Any] = [
             AVURLAssetAllowsCellularAccessKey: true
         ]
-        let asset = AVURLAsset(url: url, options: assetOptions)
+        let headersProvider: () -> [String: String] = { [weak self] in
+            guard let self else { return [:] }
+            var headers: [String: String] = [
+                "SeSACKey": AppConfig.apiKey
+            ]
+            if let accessToken = self.tokenStore.accessToken {
+                headers["Authorization"] = accessToken
+            }
+            return headers
+        }
+        let loader = StreamingResourceLoader(
+            originalScheme: url.scheme ?? "http",
+            disableSubtitles: true,
+            headersProvider: headersProvider
+        )
+        self.resourceLoader = loader
+        let assetURL = StreamingResourceLoader.makeCustomSchemeURL(from: url) ?? url
+        let asset = AVURLAsset(url: assetURL, options: assetOptions)
+        asset.resourceLoader.setDelegate(loader, queue: DispatchQueue(label: "streaming.resource.loader"))
         let item = AVPlayerItem(asset: asset)
         itemObservation = item.observe(\.status, options: [.initial, .new]) { [weak self] item, _ in
             guard let self else { return }
