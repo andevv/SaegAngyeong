@@ -9,6 +9,9 @@ import UIKit
 import SnapKit
 import Combine
 import PhotosUI
+import ImageIO
+import UniformTypeIdentifiers
+import CoreLocation
 
 final class FilterMakeViewController: BaseViewController<FilterMakeViewModel> {
     private let scrollView = UIScrollView()
@@ -31,6 +34,11 @@ final class FilterMakeViewController: BaseViewController<FilterMakeViewModel> {
     private let editButton = UIButton(type: .system)
     private var photoHeightConstraint: Constraint?
     private var isPhotoSquare = false
+    private let metadataCard = MetadataCardView()
+    private var metadataCardHeightConstraint: Constraint?
+    private let geocoder = CLGeocoder()
+    private var metadataLine3: String = ""
+    private var currentMetadata: PhotoMetadata?
 
     private let descriptionLabel = UILabel()
     private let descriptionContainer = UIView()
@@ -48,6 +56,7 @@ final class FilterMakeViewController: BaseViewController<FilterMakeViewModel> {
     private let descriptionChangedSubject = PassthroughSubject<String, Never>()
     private let priceChangedSubject = PassthroughSubject<String, Never>()
     private let imageSelectedSubject = PassthroughSubject<UIImage?, Never>()
+    private let metadataSelectedSubject = PassthroughSubject<PhotoMetadata?, Never>()
     private let saveTappedSubject = PassthroughSubject<Void, Never>()
 
     private let saveButton = UIButton(type: .system)
@@ -222,6 +231,7 @@ final class FilterMakeViewController: BaseViewController<FilterMakeViewModel> {
             categoryStackView,
             photoLabel,
             photoContainerView,
+            metadataCard,
             descriptionLabel,
             descriptionContainer,
             priceLabel,
@@ -237,6 +247,8 @@ final class FilterMakeViewController: BaseViewController<FilterMakeViewModel> {
         descriptionContainer.addSubview(descriptionPlaceholderLabel)
         priceContainer.addSubview(priceTextField)
         priceContainer.addSubview(priceUnitLabel)
+
+        metadataCard.isHidden = true
     }
 
     override func configureLayout() {
@@ -304,8 +316,14 @@ final class FilterMakeViewController: BaseViewController<FilterMakeViewModel> {
             make.edges.equalToSuperview()
         }
 
+        metadataCard.snp.makeConstraints { make in
+            make.top.equalTo(photoContainerView.snp.bottom).offset(12)
+            make.leading.trailing.equalToSuperview().inset(20)
+            metadataCardHeightConstraint = make.height.equalTo(0).constraint
+        }
+
         descriptionLabel.snp.makeConstraints { make in
-            make.top.equalTo(photoContainerView.snp.bottom).offset(16)
+            make.top.equalTo(metadataCard.snp.bottom).offset(16)
             make.leading.equalToSuperview().inset(20)
         }
 
@@ -356,6 +374,7 @@ final class FilterMakeViewController: BaseViewController<FilterMakeViewModel> {
             descriptionChanged: descriptionChangedSubject.eraseToAnyPublisher(),
             priceChanged: priceChangedSubject.eraseToAnyPublisher(),
             imageSelected: imageSelectedSubject.eraseToAnyPublisher(),
+            metadataSelected: metadataSelectedSubject.eraseToAnyPublisher(),
             saveTapped: saveTappedSubject.eraseToAnyPublisher()
         )
 
@@ -440,6 +459,221 @@ final class FilterMakeViewController: BaseViewController<FilterMakeViewModel> {
         editButton.isHidden = image == nil
         isPhotoSquare = image != nil
         updatePhotoHeight()
+    }
+
+    private func updateMetadataCard(with metadata: PhotoMetadata?) {
+        guard let metadata else {
+            metadataCard.isHidden = true
+            metadataCardHeightConstraint?.update(offset: 0)
+            return
+        }
+
+        let title = metadata.camera ?? "촬영 정보"
+        let line1: String = {
+            var parts: [String] = []
+            if let lens = mappedLensInfo(from: metadata) {
+                parts.append("\(lens) -")
+            }
+            if let focal = metadata.focalLength {
+                let focalText = focal.truncatingRemainder(dividingBy: 1) == 0 ? "\(Int(focal))" : String(format: "%.1f", focal)
+                parts.append("\(focalText)mm")
+            }
+            if let aperture = metadata.aperture {
+                let fText = aperture.truncatingRemainder(dividingBy: 1) == 0 ? "\(Int(aperture))" : String(format: "%.1f", aperture)
+                parts.append("𝒇\(fText)")
+            }
+            if let iso = metadata.iso {
+                parts.append("ISO \(iso)")
+            }
+            return parts.joined(separator: " ")
+        }()
+
+        let line2: String = {
+            let resolution: String? = {
+                guard let width = metadata.pixelWidth,
+                      let height = metadata.pixelHeight else { return nil }
+                let mp = Double(width * height) / 1_000_000.0
+                let mpText = String(format: "%.0fMP", mp)
+                return "\(mpText) · \(width) × \(height)"
+            }()
+            let fileSizeText: String? = {
+                guard let bytes = metadata.fileSize else { return nil }
+                let mb = bytes / 1_000_000.0
+                return String(format: "%.1fMB", mb)
+            }()
+            return [resolution, fileSizeText].compactMap { $0 }.joined(separator: " · ")
+        }()
+
+        let format = metadata.format ?? "EXIF"
+        metadataCard.isHidden = false
+        metadataCardHeightConstraint?.update(offset: 140)
+        metadataCard.configure(
+            title: title,
+            line1: line1,
+            line2: line2,
+            line3: metadataLine3,
+            format: format,
+            latitude: metadata.latitude,
+            longitude: metadata.longitude
+        )
+    }
+
+    private func extractMetadata(from url: URL) -> PhotoMetadata? {
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let props = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any] else {
+            return nil
+        }
+
+        let exif = props[kCGImagePropertyExifDictionary] as? [CFString: Any]
+        let tiff = props[kCGImagePropertyTIFFDictionary] as? [CFString: Any]
+        let gps = props[kCGImagePropertyGPSDictionary] as? [CFString: Any]
+
+        let model = tiff?[kCGImagePropertyTIFFModel] as? String
+        let make = tiff?[kCGImagePropertyTIFFMake] as? String
+        let camera = [make, model]
+            .compactMap { $0 }
+            .joined(separator: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        let lensInfo = exif?[kCGImagePropertyExifLensModel] as? String
+        let focalLength = exif?[kCGImagePropertyExifFocalLength] as? Double
+        let aperture = exif?[kCGImagePropertyExifFNumber] as? Double
+        let iso: Int? = {
+            if let values = exif?[kCGImagePropertyExifISOSpeedRatings] as? [NSNumber],
+               let first = values.first {
+                return first.intValue
+            }
+            return exif?[kCGImagePropertyExifISOSpeedRatings] as? Int
+        }()
+
+        let pixelWidth = props[kCGImagePropertyPixelWidth] as? Int
+        let pixelHeight = props[kCGImagePropertyPixelHeight] as? Int
+
+        let fileSize: Double? = {
+            guard let size = (try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize else { return nil }
+            return Double(size)
+        }()
+
+        let format = url.pathExtension.uppercased()
+
+        let latitude = resolveCoordinate(value: gps?[kCGImagePropertyGPSLatitude], ref: gps?[kCGImagePropertyGPSLatitudeRef])
+        let longitude = resolveCoordinate(value: gps?[kCGImagePropertyGPSLongitude], ref: gps?[kCGImagePropertyGPSLongitudeRef])
+
+        return PhotoMetadata(
+            camera: camera.isEmpty ? nil : camera,
+            lensInfo: lensInfo,
+            focalLength: focalLength,
+            aperture: aperture,
+            shutterSpeed: nil,
+            iso: iso,
+            pixelWidth: pixelWidth,
+            pixelHeight: pixelHeight,
+            fileSize: fileSize,
+            format: format.isEmpty ? nil : format,
+            whiteBalance: nil,
+            location: nil,
+            takenAt: nil,
+            latitude: latitude,
+            longitude: longitude
+        )
+    }
+
+    private func resolveCoordinate(value: Any?, ref: Any?) -> Double? {
+        guard let raw = value as? Double else { return nil }
+        let refString = ref as? String
+        if refString == "S" || refString == "W" {
+            return -raw
+        }
+        return raw
+    }
+
+    private func mappedLensInfo(from metadata: PhotoMetadata) -> String? {
+        let lensText = metadata.lensInfo?.lowercased() ?? ""
+        if lensText.contains("ultra") || lensText.contains("uw") {
+            return "울트라 와이드 카메라"
+        }
+        if lensText.contains("tele") || lensText.contains("zoom") {
+            return "망원 카메라"
+        }
+        if lensText.contains("wide") || lensText.contains("standard") {
+            return "와이드 카메라"
+        }
+        if let focal = metadata.focalLength {
+            if focal <= 13.0 {
+                return "울트라 와이드 카메라"
+            }
+            if focal <= 26.0 {
+                return "와이드 카메라"
+            }
+            return "망원 카메라"
+        }
+        return metadata.lensInfo
+    }
+
+    private func normalizedMetadata(_ metadata: PhotoMetadata) -> PhotoMetadata {
+        PhotoMetadata(
+            camera: metadata.camera,
+            lensInfo: mappedLensInfo(from: metadata),
+            focalLength: metadata.focalLength,
+            aperture: metadata.aperture,
+            shutterSpeed: metadata.shutterSpeed,
+            iso: metadata.iso,
+            pixelWidth: metadata.pixelWidth,
+            pixelHeight: metadata.pixelHeight,
+            fileSize: metadata.fileSize,
+            format: metadata.format,
+            whiteBalance: metadata.whiteBalance,
+            location: metadata.location,
+            takenAt: metadata.takenAt,
+            latitude: metadata.latitude,
+            longitude: metadata.longitude
+        )
+    }
+
+    private func updateLocationText(latitude: Double?, longitude: Double?) {
+        guard let latitude, let longitude else {
+            metadataLine3 = ""
+            return
+        }
+        metadataLine3 = "위치 확인 중"
+        let location = CLLocation(latitude: latitude, longitude: longitude)
+        geocoder.reverseGeocodeLocation(location) { [weak self] placemarks, _ in
+            guard let self else { return }
+            let place = placemarks?.first
+            let address = [
+                place?.administrativeArea,
+                place?.locality,
+                place?.thoroughfare,
+                place?.subThoroughfare
+            ]
+            .compactMap { $0 }
+            .joined(separator: " ")
+            self.metadataLine3 = address
+            self.updateMetadataCard(with: self.currentMetadata)
+        }
+    }
+
+    private func makeMetadata(from image: UIImage) -> PhotoMetadata {
+        let width = Int(image.size.width * image.scale)
+        let height = Int(image.size.height * image.scale)
+        let fileSize = image.jpegData(compressionQuality: 1.0).map { Double($0.count) }
+        return PhotoMetadata(
+            camera: nil,
+            lensInfo: nil,
+            focalLength: nil,
+            aperture: nil,
+            shutterSpeed: nil,
+            iso: nil,
+            pixelWidth: width,
+            pixelHeight: height,
+            fileSize: fileSize,
+            format: "JPG",
+            whiteBalance: nil,
+            location: nil,
+            takenAt: nil,
+            latitude: nil,
+            longitude: nil
+        )
     }
 
     private func updatePhotoHeight() {
@@ -556,11 +790,38 @@ extension FilterMakeViewController: PHPickerViewControllerDelegate {
         picker.dismiss(animated: true)
         guard let provider = results.first?.itemProvider,
               provider.canLoadObject(ofClass: UIImage.self) else { return }
-        provider.loadObject(ofClass: UIImage.self) { [weak self] object, _ in
-            guard let image = object as? UIImage else { return }
-            DispatchQueue.main.async {
-                self?.imageSelectedSubject.send(image)
+        let group = DispatchGroup()
+        var pickedImage: UIImage?
+        var pickedMetadata: PhotoMetadata?
+
+        if provider.canLoadObject(ofClass: UIImage.self) {
+            group.enter()
+            provider.loadObject(ofClass: UIImage.self) { object, _ in
+                pickedImage = object as? UIImage
+                group.leave()
             }
+        }
+
+        if provider.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
+            group.enter()
+            provider.loadFileRepresentation(forTypeIdentifier: UTType.image.identifier) { url, _ in
+                if let url {
+                    pickedMetadata = self.extractMetadata(from: url)
+                }
+                group.leave()
+            }
+        }
+
+        group.notify(queue: .main) { [weak self] in
+            guard let self, let image = pickedImage else { return }
+            self.imageSelectedSubject.send(image)
+            let rawMetadata = pickedMetadata ?? self.makeMetadata(from: image)
+            let metadata = self.normalizedMetadata(rawMetadata)
+            self.currentMetadata = metadata
+            self.metadataLine3 = ""
+            self.updateMetadataCard(with: metadata)
+            self.updateLocationText(latitude: metadata.latitude, longitude: metadata.longitude)
+            self.metadataSelectedSubject.send(metadata)
         }
     }
 }

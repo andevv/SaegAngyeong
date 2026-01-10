@@ -24,6 +24,7 @@ final class FilterMakeViewModel: BaseViewModel, ViewModelType {
         let descriptionChanged: AnyPublisher<String, Never>
         let priceChanged: AnyPublisher<String, Never>
         let imageSelected: AnyPublisher<UIImage?, Never>
+        let metadataSelected: AnyPublisher<PhotoMetadata?, Never>
         let saveTapped: AnyPublisher<Void, Never>
     }
 
@@ -41,6 +42,7 @@ final class FilterMakeViewModel: BaseViewModel, ViewModelType {
         let descriptionSubject = CurrentValueSubject<String, Never>("")
         let priceSubject = CurrentValueSubject<String, Never>("")
         let imageSubject = CurrentValueSubject<UIImage?, Never>(nil)
+        let metadataSubject = CurrentValueSubject<PhotoMetadata?, Never>(nil)
         let saveEnabledSubject = CurrentValueSubject<Bool, Never>(false)
         let savingSubject = CurrentValueSubject<Bool, Never>(false)
         let createdSubject = PassthroughSubject<Filter, Never>()
@@ -63,6 +65,10 @@ final class FilterMakeViewModel: BaseViewModel, ViewModelType {
 
         input.imageSelected
             .sink { imageSubject.send($0) }
+            .store(in: &cancellables)
+
+        input.metadataSelected
+            .sink { metadataSubject.send($0) }
             .store(in: &cancellables)
 
         Publishers.CombineLatest(
@@ -90,6 +96,7 @@ final class FilterMakeViewModel: BaseViewModel, ViewModelType {
                     description: descriptionSubject.value,
                     priceText: priceSubject.value,
                     image: imageSubject.value,
+                    metadata: metadataSubject.value,
                     savingSubject: savingSubject,
                     createdSubject: createdSubject
                 )
@@ -111,6 +118,7 @@ final class FilterMakeViewModel: BaseViewModel, ViewModelType {
         description: String,
         priceText: String,
         image: UIImage?,
+        metadata: PhotoMetadata?,
         savingSubject: CurrentValueSubject<Bool, Never>,
         createdSubject: PassthroughSubject<Filter, Never>
     ) {
@@ -160,7 +168,7 @@ final class FilterMakeViewModel: BaseViewModel, ViewModelType {
                     price: price,
                     description: trimmedDesc,
                     files: filePaths,
-                    photoMetadata: nil,
+                    photoMetadata: metadata,
                     filterValues: Self.defaultFilterValues
                 )
                 return self.filterRepository.create(draft)
