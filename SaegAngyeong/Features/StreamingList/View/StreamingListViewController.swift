@@ -131,7 +131,7 @@ private final class StreamingListCell: UITableViewCell {
     static let reuseID = "StreamingListCell"
 
     private let thumbnailView = UIImageView()
-    private let durationLabel = UILabel()
+    private let durationLabel = PaddingLabel(padding: UIEdgeInsets(top: 2, left: 2, bottom: 2, right: 2))
     private let titleLabel = UILabel()
     private let descriptionLabel = UILabel()
     private let statLabel = UILabel()
@@ -182,7 +182,7 @@ private final class StreamingListCell: UITableViewCell {
         durationLabel.snp.makeConstraints { make in
             make.trailing.equalToSuperview().inset(8)
             make.bottom.equalToSuperview().inset(8)
-            make.width.greaterThanOrEqualTo(44)
+            make.width.greaterThanOrEqualTo(40)
             make.height.equalTo(20)
         }
 
@@ -213,7 +213,7 @@ private final class StreamingListCell: UITableViewCell {
     func configure(with item: StreamingListItemViewData) {
         titleLabel.text = item.title
         descriptionLabel.text = item.description
-        durationLabel.text = " \(item.durationText) "
+        durationLabel.text = item.durationText
         statLabel.text = "\(item.viewCountText) · \(item.likeCountText)"
         KingfisherHelper.setImage(
             thumbnailView,
