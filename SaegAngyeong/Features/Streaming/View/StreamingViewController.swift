@@ -17,15 +17,20 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
     private let timelineHandleHitArea = UIView()
     private let titleLabel = UILabel()
     private let playButton = UIButton(type: .system)
+    private let miniPlayButton = UIButton(type: .system)
+    private let miniCloseButton = UIButton(type: .system)
+    private let bufferingIndicator = UIActivityIndicatorView(style: .medium)
 
     private let viewDidLoadSubject = PassthroughSubject<Void, Never>()
     private var player: AVPlayer?
     private var playerLayer: AVPlayerLayer?
     private var itemObservation: NSKeyValueObservation?
+    private var timeControlObservation: NSKeyValueObservation?
     private var timeObserverToken: Any?
     private var shouldAutoPlay = false
     private var isScrubbing = false
     private var isMiniPlayer = false
+    private var isControlsVisible = false
     private let tokenStore = TokenStore()
     private var resourceLoader: StreamingResourceLoader?
     private let controlsTapGesture = UITapGestureRecognizer()
@@ -36,6 +41,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
     private var playerWidthConstraint: Constraint?
     private var playerHeightConstraint: Constraint?
     private var sliderHeightConstraint: Constraint?
+    var onCloseRequested: (() -> Void)?
 
     override init(viewModel: StreamingViewModel) {
         super.init(viewModel: viewModel)
@@ -58,6 +64,9 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         playerLayer?.frame = playerContainer.bounds
         updateTimelineHandlePosition()
         updatePlayerLayout(animated: false)
+        playerContainer.bringSubviewToFront(playButton)
+        playerContainer.bringSubviewToFront(miniPlayButton)
+        playerContainer.bringSubviewToFront(miniCloseButton)
     }
 
     override func configureUI() {
@@ -75,6 +84,24 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         playButton.backgroundColor = UIColor.black.withAlphaComponent(0.35)
         playButton.layer.cornerRadius = 28
         playButton.addTarget(self, action: #selector(playTapped), for: .touchUpInside)
+
+        miniPlayButton.setImage(UIImage(systemName: "play.fill"), for: .normal)
+        miniPlayButton.tintColor = .gray15
+        miniPlayButton.backgroundColor = UIColor.black.withAlphaComponent(0.35)
+        miniPlayButton.layer.cornerRadius = 14
+        miniPlayButton.addTarget(self, action: #selector(playTapped), for: .touchUpInside)
+        miniPlayButton.isHidden = true
+
+        miniCloseButton.setImage(UIImage(systemName: "xmark"), for: .normal)
+        miniCloseButton.tintColor = .gray15
+        miniCloseButton.backgroundColor = UIColor.black.withAlphaComponent(0.35)
+        miniCloseButton.layer.cornerRadius = 14
+        miniCloseButton.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
+        miniCloseButton.isHidden = true
+
+        bufferingIndicator.hidesWhenStopped = true
+        bufferingIndicator.color = .gray15
+        bufferingIndicator.isHidden = true
 
         timelineSlider.minimumValue = 0
         timelineSlider.maximumValue = 1
@@ -103,11 +130,16 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
 
         view.addSubview(playerContainer)
         playerContainer.addSubview(playButton)
+        playerContainer.addSubview(miniPlayButton)
+        playerContainer.addSubview(miniCloseButton)
+        playerContainer.addSubview(bufferingIndicator)
         view.addSubview(timelineSlider)
         view.addSubview(timelineHandleHitArea)
         timelineHandleHitArea.addSubview(timelineHandle)
 
         controlsTapGesture.addTarget(self, action: #selector(handlePlayerTap))
+        controlsTapGesture.cancelsTouchesInView = false
+        controlsTapGesture.delegate = self
         playerContainer.addGestureRecognizer(controlsTapGesture)
 
         let panGesture = UIPanGestureRecognizer(target: self, action: #selector(handlePlayerPan(_:)))
@@ -143,6 +175,22 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
             make.center.equalToSuperview()
             make.width.height.equalTo(56)
         }
+
+        miniPlayButton.snp.makeConstraints { make in
+            make.top.equalToSuperview().offset(8)
+            make.leading.equalToSuperview().offset(8)
+            make.width.height.equalTo(28)
+        }
+
+        miniCloseButton.snp.makeConstraints { make in
+            make.top.equalToSuperview().offset(8)
+            make.trailing.equalToSuperview().offset(-8)
+            make.width.height.equalTo(28)
+        }
+
+        bufferingIndicator.snp.makeConstraints { make in
+            make.center.equalTo(playButton)
+        }
     }
 
     override func bindViewModel() {
@@ -161,6 +209,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         #if DEBUG
         print("[Streaming] stream URL: \(url.absoluteString)")
         #endif
+        isControlsVisible = true
         let assetOptions: [String: Any] = [
             AVURLAssetAllowsCellularAccessKey: true
         ]
@@ -209,6 +258,19 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         item.addObserver(self, forKeyPath: "loadedTimeRanges", options: [.new], context: nil)
         let player = AVPlayer(playerItem: item)
         self.player = player
+        timeControlObservation?.invalidate()
+        timeControlObservation = player.observe(\.timeControlStatus, options: [.initial, .new]) { [weak self] player, _ in
+            guard let self else { return }
+            switch player.timeControlStatus {
+            case .waitingToPlayAtSpecifiedRate:
+                self.showBufferingIndicator(true)
+            case .playing, .paused:
+                self.showBufferingIndicator(false)
+            @unknown default:
+                self.showBufferingIndicator(false)
+            }
+            self.updatePlayIcons()
+        }
         addTimeObserver(to: player)
         let layer = AVPlayerLayer(player: player)
         layer.videoGravity = .resizeAspect
@@ -216,6 +278,8 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         playerContainer.layer.insertSublayer(layer, at: 0)
         playerLayer = layer
         playerContainer.bringSubviewToFront(playButton)
+        playerContainer.bringSubviewToFront(miniPlayButton)
+        playerContainer.bringSubviewToFront(miniCloseButton)
     }
 
     @objc private func playTapped() {
@@ -231,39 +295,27 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         }
         if player.timeControlStatus == .playing {
             player.pause()
-            playButton.setImage(UIImage(systemName: "play.fill"), for: .normal)
-            playButton.isHidden = false
-            playButton.isUserInteractionEnabled = true
             shouldAutoPlay = false
         } else {
             if player.currentItem?.status == .readyToPlay {
                 player.play()
             }
-            playButton.setImage(UIImage(systemName: "pause.fill"), for: .normal)
-            playButton.isHidden = true
-            playButton.isUserInteractionEnabled = false
         }
+        updatePlayIcons()
+    }
+
+    @objc private func closeTapped() {
+        onCloseRequested?()
     }
 
     @objc private func handlePlayerTap() {
-        guard let player else { return }
+        guard player != nil else { return }
         if isMiniPlayer {
             setMiniPlayer(false, animated: true)
             return
         }
-        if playButton.isHidden == false {
-            playButton.isHidden = true
-            playButton.isUserInteractionEnabled = false
-            return
-        }
-
-        if player.timeControlStatus == .playing {
-            playButton.setImage(UIImage(systemName: "pause.fill"), for: .normal)
-        } else {
-            playButton.setImage(UIImage(systemName: "play.fill"), for: .normal)
-        }
-        playButton.isHidden = false
-        playButton.isUserInteractionEnabled = true
+        isControlsVisible.toggle()
+        updatePlayIcons()
     }
 
     @objc private func handlePlayerPan(_ gesture: UIPanGestureRecognizer) {
@@ -285,6 +337,9 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
     private func setMiniPlayer(_ mini: Bool, animated: Bool) {
         guard isMiniPlayer != mini else { return }
         isMiniPlayer = mini
+        if mini {
+            isControlsVisible = false
+        }
         updatePlayerLayout(animated: animated)
     }
 
@@ -308,6 +363,8 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
                 self.sliderHeightConstraint?.update(offset: 0)
                 self.timelineSlider.alpha = 0
                 self.timelineHandleHitArea.alpha = 0
+                self.miniPlayButton.isHidden = false
+                self.miniCloseButton.isHidden = false
                 self.view.backgroundColor = .clear
                 self.navigationController?.setNavigationBarHidden(true, animated: animated)
             } else {
@@ -321,9 +378,12 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
                 self.sliderHeightConstraint?.update(offset: 2)
                 self.timelineSlider.alpha = 1
                 self.timelineHandleHitArea.alpha = 1
+                self.miniPlayButton.isHidden = true
+                self.miniCloseButton.isHidden = true
                 self.view.backgroundColor = .black
                 self.navigationController?.setNavigationBarHidden(false, animated: animated)
             }
+            self.updatePlayIcons()
             self.view.layoutIfNeeded()
         }
         if animated {
@@ -356,6 +416,8 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         player?.pause()
         shouldAutoPlay = false
         removeTimeObserver()
+        timeControlObservation?.invalidate()
+        timeControlObservation = nil
         if let item = player?.currentItem {
             item.removeObserver(self, forKeyPath: "loadedTimeRanges")
         }
@@ -401,6 +463,16 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         }
     }
 
+    private func showBufferingIndicator(_ show: Bool) {
+        if show {
+            bufferingIndicator.startAnimating()
+            bufferingIndicator.isHidden = false
+        } else {
+            bufferingIndicator.stopAnimating()
+            bufferingIndicator.isHidden = true
+        }
+    }
+
     private func makeClearThumb(size: CGSize) -> UIImage {
         UIGraphicsBeginImageContextWithOptions(size, false, 0)
         UIColor.white.withAlphaComponent(0.01).setFill()
@@ -443,6 +515,22 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         timelineHandleCenterXConstraint?.update(offset: x)
     }
 
+    private func updatePlayIcons() {
+        guard let player else { return }
+        let imageName = player.timeControlStatus == .playing ? "pause.fill" : "play.fill"
+        let image = UIImage(systemName: imageName)
+        playButton.setImage(image, for: .normal)
+        miniPlayButton.setImage(image, for: .normal)
+
+        if isMiniPlayer {
+            playButton.isHidden = true
+            playButton.isUserInteractionEnabled = false
+            return
+        }
+        playButton.isHidden = !isControlsVisible
+        playButton.isUserInteractionEnabled = isControlsVisible
+    }
+
     private func timelineX(for value: Float, trackRect: CGRect) -> CGFloat {
         let clamped = min(max(value, 0), 1)
         return trackRect.minX + CGFloat(clamped) * trackRect.width
@@ -452,5 +540,17 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         guard trackRect.width > 0 else { return 0 }
         let clamped = min(max(x, trackRect.minX), trackRect.maxX)
         return Float((clamped - trackRect.minX) / trackRect.width)
+    }
+}
+
+extension StreamingViewController: UIGestureRecognizerDelegate {
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+        let touchedView = touch.view
+        if touchedView is UIControl { return false }
+        if touchedView?.isDescendant(of: playButton) == true { return false }
+        if touchedView?.isDescendant(of: miniPlayButton) == true { return false }
+        if touchedView?.isDescendant(of: miniCloseButton) == true { return false }
+        if touchedView?.isDescendant(of: timelineHandleHitArea) == true { return false }
+        return true
     }
 }
