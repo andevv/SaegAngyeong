@@ -38,6 +38,11 @@ final class MyUploadViewController: BaseViewController<MyUploadViewModel> {
         navigationController?.navigationBar.barStyle = .black
     }
 
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        refreshSubject.send(())
+    }
+
     override var preferredStatusBarStyle: UIStatusBarStyle {
         .lightContent
     }
