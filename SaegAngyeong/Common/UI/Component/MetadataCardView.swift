@@ -53,6 +53,7 @@ final class MetadataCardView: UIView {
 
         mapView.layer.cornerRadius = 12
         mapView.clipsToBounds = true
+        mapView.overrideUserInterfaceStyle = .dark
         mapView.isScrollEnabled = false
         mapView.isZoomEnabled = false
         mapView.isRotateEnabled = false
@@ -144,6 +145,7 @@ final class MetadataCardView: UIView {
 
         if let lat = latitude, let lon = longitude {
             let coordinate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
+            mapView.setCenter(coordinate, animated: false)
             let region = MKCoordinateRegion(center: coordinate, latitudinalMeters: 250, longitudinalMeters: 250)
             mapView.setRegion(region, animated: false)
             mapView.removeAnnotations(mapView.annotations)
