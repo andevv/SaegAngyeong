@@ -250,20 +250,31 @@ final class FilterDetailViewModel: BaseViewModel, ViewModelType {
         let location = CLLocation(latitude: lat, longitude: lon)
         geocoder.reverseGeocodeLocation(location) { placemarks, error in
             guard error == nil, let placemark = placemarks?.first else { return }
-            let address = [
+            let address = self.normalizeAddress([
                 placemark.administrativeArea,
                 placemark.locality,
                 placemark.subLocality,
                 placemark.thoroughfare,
                 placemark.subThoroughfare
             ]
-            .compactMap { $0 }
-            .joined(separator: " ")
+            .compactMap { $0 })
             guard !address.isEmpty else { return }
             DispatchQueue.main.async {
                 subject.send(viewData.updating(metadataLine3: address))
             }
         }
+    }
+
+    private func normalizeAddress(_ components: [String]) -> String {
+        var result: [String] = []
+        for component in components {
+            let trimmed = component.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { continue }
+            if result.last != trimmed {
+                result.append(trimmed)
+            }
+        }
+        return result.joined(separator: " ")
     }
 }
 

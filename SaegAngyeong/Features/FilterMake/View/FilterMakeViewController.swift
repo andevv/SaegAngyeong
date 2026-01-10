@@ -640,17 +640,28 @@ final class FilterMakeViewController: BaseViewController<FilterMakeViewModel> {
         geocoder.reverseGeocodeLocation(location) { [weak self] placemarks, _ in
             guard let self else { return }
             let place = placemarks?.first
-            let address = [
+            let address = normalizeAddress([
                 place?.administrativeArea,
                 place?.locality,
                 place?.thoroughfare,
                 place?.subThoroughfare
             ]
-            .compactMap { $0 }
-            .joined(separator: " ")
+            .compactMap { $0 })
             self.metadataLine3 = address
             self.updateMetadataCard(with: self.currentMetadata)
         }
+    }
+
+    private func normalizeAddress(_ components: [String]) -> String {
+        var result: [String] = []
+        for component in components {
+            let trimmed = component.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { continue }
+            if result.last != trimmed {
+                result.append(trimmed)
+            }
+        }
+        return result.joined(separator: " ")
     }
 
     private func makeMetadata(from image: UIImage) -> PhotoMetadata {
