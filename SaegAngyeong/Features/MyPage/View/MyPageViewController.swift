@@ -35,6 +35,14 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
     private let streamingButton = UIButton(type: .system)
     private let logoutButton = UIButton(type: .system)
 
+    private let activitySectionTitleLabel = UILabel()
+    private let activitySectionContainer = UIView()
+    private let activitySectionStack = UIStackView()
+
+    private let contentSectionTitleLabel = UILabel()
+    private let contentSectionContainer = UIView()
+    private let contentSectionStack = UIStackView()
+
     private let viewDidLoadSubject = PassthroughSubject<Void, Never>()
     private let refreshSubject = PassthroughSubject<Void, Never>()
     private let logoutSubject = PassthroughSubject<Void, Never>()
@@ -124,6 +132,18 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
         editProfileButton.layer.cornerRadius = 12
         editProfileButton.addTarget(self, action: #selector(editProfileTapped), for: .touchUpInside)
 
+        configureSection(
+            titleLabel: activitySectionTitleLabel,
+            container: activitySectionContainer,
+            stack: activitySectionStack,
+            title: "나의 활동"
+        )
+        configureSection(
+            titleLabel: contentSectionTitleLabel,
+            container: contentSectionContainer,
+            stack: contentSectionStack,
+            title: "내 콘텐츠"
+        )
         purchaseHistoryButton.setTitle("구매내역", for: .normal)
         purchaseHistoryButton.titleLabel?.font = .pretendard(.medium, size: 13)
         purchaseHistoryButton.setTitleColor(.gray30, for: .normal)
@@ -131,12 +151,6 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
         purchaseHistoryButton.layer.cornerRadius = 12
         purchaseHistoryButton.contentHorizontalAlignment = .left
         purchaseHistoryButton.contentEdgeInsets = UIEdgeInsets(top: 12, left: 16, bottom: 12, right: 16)
-        if let image = UIImage(named: "Icon_chevron")?.withRenderingMode(.alwaysTemplate) {
-            purchaseHistoryButton.setImage(image, for: .normal)
-            purchaseHistoryButton.tintColor = .gray60
-            purchaseHistoryButton.semanticContentAttribute = .forceRightToLeft
-            purchaseHistoryButton.imageEdgeInsets = UIEdgeInsets(top: 0, left: 8, bottom: 0, right: -8)
-        }
         purchaseHistoryButton.addTarget(self, action: #selector(purchaseHistoryTapped), for: .touchUpInside)
 
         likedFilterButton.setTitle("좋아요한 필터", for: .normal)
@@ -146,12 +160,6 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
         likedFilterButton.layer.cornerRadius = 12
         likedFilterButton.contentHorizontalAlignment = .left
         likedFilterButton.contentEdgeInsets = UIEdgeInsets(top: 12, left: 16, bottom: 12, right: 16)
-        if let image = UIImage(named: "Icon_chevron")?.withRenderingMode(.alwaysTemplate) {
-            likedFilterButton.setImage(image, for: .normal)
-            likedFilterButton.tintColor = .gray60
-            likedFilterButton.semanticContentAttribute = .forceRightToLeft
-            likedFilterButton.imageEdgeInsets = UIEdgeInsets(top: 0, left: 8, bottom: 0, right: -8)
-        }
         likedFilterButton.addTarget(self, action: #selector(likedFilterTapped), for: .touchUpInside)
 
         myUploadButton.setTitle("내가 만든 필터", for: .normal)
@@ -161,12 +169,6 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
         myUploadButton.layer.cornerRadius = 12
         myUploadButton.contentHorizontalAlignment = .left
         myUploadButton.contentEdgeInsets = UIEdgeInsets(top: 12, left: 16, bottom: 12, right: 16)
-        if let image = UIImage(named: "Icon_chevron")?.withRenderingMode(.alwaysTemplate) {
-            myUploadButton.setImage(image, for: .normal)
-            myUploadButton.tintColor = .gray60
-            myUploadButton.semanticContentAttribute = .forceRightToLeft
-            myUploadButton.imageEdgeInsets = UIEdgeInsets(top: 0, left: 8, bottom: 0, right: -8)
-        }
         myUploadButton.addTarget(self, action: #selector(myUploadTapped), for: .touchUpInside)
 
         myChattingListButton.setTitle("나의 채팅 목록", for: .normal)
@@ -176,12 +178,6 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
         myChattingListButton.layer.cornerRadius = 12
         myChattingListButton.contentHorizontalAlignment = .left
         myChattingListButton.contentEdgeInsets = UIEdgeInsets(top: 12, left: 16, bottom: 12, right: 16)
-        if let image = UIImage(named: "Icon_chevron")?.withRenderingMode(.alwaysTemplate) {
-            myChattingListButton.setImage(image, for: .normal)
-            myChattingListButton.tintColor = .gray60
-            myChattingListButton.semanticContentAttribute = .forceRightToLeft
-            myChattingListButton.imageEdgeInsets = UIEdgeInsets(top: 0, left: 8, bottom: 0, right: -8)
-        }
         myChattingListButton.addTarget(self, action: #selector(myChattingListTapped), for: .touchUpInside)
 
         streamingButton.setTitle("비디오 스트리밍", for: .normal)
@@ -191,12 +187,6 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
         streamingButton.layer.cornerRadius = 12
         streamingButton.contentHorizontalAlignment = .left
         streamingButton.contentEdgeInsets = UIEdgeInsets(top: 12, left: 16, bottom: 12, right: 16)
-        if let image = UIImage(named: "Icon_chevron")?.withRenderingMode(.alwaysTemplate) {
-            streamingButton.setImage(image, for: .normal)
-            streamingButton.tintColor = .gray60
-            streamingButton.semanticContentAttribute = .forceRightToLeft
-            streamingButton.imageEdgeInsets = UIEdgeInsets(top: 0, left: 8, bottom: 0, right: -8)
-        }
         streamingButton.addTarget(self, action: #selector(streamingTapped), for: .touchUpInside)
 
         logoutButton.setTitle("로그아웃", for: .normal)
@@ -216,13 +206,21 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
             hashTagStack,
             editProfileButton,
             infoStack,
-            purchaseHistoryButton,
-            likedFilterButton,
-            myUploadButton,
-            myChattingListButton,
-            streamingButton,
+            activitySectionTitleLabel,
+            activitySectionContainer,
+            contentSectionTitleLabel,
+            contentSectionContainer,
             logoutButton
         ].forEach { contentView.addSubview($0) }
+
+        addButtonsWithSeparators([purchaseHistoryButton, likedFilterButton], to: activitySectionStack)
+        addButtonsWithSeparators([myUploadButton, myChattingListButton, streamingButton], to: contentSectionStack)
+
+        [purchaseHistoryButton, likedFilterButton, myUploadButton, myChattingListButton, streamingButton, logoutButton].forEach { button in
+            button.snp.makeConstraints { make in
+                make.height.equalTo(44)
+            }
+        }
     }
 
     override func configureLayout() {
@@ -275,41 +273,30 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
             make.leading.trailing.equalToSuperview().inset(20)
         }
 
-        purchaseHistoryButton.snp.makeConstraints { make in
+        activitySectionTitleLabel.snp.makeConstraints { make in
             make.top.equalTo(infoStack.snp.bottom).offset(16)
-            make.leading.trailing.equalTo(editProfileButton)
-            make.height.equalTo(48)
+            make.leading.equalToSuperview().inset(20)
         }
 
-        likedFilterButton.snp.makeConstraints { make in
-            make.top.equalTo(purchaseHistoryButton.snp.bottom).offset(12)
-            make.leading.trailing.equalTo(editProfileButton)
-            make.height.equalTo(48)
+        activitySectionContainer.snp.makeConstraints { make in
+            make.top.equalTo(activitySectionTitleLabel.snp.bottom).offset(8)
+            make.leading.trailing.equalToSuperview().inset(20)
         }
 
-        myUploadButton.snp.makeConstraints { make in
-            make.top.equalTo(likedFilterButton.snp.bottom).offset(12)
-            make.leading.trailing.equalTo(editProfileButton)
-            make.height.equalTo(48)
+        contentSectionTitleLabel.snp.makeConstraints { make in
+            make.top.equalTo(activitySectionContainer.snp.bottom).offset(16)
+            make.leading.equalToSuperview().inset(20)
         }
 
-        myChattingListButton.snp.makeConstraints { make in
-            make.top.equalTo(myUploadButton.snp.bottom).offset(12)
-            make.leading.trailing.equalTo(editProfileButton)
-            make.height.equalTo(48)
+        contentSectionContainer.snp.makeConstraints { make in
+            make.top.equalTo(contentSectionTitleLabel.snp.bottom).offset(8)
+            make.leading.trailing.equalToSuperview().inset(20)
         }
 
         logoutButton.snp.makeConstraints { make in
-            make.top.equalTo(streamingButton.snp.bottom).offset(16)
+            make.top.equalTo(contentSectionContainer.snp.bottom).offset(16)
             make.leading.trailing.equalTo(editProfileButton)
-            make.height.equalTo(48)
             make.bottom.equalToSuperview().offset(-24)
-        }
-
-        streamingButton.snp.makeConstraints { make in
-            make.top.equalTo(myChattingListButton.snp.bottom).offset(12)
-            make.leading.trailing.equalTo(editProfileButton)
-            make.height.equalTo(48)
         }
     }
 
@@ -424,6 +411,40 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
         label.setContentHuggingPriority(.required, for: .horizontal)
         label.setContentCompressionResistancePriority(.required, for: .horizontal)
         return label
+    }
+
+    private func configureSection(titleLabel: UILabel, container: UIView, stack: UIStackView, title: String) {
+        titleLabel.text = title
+        titleLabel.textColor = .gray75
+        titleLabel.font = .pretendard(.medium, size: 12)
+
+        container.backgroundColor = .blackTurquoise
+        container.layer.cornerRadius = 14
+
+        stack.axis = .vertical
+        stack.spacing = 6
+        stack.isLayoutMarginsRelativeArrangement = true
+        stack.layoutMargins = UIEdgeInsets(top: 12, left: 12, bottom: 12, right: 12)
+
+        container.addSubview(stack)
+        stack.snp.makeConstraints { make in
+            make.edges.equalToSuperview()
+        }
+    }
+
+    private func addButtonsWithSeparators(_ buttons: [UIButton], to stack: UIStackView) {
+        stack.arrangedSubviews.forEach { $0.removeFromSuperview() }
+        for (index, button) in buttons.enumerated() {
+            stack.addArrangedSubview(button)
+            if index < buttons.count - 1 {
+                let separator = UIView()
+                separator.backgroundColor = UIColor.gray90.withAlphaComponent(0.2)
+                separator.snp.makeConstraints { make in
+                    make.height.equalTo(1)
+                }
+                stack.addArrangedSubview(separator)
+            }
+        }
     }
 
     private func presentError(_ error: Error) {
