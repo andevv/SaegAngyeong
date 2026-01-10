@@ -65,6 +65,7 @@ final class HomeViewModel: BaseViewModel, ViewModelType {
                 }
             } receiveValue: { filter in
                 let viewData = HighlightViewData(
+                    filterID: filter.id,
                     title: filter.title,
                     introduction: filter.introduction ?? "",
                     description: filter.description,
@@ -176,6 +177,7 @@ final class HomeViewModel: BaseViewModel, ViewModelType {
 
     private func emitFallbackHighlight(to subject: PassthroughSubject<HighlightViewData, Never>) {
         let viewData = HighlightViewData(
+            filterID: nil,
             title: "새싹을 담은 필터\n청록 새록",
             introduction: "오늘의 필터 소개",
             description: "햇살 아래 돋아나는 새싹처럼, 맑고 투명한 빛을 담은 자연 감성 필터입니다.",
@@ -230,6 +232,7 @@ final class HomeViewModel: BaseViewModel, ViewModelType {
 }
 
 struct HighlightViewData {
+    let filterID: String?
     let title: String
     let introduction: String
     let description: String

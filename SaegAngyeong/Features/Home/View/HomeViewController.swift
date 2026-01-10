@@ -216,6 +216,9 @@ final class HomeViewController: BaseViewController<HomeViewModel> {
     private var banners: [BannerViewData] = []
     private var hotTrends: [HotTrendViewData] = []
     private var todayAuthor: TodayAuthorViewData?
+    private var highlightFilterID: String?
+
+    var onUseTodayFilter: ((String) -> Void)?
     var onHotTrendSelected: ((String) -> Void)?
     var onAuthorFilterSelected: ((String) -> Void)?
 
@@ -236,6 +239,7 @@ final class HomeViewController: BaseViewController<HomeViewModel> {
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .black
+        updateUseButtonState()
         viewDidLoadSubject.send(())
     }
 
@@ -297,6 +301,8 @@ final class HomeViewController: BaseViewController<HomeViewModel> {
             authorIntroLabel,
             authorDescriptionLabel
         ].forEach { contentView.addSubview($0) }
+
+        useButton.addTarget(self, action: #selector(useTapped), for: .touchUpInside)
     }
 
     override func configureLayout() {
@@ -423,6 +429,8 @@ final class HomeViewController: BaseViewController<HomeViewModel> {
                 self?.titleLabel.text = viewData.title
                 self?.descriptionLabel.text = viewData.description
                 self?.subtitleLabel.text = "오늘의 필터 소개"
+                self?.highlightFilterID = viewData.filterID
+                self?.updateUseButtonState()
                 KingfisherHelper.setImage(self?.backgroundImageView ?? UIImageView(), url: viewData.imageURL, headers: viewData.headers, logLabel: "highlight")
             }
             .store(in: &cancellables)
@@ -509,6 +517,18 @@ final class HomeViewController: BaseViewController<HomeViewModel> {
             return
         }
         pageLabel.text = "\(current + 1) / \(total)"
+    }
+
+    private func updateUseButtonState() {
+        let enabled = highlightFilterID != nil
+        useButton.isEnabled = enabled
+        useButton.setTitleColor(enabled ? .gray30 : .gray45, for: .normal)
+        useButton.backgroundColor = enabled ? UIColor.brightTurquoise.withAlphaComponent(0.2) : .gray15.withAlphaComponent(0.1)
+    }
+
+    @objc private func useTapped() {
+        guard let filterID = highlightFilterID else { return }
+        onUseTodayFilter?(filterID)
     }
 
     private func currentBannerPage() -> Int {

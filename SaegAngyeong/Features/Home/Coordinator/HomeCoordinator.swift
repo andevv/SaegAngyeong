@@ -33,6 +33,9 @@ final class HomeCoordinator {
         viewController.onAuthorFilterSelected = { [weak self] filterID in
             self?.showFilterDetail(filterID: filterID)
         }
+        viewController.onUseTodayFilter = { [weak self] filterID in
+            self?.showFilterDetail(filterID: filterID)
+        }
         navigationController.setViewControllers([viewController], animated: false)
         return navigationController
     }
