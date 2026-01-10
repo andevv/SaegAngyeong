@@ -148,7 +148,7 @@ final class FilterMakeEditViewModel: BaseViewModel, ViewModelType {
         let undoEnabled: AnyPublisher<Bool, Never>
         let redoEnabled: AnyPublisher<Bool, Never>
         let isSaving: AnyPublisher<Bool, Never>
-        let saveCompleted: AnyPublisher<Void, Never>
+        let saveCompleted: AnyPublisher<Filter, Never>
     }
 
     func transform(input: Input) -> Output {
@@ -158,7 +158,7 @@ final class FilterMakeEditViewModel: BaseViewModel, ViewModelType {
         let undoSubject = CurrentValueSubject<Bool, Never>(false)
         let redoSubject = CurrentValueSubject<Bool, Never>(false)
         let savingSubject = CurrentValueSubject<Bool, Never>(false)
-        let saveCompletedSubject = PassthroughSubject<Void, Never>()
+        let saveCompletedSubject = PassthroughSubject<Filter, Never>()
 
         input.viewDidLoad
             .sink { [weak self] in
@@ -446,7 +446,7 @@ final class FilterMakeEditViewModel: BaseViewModel, ViewModelType {
     private func save(
         savingSubject: CurrentValueSubject<Bool, Never>,
         previewSubject: CurrentValueSubject<UIImage?, Never>,
-        saveCompletedSubject: PassthroughSubject<Void, Never>
+        saveCompletedSubject: PassthroughSubject<Filter, Never>
     ) {
         let trimmedTitle = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedDesc = draft.description.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -514,8 +514,8 @@ final class FilterMakeEditViewModel: BaseViewModel, ViewModelType {
                 if case let .failure(error) = completion {
                     self?.error.send(error)
                 }
-            } receiveValue: { _ in
-                saveCompletedSubject.send(())
+            } receiveValue: { filter in
+                saveCompletedSubject.send(filter)
             }
             .store(in: &cancellables)
     }

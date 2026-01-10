@@ -11,6 +11,12 @@ import UIKit
 
 final class FilterMakeViewModel: BaseViewModel, ViewModelType {
     private let filterRepository: FilterRepository
+    private let categorySubject = CurrentValueSubject<FilterMakeCategory?, Never>(nil)
+    private let titleSubject = CurrentValueSubject<String, Never>("")
+    private let descriptionSubject = CurrentValueSubject<String, Never>("")
+    private let priceSubject = CurrentValueSubject<String, Never>("")
+    private let imageSubject = CurrentValueSubject<UIImage?, Never>(nil)
+    private let metadataSubject = CurrentValueSubject<PhotoMetadata?, Never>(nil)
 
     init(filterRepository: FilterRepository) {
         self.filterRepository = filterRepository
@@ -37,38 +43,32 @@ final class FilterMakeViewModel: BaseViewModel, ViewModelType {
     }
 
     func transform(input: Input) -> Output {
-        let categorySubject = CurrentValueSubject<FilterMakeCategory?, Never>(nil)
-        let titleSubject = CurrentValueSubject<String, Never>("")
-        let descriptionSubject = CurrentValueSubject<String, Never>("")
-        let priceSubject = CurrentValueSubject<String, Never>("")
-        let imageSubject = CurrentValueSubject<UIImage?, Never>(nil)
-        let metadataSubject = CurrentValueSubject<PhotoMetadata?, Never>(nil)
         let saveEnabledSubject = CurrentValueSubject<Bool, Never>(false)
         let savingSubject = CurrentValueSubject<Bool, Never>(false)
         let createdSubject = PassthroughSubject<Filter, Never>()
 
         input.titleChanged
-            .sink { titleSubject.send($0) }
+            .sink { [weak self] in self?.titleSubject.send($0) }
             .store(in: &cancellables)
 
         input.categorySelected
-            .sink { categorySubject.send($0) }
+            .sink { [weak self] in self?.categorySubject.send($0) }
             .store(in: &cancellables)
 
         input.descriptionChanged
-            .sink { descriptionSubject.send($0) }
+            .sink { [weak self] in self?.descriptionSubject.send($0) }
             .store(in: &cancellables)
 
         input.priceChanged
-            .sink { priceSubject.send($0) }
+            .sink { [weak self] in self?.priceSubject.send($0) }
             .store(in: &cancellables)
 
         input.imageSelected
-            .sink { imageSubject.send($0) }
+            .sink { [weak self] in self?.imageSubject.send($0) }
             .store(in: &cancellables)
 
         input.metadataSelected
-            .sink { metadataSubject.send($0) }
+            .sink { [weak self] in self?.metadataSubject.send($0) }
             .store(in: &cancellables)
 
         Publishers.CombineLatest(
@@ -90,13 +90,14 @@ final class FilterMakeViewModel: BaseViewModel, ViewModelType {
 
         input.saveTapped
             .sink { [weak self] in
-                self?.createFilter(
-                    category: categorySubject.value,
-                    title: titleSubject.value,
-                    description: descriptionSubject.value,
-                    priceText: priceSubject.value,
-                    image: imageSubject.value,
-                    metadata: metadataSubject.value,
+                guard let self else { return }
+                self.createFilter(
+                    category: self.categorySubject.value,
+                    title: self.titleSubject.value,
+                    description: self.descriptionSubject.value,
+                    priceText: self.priceSubject.value,
+                    image: self.imageSubject.value,
+                    metadata: self.metadataSubject.value,
                     savingSubject: savingSubject,
                     createdSubject: createdSubject
                 )
@@ -110,6 +111,15 @@ final class FilterMakeViewModel: BaseViewModel, ViewModelType {
             isSaving: savingSubject.eraseToAnyPublisher(),
             createdFilter: createdSubject.eraseToAnyPublisher()
         )
+    }
+
+    func resetForm() {
+        categorySubject.send(nil)
+        titleSubject.send("")
+        descriptionSubject.send("")
+        priceSubject.send("")
+        imageSubject.send(nil)
+        metadataSubject.send(nil)
     }
 
     private func createFilter(

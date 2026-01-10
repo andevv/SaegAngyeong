@@ -53,6 +53,7 @@ final class FilterMakeEditViewController: BaseViewController<FilterMakeEditViewM
     private var selectedAdjustment: FilterAdjustmentType = .brightness
 
     var onAdjustmentsUpdated: ((FilterAdjustmentValues) -> Void)?
+    var onFilterCreated: ((Filter) -> Void)?
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -235,8 +236,8 @@ final class FilterMakeEditViewController: BaseViewController<FilterMakeEditViewM
             .store(in: &cancellables)
 
         output.saveCompleted
-            .sink { [weak self] in
-                self?.presentSaveSuccess()
+            .sink { [weak self] filter in
+                self?.presentSaveSuccess(filter: filter)
             }
             .store(in: &cancellables)
 
@@ -272,10 +273,10 @@ final class FilterMakeEditViewController: BaseViewController<FilterMakeEditViewM
         valueLabel.text = text
     }
 
-    private func presentSaveSuccess() {
+    private func presentSaveSuccess(filter: Filter) {
         let alert = UIAlertController(title: "완료", message: "필터 업로드가 완료되었습니다.", preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "확인", style: .default) { [weak self] _ in
-            self?.navigationController?.popViewController(animated: true)
+            self?.onFilterCreated?(filter)
         })
         present(alert, animated: true)
     }

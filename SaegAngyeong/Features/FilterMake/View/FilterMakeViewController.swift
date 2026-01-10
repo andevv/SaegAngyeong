@@ -64,6 +64,7 @@ final class FilterMakeViewController: BaseViewController<FilterMakeViewModel> {
     private var isSaving = false
     private var selectedCategory: FilterMakeCategory?
     private var currentAdjustments = FilterAdjustmentValues.defaultValues
+    var onFilterCreated: ((Filter) -> Void)?
 
     override init(viewModel: FilterMakeViewModel) {
         super.init(viewModel: viewModel)
@@ -409,7 +410,7 @@ final class FilterMakeViewController: BaseViewController<FilterMakeViewModel> {
 
         output.createdFilter
             .sink { [weak self] filter in
-                self?.presentCreateSuccess(title: filter.title)
+                self?.presentCreateSuccess(filter: filter)
             }
             .store(in: &cancellables)
 
@@ -742,9 +743,11 @@ final class FilterMakeViewController: BaseViewController<FilterMakeViewModel> {
         present(alert, animated: true)
     }
 
-    private func presentCreateSuccess(title: String) {
-        let alert = UIAlertController(title: "완료", message: "\"\(title)\" 필터가 등록되었습니다.", preferredStyle: .alert)
-        alert.addAction(UIAlertAction(title: "확인", style: .default))
+    private func presentCreateSuccess(filter: Filter) {
+        let alert = UIAlertController(title: "완료", message: "\"\(filter.title)\" 필터가 등록되었습니다.", preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "확인", style: .default) { [weak self] _ in
+            self?.onFilterCreated?(filter)
+        })
         present(alert, animated: true)
     }
 
@@ -783,6 +786,9 @@ final class FilterMakeViewController: BaseViewController<FilterMakeViewModel> {
         editVC.onAdjustmentsUpdated = { [weak self] values in
             self?.currentAdjustments = values
         }
+        editVC.onFilterCreated = { [weak self] filter in
+            self?.onFilterCreated?(filter)
+        }
         navigationController?.pushViewController(editVC, animated: true)
     }
 
@@ -792,6 +798,24 @@ final class FilterMakeViewController: BaseViewController<FilterMakeViewModel> {
 
     @objc private func dismissKeyboard() {
         view.endEditing(true)
+    }
+
+    func resetForm() {
+        nameTextField.text = ""
+        descriptionTextView.text = ""
+        descriptionPlaceholderLabel.isHidden = false
+        priceTextField.text = ""
+        selectedCategory = nil
+        applySelectedCategory(nil)
+        updatePhoto(image: nil)
+        metadataLine3 = ""
+        currentMetadata = nil
+        updateMetadataCard(with: nil)
+        currentAdjustments = FilterAdjustmentValues.defaultValues
+        viewModel.resetForm()
+        isSaveEnabled = false
+        isSaving = false
+        updateSaveButtonState()
     }
 
 }
