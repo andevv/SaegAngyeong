@@ -223,6 +223,7 @@ final class HomeViewController: BaseViewController<HomeViewModel> {
     private var bannerTimer: Timer?
     private let bannerInterval: TimeInterval = 3.5
     private var isBannerDragging = false
+    private let bannerRepeatCount = 3
     var onHotTrendSelected: ((String) -> Void)?
     var onAuthorFilterSelected: ((String) -> Void)?
 
@@ -463,6 +464,7 @@ final class HomeViewController: BaseViewController<HomeViewModel> {
                 self?.banners = banners
                 self?.updatePageLabel(current: 0, total: banners.count)
                 self?.bannerCollectionView.reloadData()
+                self?.resetBannerPositionIfNeeded()
                 self?.startBannerAutoScrollIfNeeded()
             }
             .store(in: &cancellables)
@@ -534,6 +536,21 @@ final class HomeViewController: BaseViewController<HomeViewModel> {
         pageLabel.text = "\(current + 1) / \(total)"
     }
 
+    private func currentBannerRawIndex() -> Int {
+        guard
+            let layout = bannerCollectionView.collectionViewLayout as? UICollectionViewFlowLayout
+        else { return 0 }
+        let pageWidth = layout.itemSize.width + layout.minimumLineSpacing
+        guard pageWidth > 0 else { return 0 }
+        return Int(round(bannerCollectionView.contentOffset.x / pageWidth))
+    }
+
+    private func resetBannerPositionIfNeeded() {
+        guard banners.count > 1 else { return }
+        let indexPath = IndexPath(item: banners.count, section: 0)
+        bannerCollectionView.scrollToItem(at: indexPath, at: .centeredHorizontally, animated: false)
+    }
+
     private func startBannerAutoScrollIfNeeded() {
         guard banners.count > 1 else {
             stopBannerAutoScroll()
@@ -554,11 +571,33 @@ final class HomeViewController: BaseViewController<HomeViewModel> {
 
     private func autoScrollBanner() {
         guard banners.count > 1, isBannerDragging == false else { return }
-        let current = currentBannerPage()
-        let next = (current + 1) % banners.count
-        let indexPath = IndexPath(item: next, section: 0)
+        normalizeBannerOffsetIfNeeded()
+        let rawIndex = currentBannerRawIndex()
+        let nextIndex = rawIndex + 1
+        let indexPath = IndexPath(item: nextIndex, section: 0)
         bannerCollectionView.scrollToItem(at: indexPath, at: .centeredHorizontally, animated: true)
-        updatePageLabel(current: next, total: banners.count)
+        updatePageLabel(current: nextIndex % banners.count, total: banners.count)
+    }
+
+    private func normalizeBannerOffsetIfNeeded() {
+        guard
+            banners.count > 1,
+            let layout = bannerCollectionView.collectionViewLayout as? UICollectionViewFlowLayout
+        else { return }
+        let pageWidth = layout.itemSize.width + layout.minimumLineSpacing
+        guard pageWidth > 0 else { return }
+        let rawIndex = currentBannerRawIndex()
+        let minIndex = banners.count
+        let maxIndex = banners.count * 2 - 1
+        var targetIndex = rawIndex
+        if rawIndex < minIndex {
+            targetIndex = rawIndex + banners.count
+        } else if rawIndex > maxIndex {
+            targetIndex = rawIndex - banners.count
+        }
+        if targetIndex != rawIndex {
+            bannerCollectionView.setContentOffset(CGPoint(x: CGFloat(targetIndex) * pageWidth, y: 0), animated: false)
+        }
     }
 
     private func updateUseButtonState() {
@@ -574,15 +613,8 @@ final class HomeViewController: BaseViewController<HomeViewModel> {
     }
 
     private func currentBannerPage() -> Int {
-        guard
-            let layout = bannerCollectionView.collectionViewLayout as? UICollectionViewFlowLayout,
-            banners.count > 0
-        else { return 0 }
-
-        let pageWidth = layout.itemSize.width + layout.minimumLineSpacing
-        let offsetX = bannerCollectionView.contentOffset.x
-        let page = max(0, min(CGFloat(banners.count - 1), round(offsetX / pageWidth)))
-        return Int(page)
+        guard banners.count > 0 else { return 0 }
+        return currentBannerRawIndex() % banners.count
     }
 
     private static func makeBannerLayout() -> UICollectionViewFlowLayout {
@@ -643,7 +675,7 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
             return categories.count
         }
         if collectionView == bannerCollectionView {
-            return banners.count
+            return banners.count > 1 ? banners.count * bannerRepeatCount : banners.count
         }
         if collectionView == authorFilterCollectionView {
             return todayAuthor?.filters.count ?? 0
@@ -659,7 +691,10 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
         }
         if collectionView == bannerCollectionView {
             let cell = collectionView.dequeueReusableCell(withReuseIdentifier: BannerCell.reuseID, for: indexPath) as! BannerCell
-            cell.configure(with: banners[indexPath.item])
+            if banners.isEmpty == false {
+                let item = banners[indexPath.item % banners.count]
+                cell.configure(with: item)
+            }
             return cell
         }
         if collectionView == authorFilterCollectionView {
@@ -696,6 +731,7 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
 
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
         guard scrollView == bannerCollectionView else { return }
+        normalizeBannerOffsetIfNeeded()
         updatePageLabel(current: currentBannerPage(), total: banners.count)
         isBannerDragging = false
         startBannerAutoScrollIfNeeded()
@@ -703,6 +739,7 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
 
     func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
         guard scrollView == bannerCollectionView, decelerate == false else { return }
+        normalizeBannerOffsetIfNeeded()
         updatePageLabel(current: currentBannerPage(), total: banners.count)
         isBannerDragging = false
         startBannerAutoScrollIfNeeded()
@@ -722,23 +759,19 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
         else { return }
 
         let pageWidth = layout.itemSize.width + layout.minimumLineSpacing
-        let rawPage = scrollView.contentOffset.x / pageWidth
-
-        let targetPage: CGFloat
+        let rawIndex = scrollView.contentOffset.x / pageWidth
+        let targetIndex: CGFloat
         if velocity.x > 0 {
-            targetPage = floor(rawPage + 1)
+            targetIndex = floor(rawIndex + 1)
         } else if velocity.x < 0 {
-            targetPage = ceil(rawPage - 1)
+            targetIndex = ceil(rawIndex - 1)
         } else {
-            targetPage = round(rawPage)
+            targetIndex = round(rawIndex)
         }
 
-        let clampedPage = max(0, min(CGFloat(banners.count - 1), targetPage))
-        let targetX = clampedPage * pageWidth
-        targetContentOffset.pointee = CGPoint(x: targetX, y: 0)
-
+        targetContentOffset.pointee = CGPoint(x: targetIndex * pageWidth, y: 0)
         DispatchQueue.main.async { [weak self] in
-            self?.updatePageLabel(current: Int(clampedPage), total: self?.banners.count ?? 0)
+            self?.updatePageLabel(current: Int(targetIndex) % (self?.banners.count ?? 1), total: self?.banners.count ?? 0)
         }
     }
 
@@ -746,5 +779,11 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
         guard scrollView == bannerCollectionView else { return }
         isBannerDragging = true
         stopBannerAutoScroll()
+    }
+
+    func scrollViewDidEndScrollingAnimation(_ scrollView: UIScrollView) {
+        guard scrollView == bannerCollectionView else { return }
+        normalizeBannerOffsetIfNeeded()
+        updatePageLabel(current: currentBannerPage(), total: banners.count)
     }
 }
