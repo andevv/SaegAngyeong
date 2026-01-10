@@ -12,6 +12,7 @@ import SnapKit
 
 final class StreamingViewController: BaseViewController<StreamingViewModel> {
     private let playerContainer = UIView()
+    private let timelineSlider = UISlider()
     private let titleLabel = UILabel()
     private let playButton = UIButton(type: .system)
 
@@ -19,6 +20,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
     private var player: AVPlayer?
     private var playerLayer: AVPlayerLayer?
     private var itemObservation: NSKeyValueObservation?
+    private var timeObserverToken: Any?
     private var shouldAutoPlay = false
     private let tokenStore = TokenStore()
     private var resourceLoader: StreamingResourceLoader?
@@ -52,7 +54,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         navigationItem.titleView = titleLabel
 
         playerContainer.backgroundColor = .blackTurquoise
-        playerContainer.layer.cornerRadius = 16
+        playerContainer.layer.cornerRadius = 0
         playerContainer.clipsToBounds = true
 
         playButton.setImage(UIImage(systemName: "play.fill"), for: .normal)
@@ -61,8 +63,19 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         playButton.layer.cornerRadius = 28
         playButton.addTarget(self, action: #selector(playTapped), for: .touchUpInside)
 
+        timelineSlider.minimumValue = 0
+        timelineSlider.maximumValue = 1
+        timelineSlider.value = 0
+        timelineSlider.minimumTrackTintColor = .brightTurquoise
+        timelineSlider.maximumTrackTintColor = UIColor.white.withAlphaComponent(0.2)
+        timelineSlider.isUserInteractionEnabled = false
+        let clearThumb = UIImage()
+        timelineSlider.setThumbImage(clearThumb, for: .normal)
+        timelineSlider.setThumbImage(clearThumb, for: .highlighted)
+
         view.addSubview(playerContainer)
         playerContainer.addSubview(playButton)
+        view.addSubview(timelineSlider)
 
         controlsTapGesture.addTarget(self, action: #selector(handlePlayerTap))
         playerContainer.addGestureRecognizer(controlsTapGesture)
@@ -70,9 +83,15 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
 
     override func configureLayout() {
         playerContainer.snp.makeConstraints { make in
-            make.top.equalTo(view.safeAreaLayoutGuide).offset(20)
-            make.leading.trailing.equalToSuperview().inset(20)
+            make.top.equalTo(view.safeAreaLayoutGuide)
+            make.leading.trailing.equalToSuperview()
             make.height.equalTo(playerContainer.snp.width).multipliedBy(9.0 / 16.0)
+        }
+
+        timelineSlider.snp.makeConstraints { make in
+            make.top.equalTo(playerContainer.snp.bottom).offset(2)
+            make.leading.trailing.equalTo(playerContainer)
+            make.height.equalTo(2)
         }
 
         playButton.snp.makeConstraints { make in
@@ -145,6 +164,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         item.addObserver(self, forKeyPath: "loadedTimeRanges", options: [.new], context: nil)
         let player = AVPlayer(playerItem: item)
         self.player = player
+        addTimeObserver(to: player)
         let layer = AVPlayerLayer(player: player)
         layer.videoGravity = .resizeAspect
         playerLayer?.removeFromSuperlayer()
@@ -201,6 +221,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         super.viewDidDisappear(animated)
         player?.pause()
         shouldAutoPlay = false
+        removeTimeObserver()
         if let item = player?.currentItem {
             item.removeObserver(self, forKeyPath: "loadedTimeRanges")
         }
@@ -220,5 +241,26 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         let duration = CMTimeGetSeconds(range.duration)
         print("[Streaming] buffered: \(start) + \(duration)")
         #endif
+    }
+
+    private func addTimeObserver(to player: AVPlayer) {
+        removeTimeObserver()
+        let interval = CMTime(seconds: 0.25, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
+        timeObserverToken = player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] time in
+            guard let self else { return }
+            guard let duration = player.currentItem?.duration.seconds, duration.isFinite, duration > 0 else {
+                self.timelineSlider.value = 0
+                return
+            }
+            let current = time.seconds
+            self.timelineSlider.value = Float(current / duration)
+        }
+    }
+
+    private func removeTimeObserver() {
+        if let token = timeObserverToken {
+            player?.removeTimeObserver(token)
+            timeObserverToken = nil
+        }
     }
 }
