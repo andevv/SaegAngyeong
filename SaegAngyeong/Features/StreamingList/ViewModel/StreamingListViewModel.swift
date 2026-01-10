@@ -127,14 +127,3 @@ final class StreamingListViewModel: BaseViewModel, ViewModelType {
         return headers
     }
 }
-
-struct StreamingListItemViewData {
-    let id: String
-    let title: String
-    let description: String
-    let durationText: String
-    let viewCountText: String
-    let likeCountText: String
-    let thumbnailURL: URL
-    let headers: [String: String]
-}
