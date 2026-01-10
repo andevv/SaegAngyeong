@@ -17,6 +17,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
     private let timelineHandleHitArea = UIView()
     private let titleLabel = UILabel()
     private let playButton = UIButton(type: .system)
+    private let fullScreenButton = UIButton(type: .system)
     private let miniPlayButton = UIButton(type: .system)
     private let miniCloseButton = UIButton(type: .system)
     private let bufferingIndicator = UIActivityIndicatorView(style: .medium)
@@ -30,6 +31,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
     private var shouldAutoPlay = false
     private var isScrubbing = false
     private var isMiniPlayer = false
+    private var isFullscreen = false
     private var isControlsVisible = false
     private let tokenStore = TokenStore()
     private var resourceLoader: StreamingResourceLoader?
@@ -65,6 +67,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         updateTimelineHandlePosition()
         updatePlayerLayout(animated: false)
         playerContainer.bringSubviewToFront(playButton)
+        playerContainer.bringSubviewToFront(fullScreenButton)
         playerContainer.bringSubviewToFront(miniPlayButton)
         playerContainer.bringSubviewToFront(miniCloseButton)
     }
@@ -84,6 +87,12 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         playButton.backgroundColor = UIColor.black.withAlphaComponent(0.35)
         playButton.layer.cornerRadius = 28
         playButton.addTarget(self, action: #selector(playTapped), for: .touchUpInside)
+
+        fullScreenButton.setImage(UIImage(systemName: "arrow.up.left.and.arrow.down.right"), for: .normal)
+        fullScreenButton.tintColor = .gray15
+        fullScreenButton.backgroundColor = UIColor.black.withAlphaComponent(0.35)
+        fullScreenButton.layer.cornerRadius = 14
+        fullScreenButton.addTarget(self, action: #selector(fullScreenTapped), for: .touchUpInside)
 
         miniPlayButton.setImage(UIImage(systemName: "play.fill"), for: .normal)
         miniPlayButton.tintColor = .gray15
@@ -130,6 +139,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
 
         view.addSubview(playerContainer)
         playerContainer.addSubview(playButton)
+        playerContainer.addSubview(fullScreenButton)
         playerContainer.addSubview(miniPlayButton)
         playerContainer.addSubview(miniCloseButton)
         playerContainer.addSubview(bufferingIndicator)
@@ -174,6 +184,12 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         playButton.snp.makeConstraints { make in
             make.center.equalToSuperview()
             make.width.height.equalTo(56)
+        }
+
+        fullScreenButton.snp.makeConstraints { make in
+            make.trailing.equalToSuperview().offset(-12)
+            make.bottom.equalToSuperview().offset(-12)
+            make.width.height.equalTo(28)
         }
 
         miniPlayButton.snp.makeConstraints { make in
@@ -278,6 +294,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         playerContainer.layer.insertSublayer(layer, at: 0)
         playerLayer = layer
         playerContainer.bringSubviewToFront(playButton)
+        playerContainer.bringSubviewToFront(fullScreenButton)
         playerContainer.bringSubviewToFront(miniPlayButton)
         playerContainer.bringSubviewToFront(miniCloseButton)
     }
@@ -306,6 +323,19 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
 
     @objc private func closeTapped() {
         onCloseRequested?()
+    }
+
+    @objc private func fullScreenTapped() {
+        if isMiniPlayer {
+            setMiniPlayer(false, animated: true)
+        }
+        isFullscreen.toggle()
+        updateFullscreenIcon()
+        updatePlayerLayout(animated: true)
+        setNeedsUpdateOfSupportedInterfaceOrientations()
+        let orientation: UIInterfaceOrientation = isFullscreen ? .landscapeRight : .portrait
+        UIDevice.current.setValue(orientation.rawValue, forKey: "orientation")
+        UIViewController.attemptRotationToDeviceOrientation()
     }
 
     @objc private func handlePlayerTap() {
@@ -346,7 +376,22 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
     private func updatePlayerLayout(animated: Bool) {
         let updates = { [weak self] in
             guard let self else { return }
-            if self.isMiniPlayer {
+            if self.isFullscreen {
+                self.playerWidthConstraint?.update(offset: self.view.bounds.width)
+                self.playerHeightConstraint?.update(offset: self.view.bounds.height)
+                self.playerLeadingConstraint?.update(offset: 0)
+                self.playerTopConstraint?.update(offset: 0)
+                self.playerContainer.layer.cornerRadius = 0
+                self.playerContainer.clipsToBounds = true
+                self.sliderHeightConstraint?.update(offset: 0)
+                self.timelineSlider.alpha = 0
+                self.timelineHandleHitArea.alpha = 0
+                self.fullScreenButton.isHidden = false
+                self.miniPlayButton.isHidden = true
+                self.miniCloseButton.isHidden = true
+                self.view.backgroundColor = .black
+                self.navigationController?.setNavigationBarHidden(true, animated: animated)
+            } else if self.isMiniPlayer {
                 let width: CGFloat = 160
                 let height: CGFloat = width * 9.0 / 16.0
                 let safeRight = self.view.safeAreaInsets.right
@@ -365,6 +410,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
                 self.timelineHandleHitArea.alpha = 0
                 self.miniPlayButton.isHidden = false
                 self.miniCloseButton.isHidden = false
+                self.fullScreenButton.isHidden = true
                 self.view.backgroundColor = .clear
                 self.navigationController?.setNavigationBarHidden(true, animated: animated)
             } else {
@@ -380,10 +426,12 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
                 self.timelineHandleHitArea.alpha = 1
                 self.miniPlayButton.isHidden = true
                 self.miniCloseButton.isHidden = true
+                self.fullScreenButton.isHidden = false
                 self.view.backgroundColor = .black
                 self.navigationController?.setNavigationBarHidden(false, animated: animated)
             }
             self.updatePlayIcons()
+            self.updateFullscreenIcon()
             self.view.layoutIfNeeded()
         }
         if animated {
@@ -531,6 +579,11 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         playButton.isUserInteractionEnabled = isControlsVisible
     }
 
+    private func updateFullscreenIcon() {
+        let imageName = isFullscreen ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right"
+        fullScreenButton.setImage(UIImage(systemName: imageName), for: .normal)
+    }
+
     private func timelineX(for value: Float, trackRect: CGRect) -> CGFloat {
         let clamped = min(max(value, 0), 1)
         return trackRect.minX + CGFloat(clamped) * trackRect.width
@@ -541,6 +594,10 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         let clamped = min(max(x, trackRect.minX), trackRect.maxX)
         return Float((clamped - trackRect.minX) / trackRect.width)
     }
+
+    override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
+        isFullscreen ? .landscape : .portrait
+    }
 }
 
 extension StreamingViewController: UIGestureRecognizerDelegate {
@@ -548,6 +605,7 @@ extension StreamingViewController: UIGestureRecognizerDelegate {
         let touchedView = touch.view
         if touchedView is UIControl { return false }
         if touchedView?.isDescendant(of: playButton) == true { return false }
+        if touchedView?.isDescendant(of: fullScreenButton) == true { return false }
         if touchedView?.isDescendant(of: miniPlayButton) == true { return false }
         if touchedView?.isDescendant(of: miniCloseButton) == true { return false }
         if touchedView?.isDescendant(of: timelineHandleHitArea) == true { return false }
