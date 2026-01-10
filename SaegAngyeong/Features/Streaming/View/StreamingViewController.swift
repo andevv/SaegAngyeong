@@ -13,6 +13,8 @@ import SnapKit
 final class StreamingViewController: BaseViewController<StreamingViewModel> {
     private let playerContainer = UIView()
     private let timelineSlider = UISlider()
+    private let timelineHandle = UIView()
+    private let timelineHandleHitArea = UIView()
     private let titleLabel = UILabel()
     private let playButton = UIButton(type: .system)
 
@@ -22,9 +24,12 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
     private var itemObservation: NSKeyValueObservation?
     private var timeObserverToken: Any?
     private var shouldAutoPlay = false
+    private var isScrubbing = false
     private let tokenStore = TokenStore()
     private var resourceLoader: StreamingResourceLoader?
     private let controlsTapGesture = UITapGestureRecognizer()
+    private var timelineHandleCenterXConstraint: Constraint?
+    private let timelineHandleHitSize: CGFloat = 24
 
     override init(viewModel: StreamingViewModel) {
         super.init(viewModel: viewModel)
@@ -45,6 +50,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         playerLayer?.frame = playerContainer.bounds
+        updateTimelineHandlePosition()
     }
 
     override func configureUI() {
@@ -69,13 +75,30 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         timelineSlider.minimumTrackTintColor = .brightTurquoise
         timelineSlider.maximumTrackTintColor = UIColor.white.withAlphaComponent(0.2)
         timelineSlider.isUserInteractionEnabled = false
-        let clearThumb = UIImage()
+        let clearThumb = makeClearThumb(size: CGSize(width: 24, height: 24))
         timelineSlider.setThumbImage(clearThumb, for: .normal)
         timelineSlider.setThumbImage(clearThumb, for: .highlighted)
+        timelineSlider.addTarget(self, action: #selector(timelineTouchDown), for: .touchDown)
+        timelineSlider.addTarget(self, action: #selector(timelineValueChanged), for: .valueChanged)
+        timelineSlider.addTarget(self, action: #selector(timelineTouchUp), for: [.touchUpInside, .touchUpOutside, .touchCancel])
+
+        timelineHandle.backgroundColor = .blackTurquoise
+        timelineHandle.layer.cornerRadius = 6
+        timelineHandle.layer.shadowColor = UIColor.black.cgColor
+        timelineHandle.layer.shadowOpacity = 0.35
+        timelineHandle.layer.shadowRadius = 4
+        timelineHandle.layer.shadowOffset = CGSize(width: 0, height: 1)
+
+        timelineHandleHitArea.backgroundColor = .clear
+        let handlePan = UIPanGestureRecognizer(target: self, action: #selector(handleTimelinePan(_:)))
+        timelineHandleHitArea.addGestureRecognizer(handlePan)
+        timelineHandleHitArea.isUserInteractionEnabled = true
 
         view.addSubview(playerContainer)
         playerContainer.addSubview(playButton)
         view.addSubview(timelineSlider)
+        view.addSubview(timelineHandleHitArea)
+        timelineHandleHitArea.addSubview(timelineHandle)
 
         controlsTapGesture.addTarget(self, action: #selector(handlePlayerTap))
         playerContainer.addGestureRecognizer(controlsTapGesture)
@@ -92,6 +115,17 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
             make.top.equalTo(playerContainer.snp.bottom).offset(2)
             make.leading.trailing.equalTo(playerContainer)
             make.height.equalTo(2)
+        }
+
+        timelineHandleHitArea.snp.makeConstraints { make in
+            make.centerY.equalTo(timelineSlider.snp.centerY)
+            make.width.height.equalTo(timelineHandleHitSize)
+            self.timelineHandleCenterXConstraint = make.centerX.equalTo(timelineSlider.snp.leading).offset(0).constraint
+        }
+
+        timelineHandle.snp.makeConstraints { make in
+            make.center.equalToSuperview()
+            make.width.height.equalTo(12)
         }
 
         playButton.snp.makeConstraints { make in
@@ -217,6 +251,22 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         playButton.isUserInteractionEnabled = true
     }
 
+    @objc private func timelineTouchDown() {
+        isScrubbing = true
+    }
+
+    @objc private func timelineValueChanged() {
+        guard let player else { return }
+        guard let duration = player.currentItem?.duration.seconds, duration.isFinite, duration > 0 else { return }
+        let targetSeconds = Double(timelineSlider.value) * duration
+        let targetTime = CMTime(seconds: targetSeconds, preferredTimescale: 600)
+        player.seek(to: targetTime, toleranceBefore: .zero, toleranceAfter: .zero)
+    }
+
+    @objc private func timelineTouchUp() {
+        isScrubbing = false
+    }
+
     override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
         player?.pause()
@@ -248,12 +298,15 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         let interval = CMTime(seconds: 0.25, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
         timeObserverToken = player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] time in
             guard let self else { return }
+            guard self.isScrubbing == false else { return }
             guard let duration = player.currentItem?.duration.seconds, duration.isFinite, duration > 0 else {
                 self.timelineSlider.value = 0
+                self.updateTimelineHandlePosition()
                 return
             }
             let current = time.seconds
             self.timelineSlider.value = Float(current / duration)
+            self.updateTimelineHandlePosition()
         }
     }
 
@@ -262,5 +315,58 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
             player?.removeTimeObserver(token)
             timeObserverToken = nil
         }
+    }
+
+    private func makeClearThumb(size: CGSize) -> UIImage {
+        UIGraphicsBeginImageContextWithOptions(size, false, 0)
+        UIColor.white.withAlphaComponent(0.01).setFill()
+        UIBezierPath(roundedRect: CGRect(origin: .zero, size: size), cornerRadius: size.width / 2).fill()
+        let image = UIGraphicsGetImageFromCurrentImageContext() ?? UIImage()
+        UIGraphicsEndImageContext()
+        return image
+    }
+
+    @objc private func handleTimelinePan(_ gesture: UIPanGestureRecognizer) {
+        guard let player else { return }
+        let location = gesture.location(in: timelineSlider)
+        let trackRect = timelineSlider.trackRect(forBounds: timelineSlider.bounds)
+        let clampedX = min(max(location.x, trackRect.minX), trackRect.maxX)
+        let value = valueForTimelineX(clampedX, trackRect: trackRect)
+        timelineSlider.value = value
+        updateTimelineHandlePosition()
+
+        guard let duration = player.currentItem?.duration.seconds, duration.isFinite, duration > 0 else { return }
+        let targetSeconds = Double(value) * duration
+        let targetTime = CMTime(seconds: targetSeconds, preferredTimescale: 600)
+
+        switch gesture.state {
+        case .began:
+            isScrubbing = true
+            player.seek(to: targetTime, toleranceBefore: .zero, toleranceAfter: .zero)
+        case .changed:
+            player.seek(to: targetTime, toleranceBefore: .zero, toleranceAfter: .zero)
+        case .ended, .cancelled, .failed:
+            player.seek(to: targetTime, toleranceBefore: .zero, toleranceAfter: .zero)
+            isScrubbing = false
+        default:
+            break
+        }
+    }
+
+    private func updateTimelineHandlePosition() {
+        let trackRect = timelineSlider.trackRect(forBounds: timelineSlider.bounds)
+        let x = timelineX(for: timelineSlider.value, trackRect: trackRect)
+        timelineHandleCenterXConstraint?.update(offset: x)
+    }
+
+    private func timelineX(for value: Float, trackRect: CGRect) -> CGFloat {
+        let clamped = min(max(value, 0), 1)
+        return trackRect.minX + CGFloat(clamped) * trackRect.width
+    }
+
+    private func valueForTimelineX(_ x: CGFloat, trackRect: CGRect) -> Float {
+        guard trackRect.width > 0 else { return 0 }
+        let clamped = min(max(x, trackRect.minX), trackRect.maxX)
+        return Float((clamped - trackRect.minX) / trackRect.width)
     }
 }
