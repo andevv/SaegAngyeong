@@ -219,6 +219,10 @@ final class HomeViewController: BaseViewController<HomeViewModel> {
     private var highlightFilterID: String?
 
     var onUseTodayFilter: ((String) -> Void)?
+
+    private var bannerTimer: Timer?
+    private let bannerInterval: TimeInterval = 3.5
+    private var isBannerDragging = false
     var onHotTrendSelected: ((String) -> Void)?
     var onAuthorFilterSelected: ((String) -> Void)?
 
@@ -241,6 +245,16 @@ final class HomeViewController: BaseViewController<HomeViewModel> {
         view.backgroundColor = .black
         updateUseButtonState()
         viewDidLoadSubject.send(())
+    }
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        startBannerAutoScrollIfNeeded()
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        stopBannerAutoScroll()
     }
 
     override func viewDidLayoutSubviews() {
@@ -449,6 +463,7 @@ final class HomeViewController: BaseViewController<HomeViewModel> {
                 self?.banners = banners
                 self?.updatePageLabel(current: 0, total: banners.count)
                 self?.bannerCollectionView.reloadData()
+                self?.startBannerAutoScrollIfNeeded()
             }
             .store(in: &cancellables)
 
@@ -517,6 +532,33 @@ final class HomeViewController: BaseViewController<HomeViewModel> {
             return
         }
         pageLabel.text = "\(current + 1) / \(total)"
+    }
+
+    private func startBannerAutoScrollIfNeeded() {
+        guard banners.count > 1 else {
+            stopBannerAutoScroll()
+            return
+        }
+        if bannerTimer != nil { return }
+        let timer = Timer.scheduledTimer(withTimeInterval: bannerInterval, repeats: true) { [weak self] _ in
+            self?.autoScrollBanner()
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        bannerTimer = timer
+    }
+
+    private func stopBannerAutoScroll() {
+        bannerTimer?.invalidate()
+        bannerTimer = nil
+    }
+
+    private func autoScrollBanner() {
+        guard banners.count > 1, isBannerDragging == false else { return }
+        let current = currentBannerPage()
+        let next = (current + 1) % banners.count
+        let indexPath = IndexPath(item: next, section: 0)
+        bannerCollectionView.scrollToItem(at: indexPath, at: .centeredHorizontally, animated: true)
+        updatePageLabel(current: next, total: banners.count)
     }
 
     private func updateUseButtonState() {
@@ -655,11 +697,15 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
         guard scrollView == bannerCollectionView else { return }
         updatePageLabel(current: currentBannerPage(), total: banners.count)
+        isBannerDragging = false
+        startBannerAutoScrollIfNeeded()
     }
 
     func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
         guard scrollView == bannerCollectionView, decelerate == false else { return }
         updatePageLabel(current: currentBannerPage(), total: banners.count)
+        isBannerDragging = false
+        startBannerAutoScrollIfNeeded()
     }
 
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
@@ -694,5 +740,11 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
         DispatchQueue.main.async { [weak self] in
             self?.updatePageLabel(current: Int(clampedPage), total: self?.banners.count ?? 0)
         }
+    }
+
+    func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+        guard scrollView == bannerCollectionView else { return }
+        isBannerDragging = true
+        stopBannerAutoScroll()
     }
 }
