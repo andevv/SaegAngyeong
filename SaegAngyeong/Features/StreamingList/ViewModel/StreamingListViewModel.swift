@@ -78,7 +78,7 @@ final class StreamingListViewModel: BaseViewModel, ViewModelType {
         guard !isFetching else { return }
         isFetching = true
         isLoading.send(true)
-        videoRepository.list(next: cursor, limit: 5)
+        videoRepository.list(next: cursor, limit: 8)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] completion in
                 guard let self else { return }

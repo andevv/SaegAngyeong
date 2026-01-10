@@ -22,6 +22,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
     private var shouldAutoPlay = false
     private let tokenStore = TokenStore()
     private var resourceLoader: StreamingResourceLoader?
+    private let controlsTapGesture = UITapGestureRecognizer()
 
     override init(viewModel: StreamingViewModel) {
         super.init(viewModel: viewModel)
@@ -54,15 +55,17 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         playerContainer.layer.cornerRadius = 16
         playerContainer.clipsToBounds = true
 
-        playButton.setTitle("재생", for: .normal)
-        playButton.titleLabel?.font = .pretendard(.medium, size: 14)
-        playButton.setTitleColor(.gray30, for: .normal)
-        playButton.backgroundColor = .brightTurquoise.withAlphaComponent(0.2)
-        playButton.layer.cornerRadius = 12
+        playButton.setImage(UIImage(systemName: "play.fill"), for: .normal)
+        playButton.tintColor = .gray15
+        playButton.backgroundColor = UIColor.black.withAlphaComponent(0.35)
+        playButton.layer.cornerRadius = 28
         playButton.addTarget(self, action: #selector(playTapped), for: .touchUpInside)
 
         view.addSubview(playerContainer)
-        view.addSubview(playButton)
+        playerContainer.addSubview(playButton)
+
+        controlsTapGesture.addTarget(self, action: #selector(handlePlayerTap))
+        playerContainer.addGestureRecognizer(controlsTapGesture)
     }
 
     override func configureLayout() {
@@ -73,9 +76,8 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         }
 
         playButton.snp.makeConstraints { make in
-            make.top.equalTo(playerContainer.snp.bottom).offset(16)
-            make.leading.trailing.equalTo(playerContainer)
-            make.height.equalTo(44)
+            make.center.equalToSuperview()
+            make.width.height.equalTo(56)
         }
     }
 
@@ -145,9 +147,10 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         self.player = player
         let layer = AVPlayerLayer(player: player)
         layer.videoGravity = .resizeAspect
-        playerContainer.layer.sublayers?.forEach { $0.removeFromSuperlayer() }
-        playerContainer.layer.addSublayer(layer)
+        playerLayer?.removeFromSuperlayer()
+        playerContainer.layer.insertSublayer(layer, at: 0)
         playerLayer = layer
+        playerContainer.bringSubviewToFront(playButton)
     }
 
     @objc private func playTapped() {
@@ -163,14 +166,35 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         }
         if player.timeControlStatus == .playing {
             player.pause()
-            playButton.setTitle("재생", for: .normal)
+            playButton.setImage(UIImage(systemName: "play.fill"), for: .normal)
+            playButton.isHidden = false
+            playButton.isUserInteractionEnabled = true
             shouldAutoPlay = false
         } else {
             if player.currentItem?.status == .readyToPlay {
                 player.play()
             }
-            playButton.setTitle("일시정지", for: .normal)
+            playButton.setImage(UIImage(systemName: "pause.fill"), for: .normal)
+            playButton.isHidden = true
+            playButton.isUserInteractionEnabled = false
         }
+    }
+
+    @objc private func handlePlayerTap() {
+        guard let player else { return }
+        if playButton.isHidden == false {
+            playButton.isHidden = true
+            playButton.isUserInteractionEnabled = false
+            return
+        }
+
+        if player.timeControlStatus == .playing {
+            playButton.setImage(UIImage(systemName: "pause.fill"), for: .normal)
+        } else {
+            playButton.setImage(UIImage(systemName: "play.fill"), for: .normal)
+        }
+        playButton.isHidden = false
+        playButton.isUserInteractionEnabled = true
     }
 
     override func viewDidDisappear(_ animated: Bool) {
