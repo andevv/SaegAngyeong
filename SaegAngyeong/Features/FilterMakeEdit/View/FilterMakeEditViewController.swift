@@ -88,21 +88,21 @@ final class FilterMakeEditViewController: BaseViewController<FilterMakeEditViewM
 
         undoButton.setImage(UIImage(named: "Icon_Undo"), for: .normal)
         undoButton.tintColor = .gray60
-        undoButton.backgroundColor = UIColor.gray100.withAlphaComponent(0.35)
+        undoButton.backgroundColor = UIColor.gray100.withAlphaComponent(0.7)
         undoButton.layer.cornerRadius = 10
         undoButton.contentEdgeInsets = UIEdgeInsets(top: 6, left: 6, bottom: 6, right: 6)
         undoButton.addTarget(self, action: #selector(undoTapped), for: .touchUpInside)
 
         redoButton.setImage(UIImage(named: "Icon_Redo"), for: .normal)
         redoButton.tintColor = .gray60
-        redoButton.backgroundColor = UIColor.gray100.withAlphaComponent(0.35)
+        redoButton.backgroundColor = UIColor.gray100.withAlphaComponent(0.7)
         redoButton.layer.cornerRadius = 10
         redoButton.contentEdgeInsets = UIEdgeInsets(top: 6, left: 6, bottom: 6, right: 6)
         redoButton.addTarget(self, action: #selector(redoTapped), for: .touchUpInside)
 
         compareButton.setImage(UIImage(named: "Icon_Compare"), for: .normal)
         compareButton.tintColor = .gray60
-        compareButton.backgroundColor = UIColor.gray100.withAlphaComponent(0.35)
+        compareButton.backgroundColor = UIColor.gray100.withAlphaComponent(0.7)
         compareButton.layer.cornerRadius = 10
         compareButton.contentEdgeInsets = UIEdgeInsets(top: 6, left: 6, bottom: 6, right: 6)
         compareButton.addTarget(self, action: #selector(compareTouchDown), for: .touchDown)
