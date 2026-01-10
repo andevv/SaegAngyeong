@@ -17,7 +17,7 @@ final class FilterMakeEditViewController: BaseViewController<FilterMakeEditViewM
     private let compareButton = UIButton(type: .system)
 
     private let valueLabel = UILabel()
-    private let slider = UISlider()
+    private let slider = TouchAreaSlider()
     private lazy var adjustmentCollectionView: UICollectionView = {
         let layout = UICollectionViewFlowLayout()
         layout.scrollDirection = .horizontal
@@ -367,6 +367,15 @@ final class FilterMakeEditViewController: BaseViewController<FilterMakeEditViewM
 
     private func scaleFactor(for adjustment: FilterAdjustmentType) -> Double {
         adjustment == .temperature ? 1.0 : 0.1
+    }
+}
+
+private final class TouchAreaSlider: UISlider {
+    private let touchInsets = UIEdgeInsets(top: -12, left: -12, bottom: -12, right: -12)
+
+    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+        let largerBounds = bounds.inset(by: touchInsets)
+        return largerBounds.contains(point)
     }
 }
 
