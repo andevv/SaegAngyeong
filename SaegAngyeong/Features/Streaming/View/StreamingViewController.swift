@@ -25,11 +25,17 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
     private var timeObserverToken: Any?
     private var shouldAutoPlay = false
     private var isScrubbing = false
+    private var isMiniPlayer = false
     private let tokenStore = TokenStore()
     private var resourceLoader: StreamingResourceLoader?
     private let controlsTapGesture = UITapGestureRecognizer()
     private var timelineHandleCenterXConstraint: Constraint?
     private let timelineHandleHitSize: CGFloat = 24
+    private var playerTopConstraint: Constraint?
+    private var playerLeadingConstraint: Constraint?
+    private var playerWidthConstraint: Constraint?
+    private var playerHeightConstraint: Constraint?
+    private var sliderHeightConstraint: Constraint?
 
     override init(viewModel: StreamingViewModel) {
         super.init(viewModel: viewModel)
@@ -51,6 +57,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         super.viewDidLayoutSubviews()
         playerLayer?.frame = playerContainer.bounds
         updateTimelineHandlePosition()
+        updatePlayerLayout(animated: false)
     }
 
     override func configureUI() {
@@ -102,19 +109,23 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
 
         controlsTapGesture.addTarget(self, action: #selector(handlePlayerTap))
         playerContainer.addGestureRecognizer(controlsTapGesture)
+
+        let panGesture = UIPanGestureRecognizer(target: self, action: #selector(handlePlayerPan(_:)))
+        playerContainer.addGestureRecognizer(panGesture)
     }
 
     override func configureLayout() {
         playerContainer.snp.makeConstraints { make in
-            make.top.equalTo(view.safeAreaLayoutGuide)
-            make.leading.trailing.equalToSuperview()
-            make.height.equalTo(playerContainer.snp.width).multipliedBy(9.0 / 16.0)
+            playerTopConstraint = make.top.equalTo(view.safeAreaLayoutGuide).constraint
+            playerLeadingConstraint = make.leading.equalToSuperview().constraint
+            playerWidthConstraint = make.width.equalTo(0).constraint
+            playerHeightConstraint = make.height.equalTo(0).constraint
         }
 
         timelineSlider.snp.makeConstraints { make in
             make.top.equalTo(playerContainer.snp.bottom).offset(2)
             make.leading.trailing.equalTo(playerContainer)
-            make.height.equalTo(2)
+            sliderHeightConstraint = make.height.equalTo(2).constraint
         }
 
         timelineHandleHitArea.snp.makeConstraints { make in
@@ -236,6 +247,10 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
 
     @objc private func handlePlayerTap() {
         guard let player else { return }
+        if isMiniPlayer {
+            setMiniPlayer(false, animated: true)
+            return
+        }
         if playButton.isHidden == false {
             playButton.isHidden = true
             playButton.isUserInteractionEnabled = false
@@ -249,6 +264,75 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         }
         playButton.isHidden = false
         playButton.isUserInteractionEnabled = true
+    }
+
+    @objc private func handlePlayerPan(_ gesture: UIPanGestureRecognizer) {
+        let translation = gesture.translation(in: view)
+        let velocity = gesture.velocity(in: view)
+        if gesture.state == .ended || gesture.state == .cancelled {
+            if isMiniPlayer {
+                if translation.y < -120 || velocity.y < -600 {
+                    setMiniPlayer(false, animated: true)
+                }
+            } else {
+                if translation.y > 120 || velocity.y > 600 {
+                    setMiniPlayer(true, animated: true)
+                }
+            }
+        }
+    }
+
+    private func setMiniPlayer(_ mini: Bool, animated: Bool) {
+        guard isMiniPlayer != mini else { return }
+        isMiniPlayer = mini
+        updatePlayerLayout(animated: animated)
+    }
+
+    private func updatePlayerLayout(animated: Bool) {
+        let updates = { [weak self] in
+            guard let self else { return }
+            if self.isMiniPlayer {
+                let width: CGFloat = 160
+                let height: CGFloat = width * 9.0 / 16.0
+                let safeRight = self.view.safeAreaInsets.right
+                let safeBottom = self.view.safeAreaInsets.bottom
+                let safeTop = self.view.safeAreaInsets.top
+                self.playerWidthConstraint?.update(offset: width)
+                self.playerHeightConstraint?.update(offset: height)
+                let leading = self.view.bounds.width - safeRight - width - 16
+                self.playerLeadingConstraint?.update(offset: max(16, leading))
+                let top = self.view.bounds.height - safeBottom - height - 16
+                self.playerTopConstraint?.update(offset: max(0, top - safeTop))
+                self.playerContainer.layer.cornerRadius = 12
+                self.playerContainer.clipsToBounds = true
+                self.sliderHeightConstraint?.update(offset: 0)
+                self.timelineSlider.alpha = 0
+                self.timelineHandleHitArea.alpha = 0
+                self.view.backgroundColor = .clear
+                self.navigationController?.setNavigationBarHidden(true, animated: animated)
+            } else {
+                let width = self.view.bounds.width
+                self.playerWidthConstraint?.update(offset: width)
+                self.playerHeightConstraint?.update(offset: width * 9.0 / 16.0)
+                self.playerLeadingConstraint?.update(offset: 0)
+                self.playerTopConstraint?.update(offset: 0)
+                self.playerContainer.layer.cornerRadius = 0
+                self.playerContainer.clipsToBounds = true
+                self.sliderHeightConstraint?.update(offset: 2)
+                self.timelineSlider.alpha = 1
+                self.timelineHandleHitArea.alpha = 1
+                self.view.backgroundColor = .black
+                self.navigationController?.setNavigationBarHidden(false, animated: animated)
+            }
+            self.view.layoutIfNeeded()
+        }
+        if animated {
+            UIView.animate(withDuration: 0.25, delay: 0, options: [.curveEaseInOut]) {
+                updates()
+            }
+        } else {
+            updates()
+        }
     }
 
     @objc private func timelineTouchDown() {

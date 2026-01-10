@@ -43,7 +43,7 @@ final class StreamingCoordinator {
     private func showStreaming(videoID: String) {
         let viewModel = StreamingViewModel(videoID: videoID, videoRepository: videoRepository)
         let viewController = StreamingViewController(viewModel: viewModel)
-        viewController.modalPresentationStyle = .fullScreen
+        viewController.modalPresentationStyle = .overFullScreen
         navigationController.present(viewController, animated: true)
     }
 
