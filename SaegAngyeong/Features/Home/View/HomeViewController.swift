@@ -714,7 +714,8 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
             let category = categories[indexPath.item]
             print("[Home] category tapped:", category.title)
         } else if collectionView == bannerCollectionView {
-            let banner = banners[indexPath.item]
+            guard banners.isEmpty == false else { return }
+            let banner = banners[indexPath.item % banners.count]
             print("[Home] banner tapped:", banner.title)
             openBannerIfNeeded(banner)
         } else if collectionView == authorFilterCollectionView {
