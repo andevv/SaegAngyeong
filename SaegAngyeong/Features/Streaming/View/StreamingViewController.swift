@@ -335,7 +335,6 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         setNeedsUpdateOfSupportedInterfaceOrientations()
         let orientation: UIInterfaceOrientation = isFullscreen ? .landscapeRight : .portrait
         UIDevice.current.setValue(orientation.rawValue, forKey: "orientation")
-        UIViewController.attemptRotationToDeviceOrientation()
     }
 
     @objc private func handlePlayerTap() {
