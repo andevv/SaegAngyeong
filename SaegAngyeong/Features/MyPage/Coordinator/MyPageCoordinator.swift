@@ -42,7 +42,7 @@ final class MyPageCoordinator {
             let historyVC = PurchaseHistoryViewController(viewModel: viewModel.makePurchaseHistoryViewModel())
             self.navigationController.pushViewController(historyVC, animated: true)
         }
-        viewController.onLikedFilterRequested = { [weak self, weak viewModel] in
+        viewController.onLikedFilterRequested = { [weak self] in
             guard let self else { return }
             let coordinator = LikedFilterCoordinator(
                 dependency: self.dependency,
@@ -51,7 +51,7 @@ final class MyPageCoordinator {
             self.likedFilterCoordinator = coordinator
             coordinator.start()
         }
-        viewController.onMyUploadRequested = { [weak self, weak viewModel] userID in
+        viewController.onMyUploadRequested = { [weak self] userID in
             guard let self else { return }
             let coordinator = MyUploadCoordinator(
                 dependency: self.dependency,
