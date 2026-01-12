@@ -302,6 +302,14 @@ final class ChatRoomViewController: BaseViewController<ChatRoomViewModel> {
         present(alert, animated: true)
     }
 
+    private func presentImagePreview(urls: [URL], startIndex: Int) {
+        guard urls.isEmpty == false else { return }
+        let previewVC = ChatRoomImagePreviewViewController(urls: urls, startIndex: startIndex, headers: imageHeaders)
+        previewVC.modalPresentationStyle = .fullScreen
+        previewVC.modalTransitionStyle = .crossDissolve
+        present(previewVC, animated: true)
+    }
+
     private func scrollToBottom() {
         guard items.count > 0 else { return }
         let lastRow = items.count - 1
@@ -460,6 +468,9 @@ extension ChatRoomViewController: UITableViewDataSource, UITableViewDelegate {
                 return UITableViewCell()
             }
             cell.configure(with: message, headers: imageHeaders)
+            cell.onImageTap = { [weak self] urls, index in
+                self?.presentImagePreview(urls: urls, startIndex: index)
+            }
             return cell
         case .date(let text):
             guard let cell = tableView.dequeueReusableCell(withIdentifier: ChatDateSeparatorCell.reuseID, for: indexPath) as? ChatDateSeparatorCell else {
@@ -527,6 +538,9 @@ private final class ChatMessageCell: UITableViewCell {
     private let timeLabel = UILabel()
     private let avatarImageView = UIImageView()
     private let bubbleInset = UIEdgeInsets(top: 10, left: 10, bottom: 10, right: 10)
+    private var imageURLs: [URL] = []
+
+    var onImageTap: (([URL], Int) -> Void)?
 
     private var leadingConstraint: Constraint?
     private var trailingConstraint: Constraint?
@@ -625,15 +639,17 @@ private final class ChatMessageCell: UITableViewCell {
         avatarImageView.image = nil
         attachmentGridView.prepareForReuse()
         fileNameLabel.text = nil
+        self.imageURLs = []
+        onImageTap = nil
     }
 
     func configure(with item: ChatMessageViewData, headers: [String: String]) {
         let hasFile = item.fileURLs.isEmpty == false
         let fileURL = item.fileURLs.first
-        let imageURLs = item.fileURLs.filter { url in
+        let imageFileURLs = item.fileURLs.filter { url in
             ["jpg", "jpeg", "png", "gif"].contains(url.pathExtension.lowercased())
         }
-        let isImageBundle = hasFile && imageURLs.count == item.fileURLs.count
+        let isImageBundle = hasFile && imageFileURLs.count == item.fileURLs.count
         let isPlaceholderText = item.text.trimmingCharacters(in: .whitespacesAndNewlines) == "사진을 보냈습니다."
         messageLabel.text = item.text
         timeLabel.text = item.timeText
@@ -654,15 +670,24 @@ private final class ChatMessageCell: UITableViewCell {
             attachmentGridView.isHidden = !isImageBundle
             fileRowView.isHidden = isImageBundle
             if isImageBundle {
-                attachmentGridView.configure(urls: imageURLs, headers: headers)
+                self.imageURLs = imageFileURLs
+                attachmentGridView.configure(urls: imageFileURLs, headers: headers)
+                attachmentGridView.onTap = { [weak self] index in
+                    guard let self, index < self.imageURLs.count else { return }
+                    self.onImageTap?(self.imageURLs, index)
+                }
             } else {
                 fileNameLabel.text = fileURL?.lastPathComponent ?? "파일"
+                self.imageURLs = []
+                attachmentGridView.onTap = nil
             }
             messageLabel.isHidden = isImageOnly || item.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         } else {
             attachmentGridView.isHidden = true
             fileRowView.isHidden = true
             messageLabel.isHidden = item.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            self.imageURLs = []
+            attachmentGridView.onTap = nil
         }
         let groupSpacing: CGFloat = item.isGroupStart ? 4 : 0
         let bubbleTopOffset: CGFloat = groupSpacing
@@ -755,6 +780,7 @@ private final class ChatAttachmentGridView: UIView {
     private let overlayView = UIView()
     private let overlayLabel = UILabel()
     private var currentLayout: LayoutCount?
+    var onTap: ((Int) -> Void)?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -764,8 +790,10 @@ private final class ChatAttachmentGridView: UIView {
             imageView.clipsToBounds = true
             imageView.layer.cornerRadius = 10
             imageView.backgroundColor = .black
+            imageView.isUserInteractionEnabled = true
         }
         overlayView.backgroundColor = UIColor.black.withAlphaComponent(0.5)
+        overlayView.isUserInteractionEnabled = false
         overlayLabel.font = .pretendard(.medium, size: 16)
         overlayLabel.textColor = .white
         overlayLabel.textAlignment = .center
@@ -773,6 +801,7 @@ private final class ChatAttachmentGridView: UIView {
         overlayLabel.snp.makeConstraints { make in
             make.edges.equalToSuperview()
         }
+        configureTapHandlers()
         prepareForReuse()
     }
 
@@ -885,5 +914,18 @@ private final class ChatAttachmentGridView: UIView {
         stack.spacing = spacing
         stack.distribution = .fillEqually
         return stack
+    }
+
+    private func configureTapHandlers() {
+        for (index, imageView) in imageViews.enumerated() {
+            imageView.tag = index
+            let tap = UITapGestureRecognizer(target: self, action: #selector(handleImageTap(_:)))
+            imageView.addGestureRecognizer(tap)
+        }
+    }
+
+    @objc private func handleImageTap(_ gesture: UITapGestureRecognizer) {
+        guard let view = gesture.view else { return }
+        onTap?(view.tag)
     }
 }
