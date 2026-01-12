@@ -541,6 +541,9 @@ private final class ChatMessageCell: UITableViewCell {
     private var imageURLs: [URL] = []
 
     var onImageTap: (([URL], Int) -> Void)?
+    private var fileRowMinHeightConstraint: Constraint?
+    private var fileRowFixedWidthConstraint: Constraint?
+    private var fileRowFixedHeightConstraint: Constraint?
 
     private var leadingConstraint: Constraint?
     private var trailingConstraint: Constraint?
@@ -574,6 +577,10 @@ private final class ChatMessageCell: UITableViewCell {
         fileRowView.axis = .horizontal
         fileRowView.spacing = 8
         fileRowView.alignment = .center
+        fileRowView.isLayoutMarginsRelativeArrangement = true
+        fileRowView.layoutMargins = .zero
+        fileRowView.backgroundColor = .clear
+        fileRowView.layer.cornerRadius = 0
 
         fileIconView.image = UIImage(systemName: "doc.fill")
         fileIconView.tintColor = .gray30
@@ -582,6 +589,7 @@ private final class ChatMessageCell: UITableViewCell {
         fileNameLabel.font = .pretendard(.regular, size: 12)
         fileNameLabel.textColor = .gray30
         fileNameLabel.numberOfLines = 1
+        fileNameLabel.lineBreakMode = .byTruncatingMiddle
 
         timeLabel.font = .pretendard(.regular, size: 10)
         timeLabel.textColor = .gray60
@@ -624,6 +632,14 @@ private final class ChatMessageCell: UITableViewCell {
             make.width.height.equalTo(18)
         }
 
+        fileRowView.snp.makeConstraints { make in
+            fileRowMinHeightConstraint = make.height.greaterThanOrEqualTo(0).constraint
+            fileRowFixedWidthConstraint = make.width.equalTo(240).constraint
+            fileRowFixedHeightConstraint = make.height.equalTo(56).constraint
+        }
+        fileRowFixedWidthConstraint?.deactivate()
+        fileRowFixedHeightConstraint?.deactivate()
+
         timeLabel.snp.makeConstraints { make in
             make.trailing.equalTo(bubbleView.snp.leading).offset(-6)
             make.bottom.equalTo(bubbleView).offset(-2)
@@ -650,6 +666,7 @@ private final class ChatMessageCell: UITableViewCell {
             ["jpg", "jpeg", "png", "gif"].contains(url.pathExtension.lowercased())
         }
         let isImageBundle = hasFile && imageFileURLs.count == item.fileURLs.count
+        let isFileBundle = hasFile && !isImageBundle
         let trimmedText = item.text.trimmingCharacters(in: .whitespacesAndNewlines)
         let isPlaceholderText = trimmedText == "사진을 보냈습니다." || trimmedText == "파일을 보냈습니다."
         messageLabel.text = item.text
@@ -660,7 +677,7 @@ private final class ChatMessageCell: UITableViewCell {
         avatarImageView.isHidden = !(item.showAvatar)
         timeLabel.isHidden = !(item.showTime)
         let isImageOnly = isImageBundle && (isPlaceholderText || trimmedText.isEmpty)
-        bubbleView.backgroundColor = isImageBundle ? .clear : (isMine ? UIColor.brightTurquoise.withAlphaComponent(0.9) : .blackTurquoise)
+        bubbleView.backgroundColor = (isImageBundle || isFileBundle) ? .clear : (isMine ? UIColor.brightTurquoise.withAlphaComponent(0.9) : .blackTurquoise)
         messageLabel.textColor = .gray30
         contentStack.snp.remakeConstraints { make in
             make.edges.equalToSuperview().inset(isImageBundle ? .zero : bubbleInset)
@@ -683,20 +700,22 @@ private final class ChatMessageCell: UITableViewCell {
                 attachmentGridView.onTap = nil
             }
             messageLabel.isHidden = isImageOnly || isPlaceholderText || trimmedText.isEmpty
+            updateFileRowStyle(isFile: isFileBundle, fileURL: fileURL)
         } else {
             attachmentGridView.isHidden = true
             fileRowView.isHidden = true
             messageLabel.isHidden = trimmedText.isEmpty
             self.imageURLs = []
             attachmentGridView.onTap = nil
+            updateFileRowStyle(isFile: false, fileURL: nil)
         }
         let groupSpacing: CGFloat = item.isGroupStart ? 4 : 0
         let bubbleTopOffset: CGFloat = groupSpacing
         let nameTopOffset: CGFloat = 4 + groupSpacing
-        let bubbleWidthMultiplier: CGFloat = isImageBundle ? 0.7 : 0.7
-        let bubbleSideInset: CGFloat = isImageBundle ? 12 : 16
-        let bubbleMinLeading: CGFloat = isImageBundle ? 24 : 72
-        let bubbleMaxTrailing: CGFloat = isImageBundle ? 24 : 72
+        let bubbleWidthMultiplier: CGFloat = 0.7
+        let bubbleSideInset: CGFloat = isImageBundle ? 12 : (isFileBundle ? 10 : 16)
+        let bubbleMinLeading: CGFloat = isImageBundle ? 24 : (isFileBundle ? 88 : 72)
+        let bubbleMaxTrailing: CGFloat = isImageBundle ? 24 : (isFileBundle ? 88 : 72)
         if isMine {
             avatarImageView.snp.remakeConstraints { make in
                 make.leading.equalToSuperview().offset(16)
@@ -764,6 +783,38 @@ private final class ChatMessageCell: UITableViewCell {
             }
         }
         setNeedsLayout()
+    }
+
+    private func updateFileRowStyle(isFile: Bool, fileURL: URL?) {
+        guard isFile else {
+            fileRowView.layoutMargins = .zero
+            fileRowView.backgroundColor = .clear
+            fileRowView.layer.cornerRadius = 0
+            fileNameLabel.numberOfLines = 1
+            fileNameLabel.font = .pretendard(.regular, size: 12)
+            fileRowMinHeightConstraint?.update(offset: 0)
+            return
+        }
+        let isPDF = fileURL?.pathExtension.lowercased() == "pdf"
+        if isPDF {
+            fileRowView.layoutMargins = UIEdgeInsets(top: 4, left: 12, bottom: 4, right: 12)
+            fileRowView.backgroundColor = .gray90
+            fileRowView.layer.cornerRadius = 12
+            fileNameLabel.numberOfLines = 2
+            fileNameLabel.font = .pretendard(.regular, size: 13)
+            fileRowMinHeightConstraint?.update(offset: 0)
+            fileRowFixedWidthConstraint?.activate()
+            fileRowFixedHeightConstraint?.activate()
+        } else {
+            fileRowView.layoutMargins = .zero
+            fileRowView.backgroundColor = .clear
+            fileRowView.layer.cornerRadius = 0
+            fileNameLabel.numberOfLines = 1
+            fileNameLabel.font = .pretendard(.regular, size: 12)
+            fileRowMinHeightConstraint?.update(offset: 0)
+            fileRowFixedWidthConstraint?.deactivate()
+            fileRowFixedHeightConstraint?.deactivate()
+        }
     }
 }
 
