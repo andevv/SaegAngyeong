@@ -7,6 +7,7 @@
 
 import UIKit
 import SnapKit
+import Photos
 
 final class ChatRoomImagePreviewViewController: UIViewController {
     private let urls: [URL]
@@ -17,6 +18,7 @@ final class ChatRoomImagePreviewViewController: UIViewController {
     private let collectionView: UICollectionView
     private let closeButton = UIButton(type: .system)
     private let indexLabel = UILabel()
+    private let downloadButton = UIButton(type: .system)
 
     init(urls: [URL], startIndex: Int, headers: [String: String]) {
         self.urls = urls
@@ -55,12 +57,19 @@ final class ChatRoomImagePreviewViewController: UIViewController {
         closeButton.tintColor = .gray30
         closeButton.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
 
+        downloadButton.setImage(UIImage(systemName: "arrow.down.to.line"), for: .normal)
+        downloadButton.tintColor = .gray30
+        downloadButton.backgroundColor = .clear
+        downloadButton.layer.cornerRadius = 0
+        downloadButton.addTarget(self, action: #selector(downloadTapped), for: .touchUpInside)
+
         indexLabel.font = .pretendard(.medium, size: 12)
         indexLabel.textColor = .gray60
         indexLabel.textAlignment = .center
 
         view.addSubview(collectionView)
         view.addSubview(closeButton)
+        view.addSubview(downloadButton)
         view.addSubview(indexLabel)
 
         collectionView.snp.makeConstraints { make in
@@ -70,6 +79,12 @@ final class ChatRoomImagePreviewViewController: UIViewController {
         closeButton.snp.makeConstraints { make in
             make.top.equalTo(view.safeAreaLayoutGuide).offset(12)
             make.trailing.equalTo(view.safeAreaLayoutGuide).offset(-12)
+            make.width.height.equalTo(32)
+        }
+
+        downloadButton.snp.makeConstraints { make in
+            make.centerY.equalTo(closeButton)
+            make.leading.equalTo(view.safeAreaLayoutGuide).offset(12)
             make.width.height.equalTo(32)
         }
 
@@ -93,8 +108,86 @@ final class ChatRoomImagePreviewViewController: UIViewController {
         dismiss(animated: true)
     }
 
+    @objc private func downloadTapped() {
+        let index = currentIndex()
+        guard urls.indices.contains(index) else { return }
+        requestPhotoAuthorization { [weak self] isAuthorized in
+            guard let self, isAuthorized else {
+                self?.presentAlert(title: "권한 필요", message: "사진 저장 권한을 허용해주세요.")
+                return
+            }
+            self.downloadImage(url: self.urls[index])
+        }
+    }
+
     private func updateIndexLabel(for index: Int) {
         indexLabel.text = "\(index + 1) / \(urls.count)"
+    }
+
+    private func requestPhotoAuthorization(completion: @escaping (Bool) -> Void) {
+        let status = PHPhotoLibrary.authorizationStatus(for: .addOnly)
+        switch status {
+        case .authorized, .limited:
+            completion(true)
+        case .notDetermined:
+            PHPhotoLibrary.requestAuthorization(for: .addOnly) { newStatus in
+                DispatchQueue.main.async {
+                    completion(newStatus == .authorized || newStatus == .limited)
+                }
+            }
+        default:
+            completion(false)
+        }
+    }
+
+    private func downloadImage(url: URL) {
+        setDownloadLoading(true)
+        var request = URLRequest(url: url)
+        headers.forEach { key, value in
+            request.setValue(value, forHTTPHeaderField: key)
+        }
+        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            guard let self else { return }
+            if let data {
+                self.saveToPhotoLibrary(data: data, fallbackFileName: response?.suggestedFilename)
+            } else {
+                DispatchQueue.main.async {
+                    self.setDownloadLoading(false)
+                    self.presentAlert(title: "다운로드 실패", message: error?.localizedDescription ?? "이미지를 불러올 수 없습니다.")
+                }
+            }
+        }.resume()
+    }
+
+    private func saveToPhotoLibrary(data: Data, fallbackFileName: String?) {
+        PHPhotoLibrary.shared().performChanges({
+            let request = PHAssetCreationRequest.forAsset()
+            let options = PHAssetResourceCreationOptions()
+            if let name = fallbackFileName {
+                options.originalFilename = name
+            }
+            request.addResource(with: .photo, data: data, options: options)
+        }) { [weak self] success, error in
+            DispatchQueue.main.async {
+                self?.setDownloadLoading(false)
+                if success {
+                    self?.presentAlert(title: "저장 완료", message: "사진 앱에 저장되었습니다.")
+                } else {
+                    self?.presentAlert(title: "저장 실패", message: error?.localizedDescription ?? "저장 중 오류가 발생했습니다.")
+                }
+            }
+        }
+    }
+
+    private func setDownloadLoading(_ isLoading: Bool) {
+        downloadButton.isEnabled = !isLoading
+        downloadButton.alpha = isLoading ? 0.5 : 1.0
+    }
+
+    private func presentAlert(title: String, message: String) {
+        let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "확인", style: .default))
+        present(alert, animated: true)
     }
 }
 
