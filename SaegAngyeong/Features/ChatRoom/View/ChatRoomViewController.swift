@@ -650,7 +650,8 @@ private final class ChatMessageCell: UITableViewCell {
             ["jpg", "jpeg", "png", "gif"].contains(url.pathExtension.lowercased())
         }
         let isImageBundle = hasFile && imageFileURLs.count == item.fileURLs.count
-        let isPlaceholderText = item.text.trimmingCharacters(in: .whitespacesAndNewlines) == "사진을 보냈습니다."
+        let trimmedText = item.text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let isPlaceholderText = trimmedText == "사진을 보냈습니다." || trimmedText == "파일을 보냈습니다."
         messageLabel.text = item.text
         timeLabel.text = item.timeText
         let isMine = item.isMine
@@ -658,7 +659,7 @@ private final class ChatMessageCell: UITableViewCell {
         nameLabel.isHidden = !(item.showName)
         avatarImageView.isHidden = !(item.showAvatar)
         timeLabel.isHidden = !(item.showTime)
-        let isImageOnly = isImageBundle && (isPlaceholderText || item.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        let isImageOnly = isImageBundle && (isPlaceholderText || trimmedText.isEmpty)
         bubbleView.backgroundColor = isImageBundle ? .clear : (isMine ? UIColor.brightTurquoise.withAlphaComponent(0.9) : .blackTurquoise)
         messageLabel.textColor = .gray30
         contentStack.snp.remakeConstraints { make in
@@ -681,11 +682,11 @@ private final class ChatMessageCell: UITableViewCell {
                 self.imageURLs = []
                 attachmentGridView.onTap = nil
             }
-            messageLabel.isHidden = isImageOnly || item.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            messageLabel.isHidden = isImageOnly || isPlaceholderText || trimmedText.isEmpty
         } else {
             attachmentGridView.isHidden = true
             fileRowView.isHidden = true
-            messageLabel.isHidden = item.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            messageLabel.isHidden = trimmedText.isEmpty
             self.imageURLs = []
             attachmentGridView.onTap = nil
         }

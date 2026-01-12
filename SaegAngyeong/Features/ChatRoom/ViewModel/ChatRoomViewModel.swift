@@ -297,12 +297,15 @@ final class ChatRoomViewModel: BaseViewModel, ViewModelType {
         #if DEBUG
         print("[ChatRoom] Upload files room=\(roomID) count=\(files.count)")
         #endif
+        let imageMimeTypes: Set<String> = ["image/jpeg", "image/png", "image/gif"]
+        let isImageOnly = files.allSatisfy { imageMimeTypes.contains($0.mimeType) }
+        let placeholderText = isImageOnly ? "사진을 보냈습니다." : "파일을 보냈습니다."
         chatRepository.uploadFiles(roomID: roomID, files: files)
             .flatMap { [weak self] urls -> AnyPublisher<ChatMessage, DomainError> in
                 guard let self else {
                     return Fail(error: DomainError.unknown(message: "deallocated")).eraseToAnyPublisher()
                 }
-                let draft = ChatMessageDraft(content: "사진을 보냈습니다.", fileURLs: urls)
+                let draft = ChatMessageDraft(content: placeholderText, fileURLs: urls)
                 return self.chatRepository.sendMessage(roomID: roomID, draft: draft)
             }
             .receive(on: DispatchQueue.main)
