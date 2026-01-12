@@ -29,6 +29,7 @@ final class ChatRoomViewController: BaseViewController<ChatRoomViewModel> {
     private let viewDidDisappearSubject = PassthroughSubject<Void, Never>()
     private lazy var tapGesture = UITapGestureRecognizer(target: self, action: #selector(dismissKeyboard))
     private var didInitialScroll = false
+    private var needsInitialScroll = false
     private var isRefreshing = false
     private let maxUploadBytes = 5 * 1024 * 1024
 
@@ -201,10 +202,14 @@ final class ChatRoomViewController: BaseViewController<ChatRoomViewModel> {
                 if self.didInitialScroll == false, items.isEmpty == false {
                     UIView.performWithoutAnimation {
                         self.tableView.reloadData()
-                        self.tableView.layoutIfNeeded()
-                        self.scrollToBottomSync()
                     }
-                    self.didInitialScroll = true
+                    self.needsInitialScroll = true
+                    DispatchQueue.main.async { [weak self] in
+                        guard let self, self.needsInitialScroll else { return }
+                        self.scrollToBottomSync()
+                        self.needsInitialScroll = false
+                        self.didInitialScroll = true
+                    }
                 } else {
                     self.tableView.reloadData()
                     if items.isEmpty == false {
@@ -364,6 +369,11 @@ final class ChatRoomViewController: BaseViewController<ChatRoomViewModel> {
     }
 
     private func scrollToBottomSync() {
+        guard items.isEmpty == false else { return }
+        tableView.layoutIfNeeded()
+        let lastRow = items.count - 1
+        let indexPath = IndexPath(row: lastRow, section: 0)
+        tableView.scrollToRow(at: indexPath, at: .bottom, animated: false)
         tableView.layoutIfNeeded()
         let contentHeight = tableView.contentSize.height
         let boundsHeight = tableView.bounds.height
