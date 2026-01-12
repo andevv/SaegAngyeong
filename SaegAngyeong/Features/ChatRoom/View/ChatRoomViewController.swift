@@ -34,6 +34,7 @@ final class ChatRoomViewController: BaseViewController<ChatRoomViewModel> {
     private let maxUploadBytes = 5 * 1024 * 1024
 
     var onImagePreview: (([URL], Int) -> Void)?
+    var onFilePreview: ((URL) -> Void)?
 
     private var imageHeaders: [String: String] {
         var headers: [String: String] = ["SeSACKey": AppConfig.apiKey]
@@ -471,6 +472,9 @@ extension ChatRoomViewController: UITableViewDataSource, UITableViewDelegate {
             cell.onImageTap = { [weak self] urls, index in
                 self?.onImagePreview?(urls, index)
             }
+            cell.onFileTap = { [weak self] url in
+                self?.onFilePreview?(url)
+            }
             return cell
         case .date(let text):
             guard let cell = tableView.dequeueReusableCell(withIdentifier: ChatDateSeparatorCell.reuseID, for: indexPath) as? ChatDateSeparatorCell else {
@@ -539,8 +543,10 @@ private final class ChatMessageCell: UITableViewCell {
     private let avatarImageView = UIImageView()
     private let bubbleInset = UIEdgeInsets(top: 10, left: 10, bottom: 10, right: 10)
     private var imageURLs: [URL] = []
+    private var filePreviewURL: URL?
 
     var onImageTap: (([URL], Int) -> Void)?
+    var onFileTap: ((URL) -> Void)?
     private var fileRowMinHeightConstraint: Constraint?
     private var fileRowFixedWidthConstraint: Constraint?
     private var fileRowFixedHeightConstraint: Constraint?
@@ -581,6 +587,7 @@ private final class ChatMessageCell: UITableViewCell {
         fileRowView.layoutMargins = .zero
         fileRowView.backgroundColor = .clear
         fileRowView.layer.cornerRadius = 0
+        fileRowView.isUserInteractionEnabled = true
 
         fileIconView.image = UIImage(systemName: "doc.fill")
         fileIconView.tintColor = .gray30
@@ -640,6 +647,9 @@ private final class ChatMessageCell: UITableViewCell {
         fileRowFixedWidthConstraint?.deactivate()
         fileRowFixedHeightConstraint?.deactivate()
 
+        let fileTap = UITapGestureRecognizer(target: self, action: #selector(handleFileTap))
+        fileRowView.addGestureRecognizer(fileTap)
+
         timeLabel.snp.makeConstraints { make in
             make.trailing.equalTo(bubbleView.snp.leading).offset(-6)
             make.bottom.equalTo(bubbleView).offset(-2)
@@ -656,7 +666,9 @@ private final class ChatMessageCell: UITableViewCell {
         attachmentGridView.prepareForReuse()
         fileNameLabel.text = nil
         self.imageURLs = []
+        filePreviewURL = nil
         onImageTap = nil
+        onFileTap = nil
     }
 
     func configure(with item: ChatMessageViewData, headers: [String: String]) {
@@ -694,10 +706,12 @@ private final class ChatMessageCell: UITableViewCell {
                     guard let self, index < self.imageURLs.count else { return }
                     self.onImageTap?(self.imageURLs, index)
                 }
+                filePreviewURL = nil
             } else {
                 fileNameLabel.text = fileURL?.lastPathComponent ?? "파일"
                 self.imageURLs = []
                 attachmentGridView.onTap = nil
+                self.filePreviewURL = fileURL
             }
             messageLabel.isHidden = isImageOnly || isPlaceholderText || trimmedText.isEmpty
             updateFileRowStyle(isFile: isFileBundle, fileURL: fileURL)
@@ -706,6 +720,7 @@ private final class ChatMessageCell: UITableViewCell {
             fileRowView.isHidden = true
             messageLabel.isHidden = trimmedText.isEmpty
             self.imageURLs = []
+            filePreviewURL = nil
             attachmentGridView.onTap = nil
             updateFileRowStyle(isFile: false, fileURL: nil)
         }
@@ -783,6 +798,11 @@ private final class ChatMessageCell: UITableViewCell {
             }
         }
         setNeedsLayout()
+    }
+
+    @objc private func handleFileTap() {
+        guard let url = filePreviewURL else { return }
+        onFileTap?(url)
     }
 
     private func updateFileRowStyle(isFile: Bool, fileURL: URL?) {
