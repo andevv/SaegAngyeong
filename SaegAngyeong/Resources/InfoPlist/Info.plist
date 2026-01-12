@@ -64,6 +64,8 @@
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>채팅 이미지 미리보기에서 사진을 저장하기 위해 사진 보관함 접근이 필요합니다.</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>Pretendard-Bold.otf</string>
