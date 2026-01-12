@@ -33,6 +33,8 @@ final class ChatRoomViewController: BaseViewController<ChatRoomViewModel> {
     private var isRefreshing = false
     private let maxUploadBytes = 5 * 1024 * 1024
 
+    var onImagePreview: (([URL], Int) -> Void)?
+
     private var imageHeaders: [String: String] {
         var headers: [String: String] = ["SeSACKey": AppConfig.apiKey]
         if let token = tokenStore.accessToken {
@@ -302,14 +304,6 @@ final class ChatRoomViewController: BaseViewController<ChatRoomViewModel> {
         present(alert, animated: true)
     }
 
-    private func presentImagePreview(urls: [URL], startIndex: Int) {
-        guard urls.isEmpty == false else { return }
-        let previewVC = ChatRoomImagePreviewViewController(urls: urls, startIndex: startIndex, headers: imageHeaders)
-        previewVC.modalPresentationStyle = .fullScreen
-        previewVC.modalTransitionStyle = .crossDissolve
-        present(previewVC, animated: true)
-    }
-
     private func scrollToBottom() {
         guard items.count > 0 else { return }
         let lastRow = items.count - 1
@@ -469,7 +463,7 @@ extension ChatRoomViewController: UITableViewDataSource, UITableViewDelegate {
             }
             cell.configure(with: message, headers: imageHeaders)
             cell.onImageTap = { [weak self] urls, index in
-                self?.presentImagePreview(urls: urls, startIndex: index)
+                self?.onImagePreview?(urls, index)
             }
             return cell
         case .date(let text):

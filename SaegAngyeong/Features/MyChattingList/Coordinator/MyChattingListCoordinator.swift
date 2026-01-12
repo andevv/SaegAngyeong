@@ -10,6 +10,7 @@ import UIKit
 final class MyChattingListCoordinator {
     private let dependency: AppDependency
     private let navigationController: BaseNavigationController
+    private var chatRoomCoordinator: ChatRoomCoordinator?
 
     init(dependency: AppDependency, navigationController: BaseNavigationController) {
         self.dependency = dependency
@@ -49,6 +50,12 @@ final class MyChattingListCoordinator {
             socketClient: socketClient
         )
         let viewController = ChatRoomViewController(viewModel: viewModel)
+        let coordinator = ChatRoomCoordinator(
+            dependency: dependency,
+            navigationController: navigationController
+        )
+        coordinator.bindPreview(to: viewController)
+        chatRoomCoordinator = coordinator
         navigationController.pushViewController(viewController, animated: true)
     }
 
