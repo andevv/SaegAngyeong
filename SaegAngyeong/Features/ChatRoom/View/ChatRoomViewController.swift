@@ -510,12 +510,13 @@ private final class ChatMessageCell: UITableViewCell {
     private let contentStack = UIStackView()
     private let nameLabel = UILabel()
     private let messageLabel = UILabel()
-    private let attachmentImageView = UIImageView()
+    private let attachmentGridView = ChatAttachmentGridView()
     private let fileRowView = UIStackView()
     private let fileIconView = UIImageView()
     private let fileNameLabel = UILabel()
     private let timeLabel = UILabel()
     private let avatarImageView = UIImageView()
+    private let bubbleInset = UIEdgeInsets(top: 10, left: 10, bottom: 10, right: 10)
 
     private var leadingConstraint: Constraint?
     private var trailingConstraint: Constraint?
@@ -542,10 +543,9 @@ private final class ChatMessageCell: UITableViewCell {
         messageLabel.setContentHuggingPriority(.required, for: .horizontal)
         messageLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
 
-        attachmentImageView.contentMode = .scaleAspectFill
-        attachmentImageView.clipsToBounds = true
-        attachmentImageView.layer.cornerRadius = 12
-        attachmentImageView.backgroundColor = .gray15
+        attachmentGridView.clipsToBounds = true
+        attachmentGridView.layer.cornerRadius = 12
+        attachmentGridView.backgroundColor = .black
 
         fileRowView.axis = .horizontal
         fileRowView.spacing = 8
@@ -574,7 +574,7 @@ private final class ChatMessageCell: UITableViewCell {
         bubbleView.addSubview(contentStack)
         fileRowView.addArrangedSubview(fileIconView)
         fileRowView.addArrangedSubview(fileNameLabel)
-        contentStack.addArrangedSubview(attachmentImageView)
+        contentStack.addArrangedSubview(attachmentGridView)
         contentStack.addArrangedSubview(fileRowView)
         contentStack.addArrangedSubview(messageLabel)
 
@@ -589,10 +589,10 @@ private final class ChatMessageCell: UITableViewCell {
         }
 
         contentStack.snp.makeConstraints { make in
-            make.edges.equalToSuperview().inset(10)
+            make.edges.equalToSuperview().inset(bubbleInset)
         }
 
-        attachmentImageView.snp.makeConstraints { make in
+        attachmentGridView.snp.makeConstraints { make in
             make.height.equalTo(140)
         }
 
@@ -613,15 +613,17 @@ private final class ChatMessageCell: UITableViewCell {
     override func prepareForReuse() {
         super.prepareForReuse()
         avatarImageView.image = nil
-        attachmentImageView.image = nil
+        attachmentGridView.prepareForReuse()
         fileNameLabel.text = nil
     }
 
     func configure(with item: ChatMessageViewData, headers: [String: String]) {
         let hasFile = item.fileURLs.isEmpty == false
         let fileURL = item.fileURLs.first
-        let fileExt = fileURL?.pathExtension.lowercased() ?? ""
-        let isImage = ["jpg", "jpeg", "png", "gif"].contains(fileExt)
+        let imageURLs = item.fileURLs.filter { url in
+            ["jpg", "jpeg", "png", "gif"].contains(url.pathExtension.lowercased())
+        }
+        let isImageBundle = hasFile && imageURLs.count == item.fileURLs.count
         let isPlaceholderText = item.text.trimmingCharacters(in: .whitespacesAndNewlines) == "사진을 보냈습니다."
         messageLabel.text = item.text
         timeLabel.text = item.timeText
@@ -630,30 +632,25 @@ private final class ChatMessageCell: UITableViewCell {
         nameLabel.isHidden = !(item.showName)
         avatarImageView.isHidden = !(item.showAvatar)
         timeLabel.isHidden = !(item.showTime)
-        bubbleView.backgroundColor = isMine ? UIColor.brightTurquoise.withAlphaComponent(0.9) : .blackTurquoise
-        messageLabel.textColor = isMine ? .gray30 : .gray30
+        let isImageOnly = isImageBundle && (isPlaceholderText || item.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        bubbleView.backgroundColor = isImageBundle ? .clear : (isMine ? UIColor.brightTurquoise.withAlphaComponent(0.9) : .blackTurquoise)
+        messageLabel.textColor = .gray30
+        contentStack.snp.remakeConstraints { make in
+            make.edges.equalToSuperview().inset(isImageBundle ? .zero : bubbleInset)
+        }
+        attachmentGridView.layer.cornerRadius = isImageBundle ? 16 : 12
 
         if hasFile {
-            attachmentImageView.isHidden = !isImage
-            fileRowView.isHidden = isImage
-            if isImage, let url = fileURL {
-                KingfisherHelper.setImage(
-                    attachmentImageView,
-                    url: url,
-                    headers: headers,
-                    placeholder: nil,
-                    logLabel: "chat-attachment"
-                )
+            attachmentGridView.isHidden = !isImageBundle
+            fileRowView.isHidden = isImageBundle
+            if isImageBundle {
+                attachmentGridView.configure(urls: imageURLs, headers: headers)
             } else {
                 fileNameLabel.text = fileURL?.lastPathComponent ?? "파일"
             }
-            if isPlaceholderText {
-                messageLabel.isHidden = true
-            } else {
-                messageLabel.isHidden = item.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            }
+            messageLabel.isHidden = isImageOnly || item.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         } else {
-            attachmentImageView.isHidden = true
+            attachmentGridView.isHidden = true
             fileRowView.isHidden = true
             messageLabel.isHidden = item.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         }
@@ -719,5 +716,152 @@ private final class ChatMessageCell: UITableViewCell {
             }
         }
         setNeedsLayout()
+    }
+}
+
+private final class ChatAttachmentGridView: UIView {
+    private enum LayoutCount: Int {
+        case one = 1
+        case two = 2
+        case three = 3
+        case four = 4
+        case five = 5
+    }
+
+    private let spacing: CGFloat = 2
+    private let imageViews: [UIImageView] = (0..<5).map { _ in UIImageView() }
+    private let overlayView = UIView()
+    private let overlayLabel = UILabel()
+    private var currentLayout: LayoutCount?
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        backgroundColor = .black
+        imageViews.forEach { imageView in
+            imageView.contentMode = .scaleAspectFill
+            imageView.clipsToBounds = true
+            imageView.layer.cornerRadius = 10
+            imageView.backgroundColor = .black
+        }
+        overlayView.backgroundColor = UIColor.black.withAlphaComponent(0.5)
+        overlayLabel.font = .pretendard(.medium, size: 16)
+        overlayLabel.textColor = .white
+        overlayLabel.textAlignment = .center
+        overlayView.addSubview(overlayLabel)
+        overlayLabel.snp.makeConstraints { make in
+            make.edges.equalToSuperview()
+        }
+        prepareForReuse()
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    func prepareForReuse() {
+        currentLayout = nil
+        imageViews.forEach { imageView in
+            imageView.image = nil
+            imageView.isHidden = true
+        }
+        overlayView.removeFromSuperview()
+        overlayLabel.text = nil
+        overlayView.isHidden = true
+    }
+
+    func configure(urls: [URL], headers: [String: String]) {
+        guard let layout = LayoutCount(rawValue: min(urls.count, imageViews.count)) else {
+            prepareForReuse()
+            return
+        }
+        if layout != currentLayout {
+            rebuildLayout(for: layout)
+        }
+        currentLayout = layout
+
+        let visibleCount: Int
+        switch layout {
+        case .five:
+            visibleCount = 4
+        default:
+            visibleCount = min(urls.count, imageViews.count)
+        }
+        for (index, imageView) in imageViews.enumerated() {
+            let isVisible = index < visibleCount
+            imageView.isHidden = !isVisible
+            if isVisible {
+                KingfisherHelper.setImage(
+                    imageView,
+                    url: urls[index],
+                    headers: headers,
+                    placeholder: nil,
+                    logLabel: "chat-attachment"
+                )
+            }
+        }
+        updateOverlay(totalCount: urls.count)
+    }
+
+    private func rebuildLayout(for layout: LayoutCount) {
+        subviews.forEach { $0.removeFromSuperview() }
+        overlayView.removeFromSuperview()
+
+        switch layout {
+        case .one:
+            addSubview(imageViews[0])
+            imageViews[0].snp.makeConstraints { make in
+                make.edges.equalToSuperview()
+            }
+        case .two:
+            let stack = makeStack(axis: .horizontal, views: [imageViews[0], imageViews[1]])
+            addSubview(stack)
+            stack.snp.makeConstraints { make in
+                make.edges.equalToSuperview()
+            }
+        case .three:
+            let rightStack = makeStack(axis: .vertical, views: [imageViews[1], imageViews[2]])
+            let container = makeStack(axis: .horizontal, views: [imageViews[0], rightStack])
+            container.distribution = .fill
+            addSubview(container)
+            container.snp.makeConstraints { make in
+                make.edges.equalToSuperview()
+            }
+            imageViews[0].snp.makeConstraints { make in
+                make.width.equalTo(rightStack.snp.width).multipliedBy(2.0)
+            }
+        case .four, .five:
+            let topRow = makeStack(axis: .horizontal, views: [imageViews[0], imageViews[1]])
+            let bottomRow = makeStack(axis: .horizontal, views: [imageViews[2], imageViews[3]])
+            let container = makeStack(axis: .vertical, views: [topRow, bottomRow])
+            addSubview(container)
+            container.snp.makeConstraints { make in
+                make.edges.equalToSuperview()
+            }
+        }
+    }
+
+    private func updateOverlay(totalCount: Int) {
+        let extraCount = totalCount - 4
+        if extraCount > 0 {
+            let targetView = imageViews[3]
+            targetView.addSubview(overlayView)
+            overlayView.snp.makeConstraints { make in
+                make.edges.equalToSuperview()
+            }
+            overlayLabel.text = "+\(extraCount)"
+            overlayView.isHidden = false
+        } else {
+            overlayView.removeFromSuperview()
+            overlayLabel.text = nil
+            overlayView.isHidden = true
+        }
+    }
+
+    private func makeStack(axis: NSLayoutConstraint.Axis, views: [UIView]) -> UIStackView {
+        let stack = UIStackView(arrangedSubviews: views)
+        stack.axis = axis
+        stack.spacing = spacing
+        stack.distribution = .fillEqually
+        return stack
     }
 }
