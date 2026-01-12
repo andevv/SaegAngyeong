@@ -593,7 +593,7 @@ private final class ChatMessageCell: UITableViewCell {
         }
 
         attachmentGridView.snp.makeConstraints { make in
-            make.height.equalTo(140)
+            make.height.equalTo(180)
         }
 
         fileIconView.snp.makeConstraints { make in
@@ -657,6 +657,10 @@ private final class ChatMessageCell: UITableViewCell {
         let groupSpacing: CGFloat = item.isGroupStart ? 4 : 0
         let bubbleTopOffset: CGFloat = groupSpacing
         let nameTopOffset: CGFloat = 4 + groupSpacing
+        let bubbleWidthMultiplier: CGFloat = isImageBundle ? 0.7 : 0.7
+        let bubbleSideInset: CGFloat = isImageBundle ? 12 : 16
+        let bubbleMinLeading: CGFloat = isImageBundle ? 24 : 72
+        let bubbleMaxTrailing: CGFloat = isImageBundle ? 24 : 72
         if isMine {
             avatarImageView.snp.remakeConstraints { make in
                 make.leading.equalToSuperview().offset(16)
@@ -669,9 +673,13 @@ private final class ChatMessageCell: UITableViewCell {
             bubbleView.snp.remakeConstraints { make in
                 make.top.equalToSuperview().offset(bubbleTopOffset)
                 make.bottom.equalToSuperview().offset(-6)
-                make.trailing.equalToSuperview().inset(16)
-                make.leading.greaterThanOrEqualToSuperview().offset(72)
-                make.width.lessThanOrEqualToSuperview().multipliedBy(0.7)
+                make.trailing.equalToSuperview().inset(bubbleSideInset)
+                make.leading.greaterThanOrEqualToSuperview().offset(bubbleMinLeading)
+                if isImageBundle {
+                    make.width.equalToSuperview().multipliedBy(bubbleWidthMultiplier)
+                } else {
+                    make.width.lessThanOrEqualToSuperview().multipliedBy(bubbleWidthMultiplier)
+                }
             }
             timeLabel.snp.remakeConstraints { make in
                 make.trailing.equalTo(bubbleView.snp.leading).offset(-6)
@@ -696,8 +704,12 @@ private final class ChatMessageCell: UITableViewCell {
                 }
                 make.bottom.equalToSuperview().offset(-6)
                 make.leading.equalTo(avatarImageView.snp.trailing).offset(8)
-                make.trailing.lessThanOrEqualToSuperview().inset(72)
-                make.width.lessThanOrEqualToSuperview().multipliedBy(0.7)
+                make.trailing.lessThanOrEqualToSuperview().inset(bubbleMaxTrailing)
+                if isImageBundle {
+                    make.width.equalToSuperview().multipliedBy(bubbleWidthMultiplier)
+                } else {
+                    make.width.lessThanOrEqualToSuperview().multipliedBy(bubbleWidthMultiplier)
+                }
             }
             timeLabel.snp.remakeConstraints { make in
                 make.leading.equalTo(bubbleView.snp.trailing).offset(6)
