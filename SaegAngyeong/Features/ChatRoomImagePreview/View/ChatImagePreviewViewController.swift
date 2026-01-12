@@ -114,6 +114,12 @@ extension ChatRoomImagePreviewViewController: UICollectionViewDataSource, UIColl
             return UICollectionViewCell()
         }
         cell.configure(url: urls[indexPath.item], headers: headers)
+        cell.onZoomChanged = { [weak self] isZoomed in
+            guard let self else { return }
+            if self.currentIndex() == indexPath.item {
+                self.collectionView.isScrollEnabled = !isZoomed
+            }
+        }
         return cell
     }
 
@@ -138,25 +144,52 @@ extension ChatRoomImagePreviewViewController: UICollectionViewDataSource, UIColl
         let index = Int(round(collectionView.contentOffset.x / pageWidth))
         updateIndexLabel(for: max(0, min(index, urls.count - 1)))
     }
+
+    private func currentIndex() -> Int {
+        let pageWidth = max(collectionView.bounds.width, 1)
+        return Int(round(collectionView.contentOffset.x / pageWidth))
+    }
 }
 
 private final class ChatImagePreviewCell: UICollectionViewCell {
     static let reuseID = "ChatImagePreviewCell"
 
+    private let scrollView = UIScrollView()
     private let imageView = UIImageView()
+    var onZoomChanged: ((Bool) -> Void)?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
         backgroundColor = .black
 
+        scrollView.backgroundColor = .black
+        scrollView.minimumZoomScale = 1.0
+        scrollView.maximumZoomScale = 3.0
+        scrollView.showsHorizontalScrollIndicator = false
+        scrollView.showsVerticalScrollIndicator = false
+        scrollView.delegate = self
+        scrollView.bounces = false
+        scrollView.bouncesZoom = false
+
         imageView.contentMode = .scaleAspectFit
         imageView.clipsToBounds = true
         imageView.backgroundColor = .black
 
-        contentView.addSubview(imageView)
-        imageView.snp.makeConstraints { make in
+        contentView.addSubview(scrollView)
+        scrollView.addSubview(imageView)
+
+        scrollView.snp.makeConstraints { make in
             make.edges.equalToSuperview()
         }
+
+        imageView.snp.makeConstraints { make in
+            make.edges.equalToSuperview()
+            make.width.height.equalToSuperview()
+        }
+
+        let doubleTap = UITapGestureRecognizer(target: self, action: #selector(handleDoubleTap(_:)))
+        doubleTap.numberOfTapsRequired = 2
+        scrollView.addGestureRecognizer(doubleTap)
     }
 
     @available(*, unavailable)
@@ -167,9 +200,15 @@ private final class ChatImagePreviewCell: UICollectionViewCell {
     override func prepareForReuse() {
         super.prepareForReuse()
         imageView.image = nil
+        scrollView.setZoomScale(1.0, animated: false)
+        scrollView.contentInset = .zero
+        onZoomChanged?(false)
+        onZoomChanged = nil
     }
 
     func configure(url: URL, headers: [String: String]) {
+        scrollView.setZoomScale(1.0, animated: false)
+        scrollView.contentInset = .zero
         KingfisherHelper.setImage(
             imageView,
             url: url,
@@ -177,5 +216,57 @@ private final class ChatImagePreviewCell: UICollectionViewCell {
             placeholder: nil,
             logLabel: "chat-preview"
         )
+    }
+
+    @objc private func handleDoubleTap(_ gesture: UITapGestureRecognizer) {
+        let targetScale: CGFloat = scrollView.zoomScale > 1.0 ? 1.0 : 2.5
+        if targetScale == 1.0 {
+            scrollView.setZoomScale(1.0, animated: true)
+            return
+        }
+        let location = gesture.location(in: imageView)
+        let zoomRect = zoomRect(for: targetScale, center: location)
+        scrollView.zoom(to: zoomRect, animated: true)
+    }
+
+    private func zoomRect(for scale: CGFloat, center: CGPoint) -> CGRect {
+        let size = CGSize(
+            width: scrollView.bounds.width / scale,
+            height: scrollView.bounds.height / scale
+        )
+        let origin = CGPoint(
+            x: center.x - size.width / 2.0,
+            y: center.y - size.height / 2.0
+        )
+        return CGRect(origin: origin, size: size)
+    }
+}
+
+extension ChatImagePreviewCell: UIScrollViewDelegate {
+    func viewForZooming(in scrollView: UIScrollView) -> UIView? {
+        imageView
+    }
+
+    func scrollViewDidZoom(_ scrollView: UIScrollView) {
+        scrollView.contentInset = .zero
+        clampContentOffset()
+        onZoomChanged?(scrollView.zoomScale > 1.0)
+    }
+
+    func scrollViewDidEndZooming(_ scrollView: UIScrollView, with view: UIView?, atScale scale: CGFloat) {
+        scrollView.contentInset = .zero
+        clampContentOffset()
+        onZoomChanged?(scale > 1.0)
+    }
+
+    private func clampContentOffset() {
+        let maxOffsetX = max(0, scrollView.contentSize.width - scrollView.bounds.width)
+        let maxOffsetY = max(0, scrollView.contentSize.height - scrollView.bounds.height)
+        var offset = scrollView.contentOffset
+        offset.x = min(max(0, offset.x), maxOffsetX)
+        offset.y = min(max(0, offset.y), maxOffsetY)
+        if offset != scrollView.contentOffset {
+            scrollView.setContentOffset(offset, animated: false)
+        }
     }
 }
