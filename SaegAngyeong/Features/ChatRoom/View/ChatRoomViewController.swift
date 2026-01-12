@@ -60,7 +60,9 @@ final class ChatRoomViewController: BaseViewController<ChatRoomViewModel> {
         super.viewDidDisappear(animated)
         tabBarController?.tabBar.isHidden = false
         stopKeyboardObservers()
-        viewDidDisappearSubject.send(())
+        if isMovingFromParent || isBeingDismissed {
+            viewDidDisappearSubject.send(())
+        }
     }
 
     override func viewWillDisappear(_ animated: Bool) {
