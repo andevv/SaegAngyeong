@@ -9,22 +9,36 @@ import UIKit
 import SnapKit
 import Combine
 import Kingfisher
+import PhotosUI
+import UniformTypeIdentifiers
 
 final class ChatRoomViewController: BaseViewController<ChatRoomViewModel> {
     private let tableView = UITableView(frame: .zero, style: .plain)
     private let inputContainer = UIView()
+    private let attachButton = UIButton(type: .system)
     private let messageField = UITextField()
     private let sendButton = UIButton(type: .system)
     private var keyboardObservers: [NSObjectProtocol] = []
+    private let tokenStore = TokenStore()
 
     private var items: [ChatRoomItem] = []
     private let viewDidLoadSubject = PassthroughSubject<Void, Never>()
     private let refreshSubject = PassthroughSubject<Void, Never>()
     private let sendSubject = PassthroughSubject<String, Never>()
+    private let uploadFilesSubject = PassthroughSubject<[UploadFileData], Never>()
     private let viewDidDisappearSubject = PassthroughSubject<Void, Never>()
     private lazy var tapGesture = UITapGestureRecognizer(target: self, action: #selector(dismissKeyboard))
     private var didInitialScroll = false
     private var isRefreshing = false
+    private let maxUploadBytes = 5 * 1024 * 1024
+
+    private var imageHeaders: [String: String] {
+        var headers: [String: String] = ["SeSACKey": AppConfig.apiKey]
+        if let token = tokenStore.accessToken {
+            headers["Authorization"] = token
+        }
+        return headers
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -87,6 +101,16 @@ final class ChatRoomViewController: BaseViewController<ChatRoomViewModel> {
 
         inputContainer.backgroundColor = .black
 
+        attachButton.setTitle(nil, for: .normal)
+        attachButton.setImage(UIImage(systemName: "plus"), for: .normal)
+        attachButton.tintColor = .gray30
+        attachButton.imageView?.contentMode = .scaleAspectFit
+        attachButton.contentHorizontalAlignment = .center
+        attachButton.contentVerticalAlignment = .center
+        attachButton.backgroundColor = .blackTurquoise
+        attachButton.layer.cornerRadius = 16
+        attachButton.addTarget(self, action: #selector(attachTapped), for: .touchUpInside)
+
         messageField.textColor = .gray30
         messageField.font = .pretendard(.regular, size: 13)
         messageField.attributedPlaceholder = NSAttributedString(
@@ -109,6 +133,7 @@ final class ChatRoomViewController: BaseViewController<ChatRoomViewModel> {
 
         view.addSubview(tableView)
         view.addSubview(inputContainer)
+        inputContainer.addSubview(attachButton)
         inputContainer.addSubview(messageField)
         inputContainer.addSubview(sendButton)
 
@@ -124,9 +149,15 @@ final class ChatRoomViewController: BaseViewController<ChatRoomViewModel> {
             make.height.equalTo(64)
         }
 
+        attachButton.snp.makeConstraints { make in
+            make.leading.equalToSuperview().offset(16)
+            make.centerY.equalToSuperview()
+            make.width.height.equalTo(32)
+        }
+
         messageField.snp.makeConstraints { make in
             make.centerY.equalToSuperview()
-            make.leading.equalToSuperview().offset(16)
+            make.leading.equalTo(attachButton.snp.trailing).offset(8)
             make.trailing.equalTo(sendButton.snp.leading).offset(-12)
             make.height.equalTo(36)
         }
@@ -149,6 +180,7 @@ final class ChatRoomViewController: BaseViewController<ChatRoomViewModel> {
             viewDidLoad: viewDidLoadSubject.eraseToAnyPublisher(),
             refresh: refreshSubject.eraseToAnyPublisher(),
             sendText: sendSubject.eraseToAnyPublisher(),
+            uploadFiles: uploadFilesSubject.eraseToAnyPublisher(),
             viewDidDisappear: viewDidDisappearSubject.eraseToAnyPublisher()
         )
         let output = viewModel.transform(input: input)
@@ -216,6 +248,53 @@ final class ChatRoomViewController: BaseViewController<ChatRoomViewModel> {
         let text = messageField.text ?? ""
         messageField.text = ""
         sendSubject.send(text)
+    }
+
+    @objc private func attachTapped() {
+        let sheet = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
+        sheet.addAction(UIAlertAction(title: "사진 선택", style: .default) { [weak self] _ in
+            self?.presentPhotoPicker()
+        })
+        sheet.addAction(UIAlertAction(title: "PDF 선택", style: .default) { [weak self] _ in
+            self?.presentDocumentPicker()
+        })
+        sheet.addAction(UIAlertAction(title: "취소", style: .cancel))
+        present(sheet, animated: true)
+    }
+
+    private func presentPhotoPicker() {
+        var config = PHPickerConfiguration(photoLibrary: .shared())
+        config.selectionLimit = 5
+        config.filter = .any(of: [.images, .livePhotos])
+        let picker = PHPickerViewController(configuration: config)
+        picker.delegate = self
+        present(picker, animated: true)
+    }
+
+    private func presentDocumentPicker() {
+        let picker = UIDocumentPickerViewController(forOpeningContentTypes: [UTType.pdf], asCopy: true)
+        picker.allowsMultipleSelection = true
+        picker.delegate = self
+        present(picker, animated: true)
+    }
+
+    private func uploadSelectedFiles(_ files: [UploadFileData]) {
+        guard files.isEmpty == false else { return }
+        if files.count > 5 {
+            presentAlert(title: "업로드 실패", message: "최대 5개까지 업로드할 수 있어요.")
+            return
+        }
+        for file in files where file.data.count > maxUploadBytes {
+            presentAlert(title: "업로드 실패", message: "파일 용량은 5MB 이하만 가능합니다.")
+            return
+        }
+        uploadFilesSubject.send(files)
+    }
+
+    private func presentAlert(title: String, message: String) {
+        let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "확인", style: .default))
+        present(alert, animated: true)
     }
 
     private func scrollToBottom() {
@@ -303,6 +382,62 @@ extension ChatRoomViewController: UIGestureRecognizerDelegate {
     }
 }
 
+extension ChatRoomViewController: PHPickerViewControllerDelegate {
+    func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
+        picker.dismiss(animated: true)
+        guard results.isEmpty == false else { return }
+        var uploads: [UploadFileData] = []
+        let group = DispatchGroup()
+        for result in results {
+            let provider = result.itemProvider
+            group.enter()
+            if provider.hasItemConformingToTypeIdentifier(UTType.gif.identifier) {
+                provider.loadDataRepresentation(forTypeIdentifier: UTType.gif.identifier) { data, _ in
+                    if let data {
+                        uploads.append(UploadFileData(data: data, fileName: "chat_image_\(UUID().uuidString).gif", mimeType: "image/gif"))
+                    }
+                    group.leave()
+                }
+            } else if provider.hasItemConformingToTypeIdentifier(UTType.png.identifier) {
+                provider.loadDataRepresentation(forTypeIdentifier: UTType.png.identifier) { data, _ in
+                    if let data {
+                        uploads.append(UploadFileData(data: data, fileName: "chat_image_\(UUID().uuidString).png", mimeType: "image/png"))
+                    }
+                    group.leave()
+                }
+            } else if provider.hasItemConformingToTypeIdentifier(UTType.jpeg.identifier) {
+                provider.loadDataRepresentation(forTypeIdentifier: UTType.jpeg.identifier) { data, _ in
+                    if let data {
+                        uploads.append(UploadFileData(data: data, fileName: "chat_image_\(UUID().uuidString).jpg", mimeType: "image/jpeg"))
+                    }
+                    group.leave()
+                }
+            } else {
+                provider.loadObject(ofClass: UIImage.self) { object, _ in
+                    if let image = object as? UIImage, let data = image.jpegData(compressionQuality: 0.85) {
+                        uploads.append(UploadFileData(data: data, fileName: "chat_image_\(UUID().uuidString).jpg", mimeType: "image/jpeg"))
+                    }
+                    group.leave()
+                }
+            }
+        }
+        group.notify(queue: .main) { [weak self] in
+            self?.uploadSelectedFiles(uploads)
+        }
+    }
+}
+
+extension ChatRoomViewController: UIDocumentPickerDelegate {
+    func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+        let uploads: [UploadFileData] = urls.compactMap { url in
+            guard let data = try? Data(contentsOf: url) else { return nil }
+            let name = url.lastPathComponent
+            return UploadFileData(data: data, fileName: name, mimeType: "application/pdf")
+        }
+        uploadSelectedFiles(uploads)
+    }
+}
+
 extension ChatRoomViewController: UITableViewDataSource, UITableViewDelegate {
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         items.count
@@ -314,7 +449,7 @@ extension ChatRoomViewController: UITableViewDataSource, UITableViewDelegate {
             guard let cell = tableView.dequeueReusableCell(withIdentifier: ChatMessageCell.reuseID, for: indexPath) as? ChatMessageCell else {
                 return UITableViewCell()
             }
-            cell.configure(with: message)
+            cell.configure(with: message, headers: imageHeaders)
             return cell
         case .date(let text):
             guard let cell = tableView.dequeueReusableCell(withIdentifier: ChatDateSeparatorCell.reuseID, for: indexPath) as? ChatDateSeparatorCell else {
@@ -372,8 +507,13 @@ private final class ChatMessageCell: UITableViewCell {
     static let reuseID = "ChatMessageCell"
 
     private let bubbleView = UIView()
+    private let contentStack = UIStackView()
     private let nameLabel = UILabel()
     private let messageLabel = UILabel()
+    private let attachmentImageView = UIImageView()
+    private let fileRowView = UIStackView()
+    private let fileIconView = UIImageView()
+    private let fileNameLabel = UILabel()
     private let timeLabel = UILabel()
     private let avatarImageView = UIImageView()
 
@@ -389,6 +529,10 @@ private final class ChatMessageCell: UITableViewCell {
         bubbleView.layer.cornerRadius = 16
         bubbleView.backgroundColor = .blackTurquoise
 
+        contentStack.axis = .vertical
+        contentStack.spacing = 6
+        contentStack.alignment = .fill
+
         nameLabel.font = .pretendard(.medium, size: 10)
         nameLabel.textColor = .gray60
 
@@ -397,6 +541,23 @@ private final class ChatMessageCell: UITableViewCell {
         messageLabel.numberOfLines = 0
         messageLabel.setContentHuggingPriority(.required, for: .horizontal)
         messageLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
+
+        attachmentImageView.contentMode = .scaleAspectFill
+        attachmentImageView.clipsToBounds = true
+        attachmentImageView.layer.cornerRadius = 12
+        attachmentImageView.backgroundColor = .gray15
+
+        fileRowView.axis = .horizontal
+        fileRowView.spacing = 8
+        fileRowView.alignment = .center
+
+        fileIconView.image = UIImage(systemName: "doc.fill")
+        fileIconView.tintColor = .gray30
+        fileIconView.setContentHuggingPriority(.required, for: .horizontal)
+
+        fileNameLabel.font = .pretendard(.regular, size: 12)
+        fileNameLabel.textColor = .gray30
+        fileNameLabel.numberOfLines = 1
 
         timeLabel.font = .pretendard(.regular, size: 10)
         timeLabel.textColor = .gray60
@@ -410,7 +571,12 @@ private final class ChatMessageCell: UITableViewCell {
         contentView.addSubview(nameLabel)
         contentView.addSubview(timeLabel)
         contentView.addSubview(avatarImageView)
-        bubbleView.addSubview(messageLabel)
+        bubbleView.addSubview(contentStack)
+        fileRowView.addArrangedSubview(fileIconView)
+        fileRowView.addArrangedSubview(fileNameLabel)
+        contentStack.addArrangedSubview(attachmentImageView)
+        contentStack.addArrangedSubview(fileRowView)
+        contentStack.addArrangedSubview(messageLabel)
 
         avatarImageView.snp.makeConstraints { make in
             make.leading.equalToSuperview().offset(16)
@@ -422,8 +588,16 @@ private final class ChatMessageCell: UITableViewCell {
             make.bottom.equalToSuperview().offset(-6)
         }
 
-        messageLabel.snp.makeConstraints { make in
+        contentStack.snp.makeConstraints { make in
             make.edges.equalToSuperview().inset(10)
+        }
+
+        attachmentImageView.snp.makeConstraints { make in
+            make.height.equalTo(140)
+        }
+
+        fileIconView.snp.makeConstraints { make in
+            make.width.height.equalTo(18)
         }
 
         timeLabel.snp.makeConstraints { make in
@@ -439,10 +613,17 @@ private final class ChatMessageCell: UITableViewCell {
     override func prepareForReuse() {
         super.prepareForReuse()
         avatarImageView.image = nil
+        attachmentImageView.image = nil
+        fileNameLabel.text = nil
     }
 
-    func configure(with item: ChatMessageViewData) {
-        messageLabel.text = item.text.isEmpty ? "사진을 보냈습니다." : item.text
+    func configure(with item: ChatMessageViewData, headers: [String: String]) {
+        let hasFile = item.fileURLs.isEmpty == false
+        let fileURL = item.fileURLs.first
+        let fileExt = fileURL?.pathExtension.lowercased() ?? ""
+        let isImage = ["jpg", "jpeg", "png", "gif"].contains(fileExt)
+        let isPlaceholderText = item.text.trimmingCharacters(in: .whitespacesAndNewlines) == "사진을 보냈습니다."
+        messageLabel.text = item.text
         timeLabel.text = item.timeText
         let isMine = item.isMine
         nameLabel.text = isMine ? nil : item.senderName
@@ -451,6 +632,31 @@ private final class ChatMessageCell: UITableViewCell {
         timeLabel.isHidden = !(item.showTime)
         bubbleView.backgroundColor = isMine ? UIColor.brightTurquoise.withAlphaComponent(0.9) : .blackTurquoise
         messageLabel.textColor = isMine ? .gray30 : .gray30
+
+        if hasFile {
+            attachmentImageView.isHidden = !isImage
+            fileRowView.isHidden = isImage
+            if isImage, let url = fileURL {
+                KingfisherHelper.setImage(
+                    attachmentImageView,
+                    url: url,
+                    headers: headers,
+                    placeholder: nil,
+                    logLabel: "chat-attachment"
+                )
+            } else {
+                fileNameLabel.text = fileURL?.lastPathComponent ?? "파일"
+            }
+            if isPlaceholderText {
+                messageLabel.isHidden = true
+            } else {
+                messageLabel.isHidden = item.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            }
+        } else {
+            attachmentImageView.isHidden = true
+            fileRowView.isHidden = true
+            messageLabel.isHidden = item.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
         let groupSpacing: CGFloat = item.isGroupStart ? 4 : 0
         let bubbleTopOffset: CGFloat = groupSpacing
         let nameTopOffset: CGFloat = 4 + groupSpacing
@@ -504,7 +710,7 @@ private final class ChatMessageCell: UITableViewCell {
                 KingfisherHelper.setImage(
                     avatarImageView,
                     url: url,
-                    headers: [:],
+                    headers: headers,
                     placeholder: UIImage(named: "Profile_Empty"),
                     logLabel: "chat-avatar"
                 )

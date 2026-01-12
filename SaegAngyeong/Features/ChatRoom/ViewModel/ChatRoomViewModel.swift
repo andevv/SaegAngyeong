@@ -20,6 +20,7 @@ final class ChatRoomViewModel: BaseViewModel, ViewModelType {
         let viewDidLoad: AnyPublisher<Void, Never>
         let refresh: AnyPublisher<Void, Never>
         let sendText: AnyPublisher<String, Never>
+        let uploadFiles: AnyPublisher<[UploadFileData], Never>
         let viewDidDisappear: AnyPublisher<Void, Never>
     }
 
@@ -77,6 +78,12 @@ final class ChatRoomViewModel: BaseViewModel, ViewModelType {
         input.sendText
             .sink { [weak self] text in
                 self?.send(text: text)
+            }
+            .store(in: &cancellables)
+
+        input.uploadFiles
+            .sink { [weak self] files in
+                self?.upload(files: files)
             }
             .store(in: &cancellables)
 
@@ -285,6 +292,36 @@ final class ChatRoomViewModel: BaseViewModel, ViewModelType {
             .store(in: &cancellables)
     }
 
+    private func upload(files: [UploadFileData]) {
+        guard let roomID, files.isEmpty == false else { return }
+        #if DEBUG
+        print("[ChatRoom] Upload files room=\(roomID) count=\(files.count)")
+        #endif
+        chatRepository.uploadFiles(roomID: roomID, files: files)
+            .flatMap { [weak self] urls -> AnyPublisher<ChatMessage, DomainError> in
+                guard let self else {
+                    return Fail(error: DomainError.unknown(message: "deallocated")).eraseToAnyPublisher()
+                }
+                let draft = ChatMessageDraft(content: "사진을 보냈습니다.", fileURLs: urls)
+                return self.chatRepository.sendMessage(roomID: roomID, draft: draft)
+            }
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] completion in
+                if case let .failure(error) = completion {
+                    self?.error.send(error)
+                }
+            } receiveValue: { [weak self] message in
+                guard let self else { return }
+                if !self.localStore.contains(messageID: message.id) {
+                    #if DEBUG
+                    print("[ChatRoom] Upload saved id=\(message.id)")
+                    #endif
+                    self.localStore.save(messages: [message])
+                }
+            }
+            .store(in: &cancellables)
+    }
+
     private func mapToViewData(from messages: [ChatMessage]) -> [ChatRoomItem] {
         let timeFormatter = DateFormatter()
         timeFormatter.locale = Locale(identifier: "ko_KR")
@@ -307,14 +344,7 @@ final class ChatRoomViewModel: BaseViewModel, ViewModelType {
             let next = index + 1 < messages.count ? messages[index + 1] : nil
             let isGroupStart = isSameGroup(prev, message) == false
             let isGroupEnd = isSameGroup(next, message) == false
-            let text: String
-            if let content = message.content, !content.isEmpty {
-                text = content
-            } else if message.fileURLs.isEmpty == false {
-                text = "사진을 보냈습니다."
-            } else {
-                text = ""
-            }
+            let text = message.content ?? ""
             let viewData = ChatMessageViewData(
                 id: message.id,
                 text: text,
@@ -322,6 +352,7 @@ final class ChatRoomViewModel: BaseViewModel, ViewModelType {
                 isMine: isMine,
                 avatarURL: message.sender.profileImageURL,
                 senderName: message.sender.name ?? message.sender.nick,
+                fileURLs: message.fileURLs,
                 showAvatar: isMine == false && isGroupStart,
                 showName: isMine == false && isGroupStart,
                 showTime: isGroupEnd,
@@ -391,6 +422,7 @@ struct ChatMessageViewData {
     let isMine: Bool
     let avatarURL: URL?
     let senderName: String
+    let fileURLs: [URL]
     let showAvatar: Bool
     let showName: Bool
     let showTime: Bool

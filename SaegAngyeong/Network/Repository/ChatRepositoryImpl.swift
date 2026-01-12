@@ -114,7 +114,13 @@ final class ChatRepositoryImpl: ChatRepository {
     }
 
     func uploadFiles(roomID: String, files: [UploadFileData]) -> AnyPublisher<[URL], DomainError> {
-        Fail(error: DomainError.unknown(message: "Not implemented"))
+        let uploadFiles = files.map { UploadFile(data: $0.data, fileName: $0.fileName, mimeType: $0.mimeType) }
+        return network.request(ChatFileUploadResponseDTO.self, endpoint: ChatAPI.uploadFiles(roomID: roomID, files: uploadFiles))
+            .mapError { _ in DomainError.network }
+            .map { [weak self] dto in
+                guard let self else { return [] }
+                return dto.files.compactMap { self.buildURL(from: $0) }
+            }
             .eraseToAnyPublisher()
     }
 }

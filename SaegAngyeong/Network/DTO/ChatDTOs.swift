@@ -87,3 +87,7 @@ struct ChatMessageListResponseDTO: Decodable {
         case nextCursor = "next_cursor"
     }
 }
+
+struct ChatFileUploadResponseDTO: Decodable {
+    let files: [String]
+}
