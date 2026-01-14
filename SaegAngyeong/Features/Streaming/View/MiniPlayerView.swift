@@ -24,7 +24,7 @@ final class MiniPlayerView: UIView, UIGestureRecognizerDelegate {
 
     override init(frame: CGRect) {
         super.init(frame: frame)
-        backgroundColor = .black
+        backgroundColor = .blackTurquoise
         layer.cornerRadius = 14
         clipsToBounds = true
 
