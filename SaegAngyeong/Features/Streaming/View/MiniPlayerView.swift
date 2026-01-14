@@ -14,7 +14,6 @@ final class MiniPlayerView: UIView, UIGestureRecognizerDelegate {
     private let titleLabel = UILabel()
     private let playButton = UIButton(type: .system)
     private let closeButton = UIButton(type: .system)
-    private let separator = UIView()
     private var playerLayer: AVPlayerLayer?
     private var timeControlObservation: NSKeyValueObservation?
     private var playbackService: StreamingPlaybackService?
@@ -45,13 +44,10 @@ final class MiniPlayerView: UIView, UIGestureRecognizerDelegate {
         closeButton.tintColor = .gray60
         closeButton.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
 
-        separator.backgroundColor = UIColor.white.withAlphaComponent(0.08)
-
         addSubview(playerContainer)
         addSubview(titleLabel)
         addSubview(playButton)
         addSubview(closeButton)
-        addSubview(separator)
 
         playerContainer.snp.makeConstraints { make in
             make.leading.equalToSuperview().offset(8)
@@ -76,12 +72,6 @@ final class MiniPlayerView: UIView, UIGestureRecognizerDelegate {
             make.leading.equalTo(playerContainer.snp.trailing).offset(10)
             make.trailing.lessThanOrEqualTo(playButton.snp.leading).offset(-8)
             make.centerY.equalToSuperview()
-        }
-
-        separator.snp.makeConstraints { make in
-            make.leading.trailing.equalToSuperview()
-            make.top.equalToSuperview()
-            make.height.equalTo(1)
         }
 
         let tap = UITapGestureRecognizer(target: self, action: #selector(handleExpand))
