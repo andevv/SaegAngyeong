@@ -37,13 +37,13 @@ final class StreamingCoordinator {
             sesacKey: sesacKey
         )
         let viewController = StreamingListViewController(viewModel: viewModel)
-        viewController.onVideoSelected = { [weak self] videoID in
-            self?.startStreaming(videoID: videoID)
+        viewController.onVideoSelected = { [weak self] videoID, title in
+            self?.startStreaming(videoID: videoID, title: title)
         }
         navigationController.pushViewController(viewController, animated: true)
     }
 
-    func startStreaming(videoID: String) {
+    func startStreaming(videoID: String, title: String) {
         hideMiniPlayer()
         let viewModel = StreamingViewModel(videoID: videoID, videoRepository: videoRepository)
         let viewController = StreamingViewController(
@@ -51,6 +51,7 @@ final class StreamingCoordinator {
             videoID: videoID,
             playbackService: playbackService
         )
+        playbackService.currentTitle = title
         viewController.onCloseRequested = { [weak self] in
             self?.hideMiniPlayer()
             self?.navigationController.dismiss(animated: true)

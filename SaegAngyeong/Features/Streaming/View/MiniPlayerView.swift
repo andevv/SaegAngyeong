@@ -102,6 +102,10 @@ final class MiniPlayerView: UIView, UIGestureRecognizerDelegate {
 
     func bind(service: StreamingPlaybackService) {
         playbackService = service
+        titleLabel.text = service.currentTitle ?? "Streaming"
+        service.onTitleChanged = { [weak self] title in
+            self?.titleLabel.text = title ?? "Streaming"
+        }
         let layer = AVPlayerLayer(player: service.player)
         layer.videoGravity = .resizeAspect
         playerLayer?.removeFromSuperlayer()
@@ -143,5 +147,6 @@ final class MiniPlayerView: UIView, UIGestureRecognizerDelegate {
 
     deinit {
         timeControlObservation?.invalidate()
+        playbackService?.onTitleChanged = nil
     }
 }

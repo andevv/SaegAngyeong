@@ -13,6 +13,14 @@ final class StreamingPlaybackService {
     private var resourceLoader: StreamingResourceLoader?
     private(set) var currentVideoID: String?
     private var currentURL: URL?
+    var currentTitle: String? {
+        didSet {
+            if currentTitle != oldValue {
+                onTitleChanged?(currentTitle)
+            }
+        }
+    }
+    var onTitleChanged: ((String?) -> Void)?
 
     func prepare(
         videoID: String,
@@ -54,5 +62,6 @@ final class StreamingPlaybackService {
         resourceLoader = nil
         currentURL = nil
         currentVideoID = nil
+        currentTitle = nil
     }
 }
