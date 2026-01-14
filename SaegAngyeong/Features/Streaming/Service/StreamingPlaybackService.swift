@@ -19,6 +19,10 @@ final class StreamingPlaybackService {
         url: URL,
         headersProvider: @escaping () -> [String: String]
     ) -> AVPlayerItem {
+        if currentVideoID == videoID, let item = player.currentItem {
+            currentVideoID = videoID
+            return item
+        }
         if let currentURL, currentURL == url, let item = player.currentItem {
             currentVideoID = videoID
             return item
