@@ -16,6 +16,11 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
     private let timelineHandle = UIView()
     private let timelineHandleHitArea = UIView()
     private let titleLabel = UILabel()
+    private let infoContainer = UIView()
+    private let infoTitleLabel = UILabel()
+    private let infoSubtitleLabel = UILabel()
+    private let infoMetaLabel = UILabel()
+    private let liveBadge = UILabel()
     private let playButton = UIButton(type: .system)
     private let fullScreenButton = UIButton(type: .system)
     private let miniPlayButton = UIButton(type: .system)
@@ -25,6 +30,8 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
     private let viewDidLoadSubject = PassthroughSubject<Void, Never>()
     private let playbackService: StreamingPlaybackService
     private let videoID: String
+    private let viewCountText: String
+    private let likeCountText: String
     private var playerLayer: AVPlayerLayer?
     private var itemObservation: NSKeyValueObservation?
     private var timeControlObservation: NSKeyValueObservation?
@@ -50,9 +57,17 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         playbackService.player
     }
 
-    init(viewModel: StreamingViewModel, videoID: String, playbackService: StreamingPlaybackService) {
+    init(
+        viewModel: StreamingViewModel,
+        videoID: String,
+        playbackService: StreamingPlaybackService,
+        viewCountText: String,
+        likeCountText: String
+    ) {
         self.videoID = videoID
         self.playbackService = playbackService
+        self.viewCountText = viewCountText
+        self.likeCountText = likeCountText
         super.init(viewModel: viewModel)
         hidesBottomBarWhenPushed = true
     }
@@ -144,6 +159,28 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         timelineHandleHitArea.addGestureRecognizer(handlePan)
         timelineHandleHitArea.isUserInteractionEnabled = true
 
+        infoContainer.backgroundColor = .black
+
+        infoTitleLabel.textColor = .gray30
+        infoTitleLabel.font = .pretendard(.medium, size: 16)
+        infoTitleLabel.numberOfLines = 2
+
+        infoSubtitleLabel.textColor = .gray60
+        infoSubtitleLabel.font = .pretendard(.regular, size: 12)
+        infoSubtitleLabel.numberOfLines = 1
+
+        infoMetaLabel.textColor = .gray60
+        infoMetaLabel.font = .pretendard(.regular, size: 11)
+        infoMetaLabel.numberOfLines = 1
+
+        liveBadge.text = "LIVE"
+        liveBadge.textColor = .gray30
+        liveBadge.font = .pretendard(.medium, size: 10)
+        liveBadge.textAlignment = .center
+        liveBadge.backgroundColor = .brightTurquoise
+        liveBadge.layer.cornerRadius = 8
+        liveBadge.clipsToBounds = true
+
         view.addSubview(playerContainer)
         playerContainer.addSubview(playButton)
         playerContainer.addSubview(fullScreenButton)
@@ -152,6 +189,11 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         playerContainer.addSubview(bufferingIndicator)
         view.addSubview(timelineSlider)
         view.addSubview(timelineHandleHitArea)
+        view.addSubview(infoContainer)
+        infoContainer.addSubview(infoTitleLabel)
+        infoContainer.addSubview(infoSubtitleLabel)
+        infoContainer.addSubview(infoMetaLabel)
+        infoContainer.addSubview(liveBadge)
         timelineHandleHitArea.addSubview(timelineHandle)
 
         controlsTapGesture.addTarget(self, action: #selector(handlePlayerTap))
@@ -186,6 +228,37 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         timelineHandle.snp.makeConstraints { make in
             make.center.equalToSuperview()
             make.width.height.equalTo(12)
+        }
+
+        infoContainer.snp.makeConstraints { make in
+            make.top.equalTo(timelineSlider.snp.bottom).offset(14)
+            make.leading.trailing.equalTo(view.safeAreaLayoutGuide).inset(16)
+        }
+
+        liveBadge.snp.makeConstraints { make in
+            make.top.equalToSuperview()
+            make.leading.equalToSuperview()
+            make.width.equalTo(36)
+            make.height.equalTo(16)
+        }
+
+        infoTitleLabel.snp.makeConstraints { make in
+            make.top.equalToSuperview()
+            make.leading.equalTo(liveBadge.snp.trailing).offset(8)
+            make.trailing.equalToSuperview()
+        }
+
+        infoSubtitleLabel.snp.makeConstraints { make in
+            make.top.equalTo(infoTitleLabel.snp.bottom).offset(6)
+            make.leading.equalTo(infoTitleLabel)
+            make.trailing.equalTo(infoTitleLabel)
+        }
+
+        infoMetaLabel.snp.makeConstraints { make in
+            make.top.equalTo(infoSubtitleLabel.snp.bottom).offset(6)
+            make.leading.equalTo(infoTitleLabel)
+            make.trailing.equalTo(infoTitleLabel)
+            make.bottom.equalToSuperview()
         }
 
         playButton.snp.makeConstraints { make in
@@ -226,6 +299,10 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
                 self?.setupPlayer(url: url)
             }
             .store(in: &cancellables)
+
+        infoTitleLabel.text = playbackService.currentTitle ?? "Streaming"
+        infoSubtitleLabel.text = "실시간 스트리밍 중"
+        infoMetaLabel.text = "\(viewCountText) · \(likeCountText)"
     }
 
     private func setupPlayer(url: URL) {
@@ -389,6 +466,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
                 self.sliderHeightConstraint?.update(offset: 0)
                 self.timelineSlider.alpha = 0
                 self.timelineHandleHitArea.alpha = 0
+                self.infoContainer.alpha = 0
                 self.fullScreenButton.isHidden = false
                 self.miniPlayButton.isHidden = true
                 self.miniCloseButton.isHidden = true
@@ -411,6 +489,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
                 self.sliderHeightConstraint?.update(offset: 0)
                 self.timelineSlider.alpha = 0
                 self.timelineHandleHitArea.alpha = 0
+                self.infoContainer.alpha = 0
                 self.miniPlayButton.isHidden = false
                 self.miniCloseButton.isHidden = false
                 self.fullScreenButton.isHidden = true
@@ -427,6 +506,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
                 self.sliderHeightConstraint?.update(offset: 2)
                 self.timelineSlider.alpha = 1
                 self.timelineHandleHitArea.alpha = 1
+                self.infoContainer.alpha = 1
                 self.miniPlayButton.isHidden = true
                 self.miniCloseButton.isHidden = true
                 self.fullScreenButton.isHidden = false

@@ -11,7 +11,7 @@ import Combine
 import Kingfisher
 
 final class StreamingListViewController: BaseViewController<StreamingListViewModel> {
-    var onVideoSelected: ((String, String) -> Void)?
+    var onVideoSelected: ((String, String, String, String) -> Void)?
 
     private let tableView = UITableView(frame: .zero, style: .plain)
     private let refreshControl = UIRefreshControl()
@@ -116,7 +116,7 @@ extension StreamingListViewController: UITableViewDataSource, UITableViewDelegat
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
         let item = items[indexPath.row]
-        onVideoSelected?(item.id, item.title)
+        onVideoSelected?(item.id, item.title, item.viewCountText, item.likeCountText)
     }
 
     func scrollViewDidScroll(_ scrollView: UIScrollView) {

@@ -105,6 +105,8 @@ final class MainTabBarController: UITabBarController {
     private func presentStreamingFromMini() {
         guard let videoID = dependency.streamingPlaybackService.currentVideoID else { return }
         let title = dependency.streamingPlaybackService.currentTitle ?? "Streaming"
+        let viewCountText = dependency.streamingPlaybackService.currentViewCountText ?? "-"
+        let likeCountText = dependency.streamingPlaybackService.currentLikeCountText ?? "-"
         guard let presenter = selectedViewController as? BaseNavigationController else { return }
         let coordinator = StreamingCoordinator(
             navigationController: presenter,
@@ -114,7 +116,12 @@ final class MainTabBarController: UITabBarController {
             playbackService: dependency.streamingPlaybackService
         )
         streamingCoordinator = coordinator
-        coordinator.startStreaming(videoID: videoID, title: title)
+        coordinator.startStreaming(
+            videoID: videoID,
+            title: title,
+            viewCountText: viewCountText,
+            likeCountText: likeCountText
+        )
     }
 }
 

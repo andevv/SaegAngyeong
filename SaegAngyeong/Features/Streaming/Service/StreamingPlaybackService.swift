@@ -20,6 +20,8 @@ final class StreamingPlaybackService {
             }
         }
     }
+    var currentViewCountText: String?
+    var currentLikeCountText: String?
     var onTitleChanged: ((String?) -> Void)?
 
     func prepare(
@@ -63,5 +65,7 @@ final class StreamingPlaybackService {
         currentURL = nil
         currentVideoID = nil
         currentTitle = nil
+        currentViewCountText = nil
+        currentLikeCountText = nil
     }
 }
