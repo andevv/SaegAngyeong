@@ -6,15 +6,20 @@
 //
 
 import UIKit
+import SnapKit
 
 final class MainTabBarController: UITabBarController {
 
+    private let dependency: AppDependency
     private let homeCoordinator: HomeCoordinator
     private let feedCoordinator: FeedCoordinator
     private let filterMakeCoordinator: FilterMakeCoordinator
     private let myPageCoordinator: MyPageCoordinator
+    private let miniPlayerView = MiniPlayerView()
+    private var streamingCoordinator: StreamingCoordinator?
 
     init(dependency: AppDependency) {
+        self.dependency = dependency
         self.homeCoordinator = HomeCoordinator(dependency: dependency)
         self.feedCoordinator = FeedCoordinator(dependency: dependency)
         self.filterMakeCoordinator = FilterMakeCoordinator(dependency: dependency)
@@ -22,6 +27,7 @@ final class MainTabBarController: UITabBarController {
         super.init(nibName: nil, bundle: nil)
         configureAppearance()
         setupTabs(dependency: dependency)
+        setupMiniPlayer()
         delegate = self
     }
 
@@ -67,6 +73,47 @@ final class MainTabBarController: UITabBarController {
             myPageVC
         ]
         selectedIndex = 0
+    }
+
+    private func setupMiniPlayer() {
+        miniPlayerView.isHidden = true
+        miniPlayerView.bind(service: dependency.streamingPlaybackService)
+        miniPlayerView.onExpand = { [weak self] in
+            self?.presentStreamingFromMini()
+        }
+        miniPlayerView.onClose = { [weak self] in
+            self?.dependency.streamingPlaybackService.stop()
+            self?.hideMiniPlayer()
+        }
+        view.addSubview(miniPlayerView)
+        miniPlayerView.snp.makeConstraints { make in
+            make.leading.trailing.equalToSuperview().inset(12)
+            make.bottom.equalTo(tabBar.snp.top).offset(-8)
+            make.height.equalTo(60)
+        }
+    }
+
+    func showMiniPlayer() {
+        miniPlayerView.isHidden = false
+        view.bringSubviewToFront(miniPlayerView)
+    }
+
+    func hideMiniPlayer() {
+        miniPlayerView.isHidden = true
+    }
+
+    private func presentStreamingFromMini() {
+        guard let videoID = dependency.streamingPlaybackService.currentVideoID else { return }
+        guard let presenter = selectedViewController as? BaseNavigationController else { return }
+        let coordinator = StreamingCoordinator(
+            navigationController: presenter,
+            videoRepository: dependency.videoRepository,
+            accessTokenProvider: { [weak self] in self?.dependency.tokenStore.accessToken },
+            sesacKey: AppConfig.apiKey,
+            playbackService: dependency.streamingPlaybackService
+        )
+        streamingCoordinator = coordinator
+        coordinator.startStreaming(videoID: videoID)
     }
 }
 

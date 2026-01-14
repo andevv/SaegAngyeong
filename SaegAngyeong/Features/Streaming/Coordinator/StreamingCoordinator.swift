@@ -13,18 +13,21 @@ final class StreamingCoordinator {
     private let videoRepository: VideoRepository
     private let accessTokenProvider: () -> String?
     private let sesacKey: String
+    private let playbackService: StreamingPlaybackService
     private var cancellables = Set<AnyCancellable>()
 
     init(
         navigationController: BaseNavigationController,
         videoRepository: VideoRepository,
         accessTokenProvider: @escaping () -> String?,
-        sesacKey: String
+        sesacKey: String,
+        playbackService: StreamingPlaybackService
     ) {
         self.navigationController = navigationController
         self.videoRepository = videoRepository
         self.accessTokenProvider = accessTokenProvider
         self.sesacKey = sesacKey
+        self.playbackService = playbackService
     }
 
     func start() {
@@ -35,19 +38,37 @@ final class StreamingCoordinator {
         )
         let viewController = StreamingListViewController(viewModel: viewModel)
         viewController.onVideoSelected = { [weak self] videoID in
-            self?.showStreaming(videoID: videoID)
+            self?.startStreaming(videoID: videoID)
         }
         navigationController.pushViewController(viewController, animated: true)
     }
 
-    private func showStreaming(videoID: String) {
+    func startStreaming(videoID: String) {
+        hideMiniPlayer()
         let viewModel = StreamingViewModel(videoID: videoID, videoRepository: videoRepository)
-        let viewController = StreamingViewController(viewModel: viewModel)
+        let viewController = StreamingViewController(
+            viewModel: viewModel,
+            videoID: videoID,
+            playbackService: playbackService
+        )
         viewController.onCloseRequested = { [weak self] in
+            self?.hideMiniPlayer()
+            self?.navigationController.dismiss(animated: true)
+        }
+        viewController.onMiniPlayerRequested = { [weak self] in
+            self?.showMiniPlayer()
             self?.navigationController.dismiss(animated: true)
         }
         viewController.modalPresentationStyle = .overFullScreen
         navigationController.present(viewController, animated: true)
+    }
+
+    private func showMiniPlayer() {
+        (navigationController.tabBarController as? MainTabBarController)?.showMiniPlayer()
+    }
+
+    private func hideMiniPlayer() {
+        (navigationController.tabBarController as? MainTabBarController)?.hideMiniPlayer()
     }
 
     deinit {

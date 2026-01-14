@@ -23,7 +23,8 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
     private let bufferingIndicator = UIActivityIndicatorView(style: .medium)
 
     private let viewDidLoadSubject = PassthroughSubject<Void, Never>()
-    private var player: AVPlayer?
+    private let playbackService: StreamingPlaybackService
+    private let videoID: String
     private var playerLayer: AVPlayerLayer?
     private var itemObservation: NSKeyValueObservation?
     private var timeControlObservation: NSKeyValueObservation?
@@ -34,7 +35,6 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
     private var isFullscreen = false
     private var isControlsVisible = false
     private let tokenStore = TokenStore()
-    private var resourceLoader: StreamingResourceLoader?
     private let controlsTapGesture = UITapGestureRecognizer()
     private var timelineHandleCenterXConstraint: Constraint?
     private let timelineHandleHitSize: CGFloat = 24
@@ -44,8 +44,15 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
     private var playerHeightConstraint: Constraint?
     private var sliderHeightConstraint: Constraint?
     var onCloseRequested: (() -> Void)?
+    var onMiniPlayerRequested: (() -> Void)?
 
-    override init(viewModel: StreamingViewModel) {
+    private var player: AVPlayer {
+        playbackService.player
+    }
+
+    init(viewModel: StreamingViewModel, videoID: String, playbackService: StreamingPlaybackService) {
+        self.videoID = videoID
+        self.playbackService = playbackService
         super.init(viewModel: viewModel)
         hidesBottomBarWhenPushed = true
     }
@@ -226,9 +233,6 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         print("[Streaming] stream URL: \(url.absoluteString)")
         #endif
         isControlsVisible = true
-        let assetOptions: [String: Any] = [
-            AVURLAssetAllowsCellularAccessKey: true
-        ]
         let headersProvider: () -> [String: String] = { [weak self] in
             guard let self else { return [:] }
             var headers: [String: String] = [
@@ -239,16 +243,11 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
             }
             return headers
         }
-        let loader = StreamingResourceLoader(
-            originalScheme: url.scheme ?? "http",
-            disableSubtitles: true,
+        let item = playbackService.prepare(
+            videoID: videoID,
+            url: url,
             headersProvider: headersProvider
         )
-        self.resourceLoader = loader
-        let assetURL = StreamingResourceLoader.makeCustomSchemeURL(from: url) ?? url
-        let asset = AVURLAsset(url: assetURL, options: assetOptions)
-        asset.resourceLoader.setDelegate(loader, queue: DispatchQueue(label: "streaming.resource.loader"))
-        let item = AVPlayerItem(asset: asset)
         itemObservation = item.observe(\.status, options: [.initial, .new]) { [weak self] item, _ in
             guard let self else { return }
             switch item.status {
@@ -257,7 +256,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
                 print("[Streaming] item ready")
                 #endif
                 if self.shouldAutoPlay {
-                    self.player?.play()
+                    self.player.play()
                 }
             case .failed:
                 #if DEBUG
@@ -272,8 +271,6 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
             }
         }
         item.addObserver(self, forKeyPath: "loadedTimeRanges", options: [.new], context: nil)
-        let player = AVPlayer(playerItem: item)
-        self.player = player
         timeControlObservation?.invalidate()
         timeControlObservation = player.observe(\.timeControlStatus, options: [.initial, .new]) { [weak self] player, _ in
             guard let self else { return }
@@ -300,7 +297,8 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
     }
 
     @objc private func playTapped() {
-        guard let player else { return }
+        let player = player
+        guard player.currentItem != nil else { return }
         shouldAutoPlay = true
         do {
             try AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback, options: [])
@@ -322,6 +320,8 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
     }
 
     @objc private func closeTapped() {
+        playbackService.stop()
+        shouldAutoPlay = false
         onCloseRequested?()
     }
 
@@ -338,7 +338,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
     }
 
     @objc private func handlePlayerTap() {
-        guard player != nil else { return }
+        guard player.currentItem != nil else { return }
         if isMiniPlayer {
             setMiniPlayer(false, animated: true)
             return
@@ -364,6 +364,10 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
     }
 
     private func setMiniPlayer(_ mini: Bool, animated: Bool) {
+        if mini {
+            onMiniPlayerRequested?()
+            return
+        }
         guard isMiniPlayer != mini else { return }
         isMiniPlayer = mini
         if mini {
@@ -447,7 +451,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
     }
 
     @objc private func timelineValueChanged() {
-        guard let player else { return }
+        let player = player
         guard let duration = player.currentItem?.duration.seconds, duration.isFinite, duration > 0 else { return }
         let targetSeconds = Double(timelineSlider.value) * duration
         let targetTime = CMTime(seconds: targetSeconds, preferredTimescale: 600)
@@ -460,12 +464,10 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
 
     override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
-        player?.pause()
-        shouldAutoPlay = false
         removeTimeObserver()
         timeControlObservation?.invalidate()
         timeControlObservation = nil
-        if let item = player?.currentItem {
+        if let item = player.currentItem {
             item.removeObserver(self, forKeyPath: "loadedTimeRanges")
         }
     }
@@ -505,7 +507,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
 
     private func removeTimeObserver() {
         if let token = timeObserverToken {
-            player?.removeTimeObserver(token)
+            player.removeTimeObserver(token)
             timeObserverToken = nil
         }
     }
@@ -530,7 +532,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
     }
 
     @objc private func handleTimelinePan(_ gesture: UIPanGestureRecognizer) {
-        guard let player else { return }
+        let player = player
         let location = gesture.location(in: timelineSlider)
         let trackRect = timelineSlider.trackRect(forBounds: timelineSlider.bounds)
         let clampedX = min(max(location.x, trackRect.minX), trackRect.maxX)
@@ -563,7 +565,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
     }
 
     private func updatePlayIcons() {
-        guard let player else { return }
+        let player = player
         let imageName = player.timeControlStatus == .playing ? "pause.fill" : "play.fill"
         let image = UIImage(systemName: imageName)
         playButton.setImage(image, for: .normal)

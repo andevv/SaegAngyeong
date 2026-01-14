@@ -76,7 +76,8 @@ final class MyPageCoordinator {
                 navigationController: self.navigationController,
                 videoRepository: self.dependency.videoRepository,
                 accessTokenProvider: { [weak self] in self?.dependency.tokenStore.accessToken },
-                sesacKey: AppConfig.apiKey
+                sesacKey: AppConfig.apiKey,
+                playbackService: self.dependency.streamingPlaybackService
             )
             self.streamingCoordinator = coordinator
             coordinator.start()

@@ -20,6 +20,7 @@ struct AppDependency {
     let videoRepository: VideoRepository
     let orderRepository: OrderRepository
     let paymentRepository: PaymentRepository
+    let streamingPlaybackService: StreamingPlaybackService
 
     static func make() -> AppDependency {
         let tokenStore = TokenStore()
@@ -50,6 +51,7 @@ struct AppDependency {
         let videoRepository = VideoRepositoryImpl(network: provider)
         let orderRepository = OrderRepositoryImpl(network: provider)
         let paymentRepository = PaymentRepositoryImpl(network: provider)
+        let streamingPlaybackService = StreamingPlaybackService()
         return AppDependency(
             tokenStore: tokenStore,
             networkProvider: provider,
@@ -60,7 +62,8 @@ struct AppDependency {
             chatRepository: chatRepository,
             videoRepository: videoRepository,
             orderRepository: orderRepository,
-            paymentRepository: paymentRepository
+            paymentRepository: paymentRepository,
+            streamingPlaybackService: streamingPlaybackService
         )
     }
 }
