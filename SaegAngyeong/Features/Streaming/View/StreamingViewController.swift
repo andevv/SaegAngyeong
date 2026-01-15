@@ -13,8 +13,6 @@ import SnapKit
 final class StreamingViewController: BaseViewController<StreamingViewModel> {
     private let playerContainer = UIView()
     private let timelineSlider = UISlider()
-    private let timelineHandle = UIView()
-    private let timelineHandleHitArea = UIView()
     private let titleLabel = UILabel()
     private let infoContainer = UIView()
     private let infoTitleLabel = UILabel()
@@ -44,8 +42,6 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
     private var isControlsVisible = false
     private let tokenStore = TokenStore()
     private let controlsTapGesture = UITapGestureRecognizer()
-    private var timelineHandleCenterXConstraint: Constraint?
-    private let timelineHandleHitSize: CGFloat = 24
     private var playerTopConstraint: Constraint?
     private var playerLeadingConstraint: Constraint?
     private var playerWidthConstraint: Constraint?
@@ -87,7 +83,6 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         playerLayer?.frame = playerContainer.bounds
-        updateTimelineHandlePosition()
         updatePlayerLayout(animated: false)
         playerContainer.bringSubviewToFront(playButton)
         playerContainer.bringSubviewToFront(fullScreenButton)
@@ -149,25 +144,13 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         timelineSlider.value = 0
         timelineSlider.minimumTrackTintColor = .brightTurquoise
         timelineSlider.maximumTrackTintColor = UIColor.white.withAlphaComponent(0.2)
-        timelineSlider.isUserInteractionEnabled = false
-        let clearThumb = makeClearThumb(size: CGSize(width: 24, height: 24))
-        timelineSlider.setThumbImage(clearThumb, for: .normal)
-        timelineSlider.setThumbImage(clearThumb, for: .highlighted)
+        timelineSlider.isUserInteractionEnabled = true
+        let thumb = makeThumbImage(size: CGSize(width: 16, height: 16))
+        timelineSlider.setThumbImage(thumb, for: .normal)
+        timelineSlider.setThumbImage(thumb, for: .highlighted)
         timelineSlider.addTarget(self, action: #selector(timelineTouchDown), for: .touchDown)
         timelineSlider.addTarget(self, action: #selector(timelineValueChanged), for: .valueChanged)
         timelineSlider.addTarget(self, action: #selector(timelineTouchUp), for: [.touchUpInside, .touchUpOutside, .touchCancel])
-
-        timelineHandle.backgroundColor = .blackTurquoise
-        timelineHandle.layer.cornerRadius = 6
-        timelineHandle.layer.shadowColor = UIColor.black.cgColor
-        timelineHandle.layer.shadowOpacity = 0.35
-        timelineHandle.layer.shadowRadius = 4
-        timelineHandle.layer.shadowOffset = CGSize(width: 0, height: 1)
-
-        timelineHandleHitArea.backgroundColor = .clear
-        let handlePan = UIPanGestureRecognizer(target: self, action: #selector(handleTimelinePan(_:)))
-        timelineHandleHitArea.addGestureRecognizer(handlePan)
-        timelineHandleHitArea.isUserInteractionEnabled = true
 
         infoContainer.backgroundColor = .black
 
@@ -199,13 +182,11 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         playerContainer.addSubview(bufferingIndicator)
         playerContainer.addSubview(timeLabel)
         view.addSubview(timelineSlider)
-        view.addSubview(timelineHandleHitArea)
         view.addSubview(infoContainer)
         infoContainer.addSubview(infoTitleLabel)
         infoContainer.addSubview(infoSubtitleLabel)
         infoContainer.addSubview(infoMetaLabel)
         infoContainer.addSubview(liveBadge)
-        timelineHandleHitArea.addSubview(timelineHandle)
 
         controlsTapGesture.addTarget(self, action: #selector(handlePlayerTap))
         controlsTapGesture.cancelsTouchesInView = false
@@ -228,17 +209,6 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
             make.top.equalTo(playerContainer.snp.bottom).offset(2)
             make.leading.trailing.equalTo(playerContainer)
             sliderHeightConstraint = make.height.equalTo(2).constraint
-        }
-
-        timelineHandleHitArea.snp.makeConstraints { make in
-            make.centerY.equalTo(timelineSlider.snp.centerY)
-            make.width.height.equalTo(timelineHandleHitSize)
-            self.timelineHandleCenterXConstraint = make.centerX.equalTo(timelineSlider.snp.leading).offset(0).constraint
-        }
-
-        timelineHandle.snp.makeConstraints { make in
-            make.center.equalToSuperview()
-            make.width.height.equalTo(12)
         }
 
         infoContainer.snp.makeConstraints { make in
@@ -481,7 +451,6 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
                 self.playerContainer.clipsToBounds = true
                 self.sliderHeightConstraint?.update(offset: 0)
                 self.timelineSlider.alpha = 0
-                self.timelineHandleHitArea.alpha = 0
                 self.timeLabel.alpha = 1
                 self.infoContainer.alpha = 0
                 self.fullScreenButton.isHidden = false
@@ -510,7 +479,6 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
                 self.playerContainer.clipsToBounds = true
                 self.sliderHeightConstraint?.update(offset: 0)
                 self.timelineSlider.alpha = 0
-                self.timelineHandleHitArea.alpha = 0
                 self.timeLabel.alpha = 0
                 self.infoContainer.alpha = 0
                 self.miniPlayButton.isHidden = false
@@ -528,7 +496,6 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
                 self.playerContainer.clipsToBounds = true
                 self.sliderHeightConstraint?.update(offset: 2)
                 self.timelineSlider.alpha = 1
-                self.timelineHandleHitArea.alpha = 1
                 self.timeLabel.alpha = 1
                 self.infoContainer.alpha = 1
                 self.miniPlayButton.isHidden = true
@@ -605,12 +572,10 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
             guard self.isScrubbing == false else { return }
             guard let duration = player.currentItem?.duration.seconds, duration.isFinite, duration > 0 else {
                 self.timelineSlider.value = 0
-                self.updateTimelineHandlePosition()
                 return
             }
             let current = time.seconds
             self.timelineSlider.value = Float(current / duration)
-            self.updateTimelineHandlePosition()
             self.timeLabel.text = "\(self.formatTime(current)) / \(self.formatTime(duration))"
         }
     }
@@ -632,46 +597,13 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         }
     }
 
-    private func makeClearThumb(size: CGSize) -> UIImage {
+    private func makeThumbImage(size: CGSize) -> UIImage {
         UIGraphicsBeginImageContextWithOptions(size, false, 0)
-        UIColor.white.withAlphaComponent(0.01).setFill()
+        UIColor.blackTurquoise.setFill()
         UIBezierPath(roundedRect: CGRect(origin: .zero, size: size), cornerRadius: size.width / 2).fill()
         let image = UIGraphicsGetImageFromCurrentImageContext() ?? UIImage()
         UIGraphicsEndImageContext()
         return image
-    }
-
-    @objc private func handleTimelinePan(_ gesture: UIPanGestureRecognizer) {
-        let player = player
-        let location = gesture.location(in: timelineSlider)
-        let trackRect = timelineSlider.trackRect(forBounds: timelineSlider.bounds)
-        let clampedX = min(max(location.x, trackRect.minX), trackRect.maxX)
-        let value = valueForTimelineX(clampedX, trackRect: trackRect)
-        timelineSlider.value = value
-        updateTimelineHandlePosition()
-
-        guard let duration = player.currentItem?.duration.seconds, duration.isFinite, duration > 0 else { return }
-        let targetSeconds = Double(value) * duration
-        let targetTime = CMTime(seconds: targetSeconds, preferredTimescale: 600)
-
-        switch gesture.state {
-        case .began:
-            isScrubbing = true
-            player.seek(to: targetTime, toleranceBefore: .zero, toleranceAfter: .zero)
-        case .changed:
-            player.seek(to: targetTime, toleranceBefore: .zero, toleranceAfter: .zero)
-        case .ended, .cancelled, .failed:
-            player.seek(to: targetTime, toleranceBefore: .zero, toleranceAfter: .zero)
-            isScrubbing = false
-        default:
-            break
-        }
-    }
-
-    private func updateTimelineHandlePosition() {
-        let trackRect = timelineSlider.trackRect(forBounds: timelineSlider.bounds)
-        let x = timelineX(for: timelineSlider.value, trackRect: trackRect)
-        timelineHandleCenterXConstraint?.update(offset: x)
     }
 
     private func updatePlayIcons() {
@@ -708,17 +640,6 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         fullScreenButton.setImage(UIImage(systemName: imageName), for: .normal)
     }
 
-    private func timelineX(for value: Float, trackRect: CGRect) -> CGFloat {
-        let clamped = min(max(value, 0), 1)
-        return trackRect.minX + CGFloat(clamped) * trackRect.width
-    }
-
-    private func valueForTimelineX(_ x: CGFloat, trackRect: CGRect) -> Float {
-        guard trackRect.width > 0 else { return 0 }
-        let clamped = min(max(x, trackRect.minX), trackRect.maxX)
-        return Float((clamped - trackRect.minX) / trackRect.width)
-    }
-
     override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
         isFullscreen ? .landscape : .portrait
     }
@@ -732,7 +653,6 @@ extension StreamingViewController: UIGestureRecognizerDelegate {
         if touchedView?.isDescendant(of: fullScreenButton) == true { return false }
         if touchedView?.isDescendant(of: miniPlayButton) == true { return false }
         if touchedView?.isDescendant(of: miniCloseButton) == true { return false }
-        if touchedView?.isDescendant(of: timelineHandleHitArea) == true { return false }
         return true
     }
 }
