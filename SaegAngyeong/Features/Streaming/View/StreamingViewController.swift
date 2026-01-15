@@ -12,7 +12,7 @@ import SnapKit
 
 final class StreamingViewController: BaseViewController<StreamingViewModel> {
     private let playerContainer = UIView()
-    private let timelineSlider = UISlider()
+    private let timelineSlider = TouchExpandedSlider(touchInsets: UIEdgeInsets(top: 12, left: 12, bottom: 12, right: 12))
     private let titleLabel = UILabel()
     private let infoContainer = UIView()
     private let infoTitleLabel = UILabel()
