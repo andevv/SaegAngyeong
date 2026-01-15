@@ -26,6 +26,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
     private let miniPlayButton = UIButton(type: .system)
     private let miniCloseButton = UIButton(type: .system)
     private let bufferingIndicator = UIActivityIndicatorView(style: .medium)
+    private let timeLabel = PaddingLabel(padding: UIEdgeInsets(top: 4, left: 8, bottom: 4, right: 8))
 
     private let viewDidLoadSubject = PassthroughSubject<Void, Never>()
     private let playbackService: StreamingPlaybackService
@@ -135,6 +136,14 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         bufferingIndicator.color = .gray15
         bufferingIndicator.isHidden = true
 
+        timeLabel.textColor = .gray30
+        timeLabel.font = .pretendard(.medium, size: 12)
+        timeLabel.textAlignment = .center
+        timeLabel.text = "00:00 / 00:00"
+        timeLabel.backgroundColor = UIColor.black.withAlphaComponent(0.35)
+        timeLabel.layer.cornerRadius = 10
+        timeLabel.clipsToBounds = true
+
         timelineSlider.minimumValue = 0
         timelineSlider.maximumValue = 1
         timelineSlider.value = 0
@@ -188,6 +197,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         playerContainer.addSubview(miniPlayButton)
         playerContainer.addSubview(miniCloseButton)
         playerContainer.addSubview(bufferingIndicator)
+        playerContainer.addSubview(timeLabel)
         view.addSubview(timelineSlider)
         view.addSubview(timelineHandleHitArea)
         view.addSubview(infoContainer)
@@ -287,6 +297,11 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
 
         bufferingIndicator.snp.makeConstraints { make in
             make.center.equalTo(playButton)
+        }
+
+        timeLabel.snp.makeConstraints { make in
+            make.leading.equalToSuperview().offset(12)
+            make.bottom.equalToSuperview().offset(-10)
         }
     }
 
@@ -467,6 +482,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
                 self.sliderHeightConstraint?.update(offset: 0)
                 self.timelineSlider.alpha = 0
                 self.timelineHandleHitArea.alpha = 0
+                self.timeLabel.alpha = 1
                 self.infoContainer.alpha = 0
                 self.fullScreenButton.isHidden = false
                 self.fullScreenButton.snp.remakeConstraints { make in
@@ -495,6 +511,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
                 self.sliderHeightConstraint?.update(offset: 0)
                 self.timelineSlider.alpha = 0
                 self.timelineHandleHitArea.alpha = 0
+                self.timeLabel.alpha = 0
                 self.infoContainer.alpha = 0
                 self.miniPlayButton.isHidden = false
                 self.miniCloseButton.isHidden = false
@@ -512,6 +529,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
                 self.sliderHeightConstraint?.update(offset: 2)
                 self.timelineSlider.alpha = 1
                 self.timelineHandleHitArea.alpha = 1
+                self.timeLabel.alpha = 1
                 self.infoContainer.alpha = 1
                 self.miniPlayButton.isHidden = true
                 self.miniCloseButton.isHidden = true
@@ -593,6 +611,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
             let current = time.seconds
             self.timelineSlider.value = Float(current / duration)
             self.updateTimelineHandlePosition()
+            self.timeLabel.text = "\(self.formatTime(current)) / \(self.formatTime(duration))"
         }
     }
 
@@ -673,6 +692,15 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         playButton.isUserInteractionEnabled = isControlsVisible
         fullScreenButton.isHidden = !isControlsVisible
         fullScreenButton.isUserInteractionEnabled = isControlsVisible
+        timeLabel.isHidden = !isControlsVisible
+    }
+
+    private func formatTime(_ seconds: Double) -> String {
+        guard seconds.isFinite else { return "00:00" }
+        let totalSeconds = max(0, Int(seconds.rounded(.down)))
+        let minutes = totalSeconds / 60
+        let remainingSeconds = totalSeconds % 60
+        return String(format: "%02d:%02d", minutes, remainingSeconds)
     }
 
     private func updateFullscreenIcon() {
