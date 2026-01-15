@@ -26,7 +26,8 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
     private let fullScreenButton = UIButton(type: .system)
     private let miniPlayButton = UIButton(type: .system)
     private let miniCloseButton = UIButton(type: .system)
-    private let bufferingIndicator = UIActivityIndicatorView(style: .medium)
+    private let playBufferingIndicator = UIActivityIndicatorView(style: .medium)
+    private let miniBufferingIndicator = UIActivityIndicatorView(style: .medium)
     private let timeLabel = PaddingLabel(padding: UIEdgeInsets(top: 4, left: 8, bottom: 4, right: 8))
 
     private let viewDidLoadSubject = PassthroughSubject<Void, Never>()
@@ -130,9 +131,13 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         miniCloseButton.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
         miniCloseButton.isHidden = true
 
-        bufferingIndicator.hidesWhenStopped = true
-        bufferingIndicator.color = .gray15
-        bufferingIndicator.isHidden = true
+        playBufferingIndicator.hidesWhenStopped = true
+        playBufferingIndicator.color = .gray15
+        playBufferingIndicator.isHidden = true
+
+        miniBufferingIndicator.hidesWhenStopped = true
+        miniBufferingIndicator.color = .gray15
+        miniBufferingIndicator.isHidden = true
 
         timeLabel.textColor = .gray30
         timeLabel.font = .pretendard(.medium, size: 12)
@@ -182,7 +187,8 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         playerContainer.addSubview(fullScreenButton)
         playerContainer.addSubview(miniPlayButton)
         playerContainer.addSubview(miniCloseButton)
-        playerContainer.addSubview(bufferingIndicator)
+        playButton.addSubview(playBufferingIndicator)
+        miniPlayButton.addSubview(miniBufferingIndicator)
         playerContainer.addSubview(timeLabel)
         view.addSubview(timelineSlider)
         view.addSubview(infoContainer)
@@ -268,8 +274,12 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
             make.width.height.equalTo(28)
         }
 
-        bufferingIndicator.snp.makeConstraints { make in
-            make.center.equalTo(playButton)
+        playBufferingIndicator.snp.makeConstraints { make in
+            make.center.equalToSuperview()
+        }
+
+        miniBufferingIndicator.snp.makeConstraints { make in
+            make.center.equalToSuperview()
         }
 
         timeLabel.snp.makeConstraints { make in
@@ -592,11 +602,18 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
 
     private func showBufferingIndicator(_ show: Bool) {
         if show {
-            bufferingIndicator.startAnimating()
-            bufferingIndicator.isHidden = false
+            playBufferingIndicator.startAnimating()
+            playBufferingIndicator.isHidden = false
+            miniBufferingIndicator.startAnimating()
+            miniBufferingIndicator.isHidden = false
+            playButton.setImage(nil, for: .normal)
+            miniPlayButton.setImage(nil, for: .normal)
         } else {
-            bufferingIndicator.stopAnimating()
-            bufferingIndicator.isHidden = true
+            playBufferingIndicator.stopAnimating()
+            playBufferingIndicator.isHidden = true
+            miniBufferingIndicator.stopAnimating()
+            miniBufferingIndicator.isHidden = true
+            updatePlayIcons()
         }
     }
 
@@ -610,6 +627,9 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
     }
 
     private func updatePlayIcons() {
+        if playBufferingIndicator.isAnimating || miniBufferingIndicator.isAnimating {
+            return
+        }
         let player = player
         let imageName = player.timeControlStatus == .playing ? "pause.fill" : "play.fill"
         let image = UIImage(systemName: imageName)
