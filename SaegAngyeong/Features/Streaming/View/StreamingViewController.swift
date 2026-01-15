@@ -114,7 +114,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         fullScreenButton.tintColor = .gray15
         fullScreenButton.backgroundColor = UIColor.black.withAlphaComponent(0.35)
         fullScreenButton.contentEdgeInsets = UIEdgeInsets(top: 8, left: 8, bottom: 8, right: 8)
-        fullScreenButton.layer.cornerRadius = 14
+        fullScreenButton.layer.cornerRadius = 16
         fullScreenButton.addTarget(self, action: #selector(fullScreenTapped), for: .touchUpInside)
 
         miniPlayButton.setImage(UIImage(systemName: "play.fill"), for: .normal)
@@ -469,6 +469,11 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
                 self.timelineHandleHitArea.alpha = 0
                 self.infoContainer.alpha = 0
                 self.fullScreenButton.isHidden = false
+                self.fullScreenButton.snp.remakeConstraints { make in
+                    make.trailing.equalToSuperview().offset(-30)
+                    make.bottom.equalToSuperview().offset(-30)
+                    make.width.height.equalTo(32)
+                }
                 self.miniPlayButton.isHidden = true
                 self.miniCloseButton.isHidden = true
                 self.view.backgroundColor = .black
@@ -511,6 +516,11 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
                 self.miniPlayButton.isHidden = true
                 self.miniCloseButton.isHidden = true
                 self.fullScreenButton.isHidden = false
+                self.fullScreenButton.snp.remakeConstraints { make in
+                    make.trailing.equalToSuperview().offset(-12)
+                    make.bottom.equalToSuperview().offset(-12)
+                    make.width.height.equalTo(32)
+                }
                 self.view.backgroundColor = .black
                 self.navigationController?.setNavigationBarHidden(false, animated: animated)
             }
