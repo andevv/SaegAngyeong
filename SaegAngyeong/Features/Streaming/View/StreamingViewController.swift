@@ -113,6 +113,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         fullScreenButton.setImage(UIImage(systemName: "arrow.up.left.and.arrow.down.right"), for: .normal)
         fullScreenButton.tintColor = .gray15
         fullScreenButton.backgroundColor = UIColor.black.withAlphaComponent(0.35)
+        fullScreenButton.contentEdgeInsets = UIEdgeInsets(top: 8, left: 8, bottom: 8, right: 8)
         fullScreenButton.layer.cornerRadius = 14
         fullScreenButton.addTarget(self, action: #selector(fullScreenTapped), for: .touchUpInside)
 
@@ -654,10 +655,14 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         if isMiniPlayer {
             playButton.isHidden = true
             playButton.isUserInteractionEnabled = false
+            fullScreenButton.isHidden = true
+            fullScreenButton.isUserInteractionEnabled = false
             return
         }
         playButton.isHidden = !isControlsVisible
         playButton.isUserInteractionEnabled = isControlsVisible
+        fullScreenButton.isHidden = !isControlsVisible
+        fullScreenButton.isUserInteractionEnabled = isControlsVisible
     }
 
     private func updateFullscreenIcon() {
