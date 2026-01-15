@@ -12,7 +12,10 @@ import SnapKit
 
 final class StreamingViewController: BaseViewController<StreamingViewModel> {
     private let playerContainer = UIView()
-    private let timelineSlider = TouchExpandedSlider(touchInsets: UIEdgeInsets(top: 12, left: 12, bottom: 12, right: 12))
+    private let timelineSlider = TouchExpandedSlider(
+        touchInsets: UIEdgeInsets(top: 12, left: 12, bottom: 12, right: 12),
+        trackHeight: 2
+    )
     private let titleLabel = UILabel()
     private let infoContainer = UIView()
     private let infoTitleLabel = UILabel()
@@ -145,7 +148,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         timelineSlider.minimumTrackTintColor = .brightTurquoise
         timelineSlider.maximumTrackTintColor = UIColor.white.withAlphaComponent(0.2)
         timelineSlider.isUserInteractionEnabled = true
-        let thumb = makeThumbImage(size: CGSize(width: 16, height: 16))
+        let thumb = makeThumbImage(size: CGSize(width: 12, height: 12))
         timelineSlider.setThumbImage(thumb, for: .normal)
         timelineSlider.setThumbImage(thumb, for: .highlighted)
         timelineSlider.addTarget(self, action: #selector(timelineTouchDown), for: .touchDown)
@@ -206,7 +209,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         }
 
         timelineSlider.snp.makeConstraints { make in
-            make.top.equalTo(playerContainer.snp.bottom).offset(2)
+            make.top.equalTo(playerContainer.snp.bottom)
             make.leading.trailing.equalTo(playerContainer)
             sliderHeightConstraint = make.height.equalTo(2).constraint
         }

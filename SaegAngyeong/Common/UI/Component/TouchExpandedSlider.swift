@@ -9,9 +9,11 @@ import UIKit
 
 final class TouchExpandedSlider: UISlider {
     private let touchInsets: UIEdgeInsets
+    private let trackHeight: CGFloat
 
-    init(touchInsets: UIEdgeInsets) {
+    init(touchInsets: UIEdgeInsets, trackHeight: CGFloat) {
         self.touchInsets = touchInsets
+        self.trackHeight = trackHeight
         super.init(frame: .zero)
     }
 
@@ -28,5 +30,11 @@ final class TouchExpandedSlider: UISlider {
             right: -touchInsets.right
         ))
         return expandedBounds.contains(point)
+    }
+
+    override func trackRect(forBounds bounds: CGRect) -> CGRect {
+        let rect = super.trackRect(forBounds: bounds)
+        let y = rect.midY - trackHeight / 2
+        return CGRect(x: rect.origin.x, y: y, width: rect.width, height: trackHeight)
     }
 }
