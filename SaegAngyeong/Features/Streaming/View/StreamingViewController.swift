@@ -51,6 +51,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
     private var playerWidthConstraint: Constraint?
     private var playerHeightConstraint: Constraint?
     private var sliderHeightConstraint: Constraint?
+    private var timelineTopConstraint: Constraint?
     var onCloseRequested: (() -> Void)?
     var onMiniPlayerRequested: (() -> Void)?
 
@@ -215,7 +216,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         }
 
         timelineSlider.snp.makeConstraints { make in
-            make.top.equalTo(playerContainer.snp.bottom)
+            timelineTopConstraint = make.top.equalTo(playerContainer.snp.bottom).constraint
             make.leading.trailing.equalTo(playerContainer)
             sliderHeightConstraint = make.height.equalTo(2).constraint
         }
@@ -283,8 +284,8 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         }
 
         timeLabel.snp.makeConstraints { make in
-            make.leading.equalToSuperview().offset(12)
-            make.bottom.equalToSuperview().offset(-10)
+            make.leading.equalTo(timelineSlider.snp.leading)
+            make.bottom.equalTo(timelineSlider.snp.top).offset(-8)
         }
     }
 
@@ -462,14 +463,14 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
                 self.playerTopConstraint?.update(offset: 0)
                 self.playerContainer.layer.cornerRadius = 0
                 self.playerContainer.clipsToBounds = true
-                self.sliderHeightConstraint?.update(offset: 0)
-                self.timelineSlider.alpha = 0
+                self.remakeTimelineConstraints(topOffset: -16, horizontalInset: 16, useSafeArea: true)
+                self.timelineSlider.alpha = 1
                 self.timeLabel.alpha = 1
                 self.infoContainer.alpha = 0
                 self.fullScreenButton.isHidden = false
                 self.fullScreenButton.snp.remakeConstraints { make in
-                    make.trailing.equalToSuperview().offset(-30)
-                    make.bottom.equalToSuperview().offset(-30)
+                    make.trailing.equalTo(self.timelineSlider.snp.trailing)
+                    make.bottom.equalTo(self.timelineSlider.snp.top).offset(-8)
                     make.width.height.equalTo(32)
                 }
                 self.miniPlayButton.isHidden = true
@@ -490,7 +491,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
                 self.playerTopConstraint?.update(offset: max(0, top - safeTop))
                 self.playerContainer.layer.cornerRadius = 12
                 self.playerContainer.clipsToBounds = true
-                self.sliderHeightConstraint?.update(offset: 0)
+                self.remakeTimelineConstraints(topOffset: 0, horizontalInset: 0, useSafeArea: false)
                 self.timelineSlider.alpha = 0
                 self.timeLabel.alpha = 0
                 self.infoContainer.alpha = 0
@@ -507,7 +508,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
                 self.playerTopConstraint?.update(offset: 0)
                 self.playerContainer.layer.cornerRadius = 0
                 self.playerContainer.clipsToBounds = true
-                self.sliderHeightConstraint?.update(offset: 2)
+                self.remakeTimelineConstraints(topOffset: 0, horizontalInset: 0, useSafeArea: false)
                 self.timelineSlider.alpha = 1
                 self.timeLabel.alpha = 1
                 self.infoContainer.alpha = 1
@@ -641,6 +642,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
             playButton.isUserInteractionEnabled = false
             fullScreenButton.isHidden = true
             fullScreenButton.isUserInteractionEnabled = false
+            timelineSlider.isHidden = true
             return
         }
         playButton.isHidden = !isControlsVisible
@@ -648,6 +650,21 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         fullScreenButton.isHidden = !isControlsVisible
         fullScreenButton.isUserInteractionEnabled = isControlsVisible
         timeLabel.isHidden = !isControlsVisible
+        timelineSlider.isHidden = isFullscreen ? !isControlsVisible : false
+    }
+
+    private func remakeTimelineConstraints(topOffset: CGFloat, horizontalInset: CGFloat, useSafeArea: Bool) {
+        timelineSlider.snp.remakeConstraints { make in
+            timelineTopConstraint = make.top.equalTo(playerContainer.snp.bottom).offset(topOffset).constraint
+            if useSafeArea {
+                make.leading.equalTo(view.safeAreaLayoutGuide).offset(horizontalInset)
+                make.trailing.equalTo(view.safeAreaLayoutGuide).offset(-horizontalInset)
+            } else {
+                make.leading.equalTo(playerContainer).offset(horizontalInset)
+                make.trailing.equalTo(playerContainer).offset(-horizontalInset)
+            }
+            sliderHeightConstraint = make.height.equalTo(2).constraint
+        }
     }
 
     private func formatTime(_ seconds: Double) -> String {
