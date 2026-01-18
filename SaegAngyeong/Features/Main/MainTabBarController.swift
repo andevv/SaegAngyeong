@@ -38,7 +38,7 @@ final class MainTabBarController: UITabBarController {
 
     deinit {
         #if DEBUG
-        print("[Deinit][VC] \(type(of: self))")
+        AppLogger.debug("[Deinit][VC] \(type(of: self))")
         #endif
     }
 
@@ -148,7 +148,7 @@ private final class DummyViewController: UIViewController {
 
     deinit {
         #if DEBUG
-        print("[Deinit][VC] \(type(of: self))")
+        AppLogger.debug("[Deinit][VC] \(type(of: self))")
         #endif
     }
 }

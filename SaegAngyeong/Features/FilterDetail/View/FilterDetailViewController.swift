@@ -485,7 +485,7 @@ final class FilterDetailViewController: BaseViewController<FilterDetailViewModel
     }
 
     @objc private func editTapped() {
-        print("[FilterDetail] edit tapped")
+        AppLogger.debug("[FilterDetail] edit tapped")
     }
 
     @objc private func deleteTapped() {

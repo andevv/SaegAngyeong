@@ -43,7 +43,7 @@ final class StreamingResourceLoader: NSObject, AVAssetResourceLoaderDelegate {
             return false
         }
         #if DEBUG
-        print("[StreamingLoader] request: \(actualURL.absoluteString)")
+        AppLogger.debug("[StreamingLoader] request: \(actualURL.absoluteString)")
         #endif
 
         var request = URLRequest(url: actualURL)
@@ -67,7 +67,7 @@ final class StreamingResourceLoader: NSObject, AVAssetResourceLoaderDelegate {
         let task = session.dataTask(with: request) { [weak self] data, response, error in
             if let error {
                 #if DEBUG
-                print("[StreamingLoader] error: \(error.localizedDescription)")
+                AppLogger.debug("[StreamingLoader] error: \(error.localizedDescription)")
                 #endif
                 loadingRequest.finishLoading(with: error)
                 self?.removeTask(for: loadingRequest)
@@ -82,11 +82,11 @@ final class StreamingResourceLoader: NSObject, AVAssetResourceLoaderDelegate {
             }
             #if DEBUG
             if let response = response as? HTTPURLResponse {
-                print("[StreamingLoader] status: \(response.statusCode) playlist: \(isPlaylist) size: \(responseData?.count ?? 0)")
+                AppLogger.debug("[StreamingLoader] status: \(response.statusCode) playlist: \(isPlaylist) size: \(responseData?.count ?? 0)")
                 if isSubtitle {
-                    print("[StreamingLoader] subtitle mime: \(response.mimeType ?? "nil")")
+                    AppLogger.debug("[StreamingLoader] subtitle mime: \(response.mimeType ?? "nil")")
                     if let responseData, let prefix = String(data: responseData.prefix(32), encoding: .utf8) {
-                        print("[StreamingLoader] subtitle prefix: \(prefix.replacingOccurrences(of: "\n", with: "\\n"))")
+                        AppLogger.debug("[StreamingLoader] subtitle prefix: \(prefix.replacingOccurrences(of: "\n", with: "\\n"))")
                     }
                 }
             }

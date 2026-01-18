@@ -102,7 +102,7 @@ final class MyPageCoordinator {
 
     deinit {
         #if DEBUG
-        print("[Deinit][Coordinator] \(type(of: self))")
+        AppLogger.debug("[Deinit][Coordinator] \(type(of: self))")
         #endif
     }
 }

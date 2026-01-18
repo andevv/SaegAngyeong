@@ -19,7 +19,7 @@ final class BaseNavigationController: UINavigationController {
 
     deinit {
         #if DEBUG
-        print("[Deinit][VC] \(type(of: self))")
+        AppLogger.debug("[Deinit][VC] \(type(of: self))")
         #endif
     }
 }

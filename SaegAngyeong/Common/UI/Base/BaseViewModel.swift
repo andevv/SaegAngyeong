@@ -29,7 +29,7 @@ class BaseViewModel {
 
     deinit {
         #if DEBUG
-        print("[Deinit][VM] \(type(of: self))")
+        AppLogger.debug("[Deinit][VM] \(type(of: self))")
         #endif
     }
 }

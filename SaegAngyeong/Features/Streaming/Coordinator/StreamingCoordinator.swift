@@ -83,7 +83,7 @@ final class StreamingCoordinator {
 
     deinit {
         #if DEBUG
-        print("[Deinit][Coordinator] \(type(of: self))")
+        AppLogger.debug("[Deinit][Coordinator] \(type(of: self))")
         #endif
     }
 }

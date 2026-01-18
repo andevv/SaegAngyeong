@@ -30,7 +30,7 @@ final class ChatSocketClient {
 
         socket.on(clientEvent: .connect) { _, _ in
             #if DEBUG
-            print("[ChatSocket] connected")
+            AppLogger.debug("[ChatSocket] connected")
             #endif
             if let roomID = self.currentRoomID {
                 self.emitJoin(roomID: roomID)
@@ -38,17 +38,17 @@ final class ChatSocketClient {
         }
         socket.on(clientEvent: .disconnect) { data, _ in
             #if DEBUG
-            print("[ChatSocket] disconnected \(data)")
+            AppLogger.debug("[ChatSocket] disconnected \(data)")
             #endif
         }
         socket.on(clientEvent: .error) { data, _ in
             #if DEBUG
-            print("[ChatSocket] error \(data)")
+            AppLogger.debug("[ChatSocket] error \(data)")
             #endif
         }
         #if DEBUG
         socket.onAny { event in
-            print("[ChatSocket] event \(event.event) items=\(event.items ?? [])")
+            AppLogger.debug("[ChatSocket] event \(event.event) items=\(event.items ?? [])")
         }
         #endif
         socket.on("chat") { [weak self] data, _ in
@@ -61,14 +61,14 @@ final class ChatSocketClient {
 
     func connect() {
         #if DEBUG
-        print("[ChatSocket] connect()")
+        AppLogger.debug("[ChatSocket] connect()")
         #endif
         socket.connect()
     }
 
     func disconnect() {
         #if DEBUG
-        print("[ChatSocket] disconnect()")
+        AppLogger.debug("[ChatSocket] disconnect()")
         #endif
         socket.disconnect()
     }
@@ -76,7 +76,7 @@ final class ChatSocketClient {
     func shutdown() {
         currentRoomID = nil
         #if DEBUG
-        print("[ChatSocket] shutdown()")
+        AppLogger.debug("[ChatSocket] shutdown()")
         #endif
         manager.reconnects = false
         socket.removeAllHandlers()
@@ -91,7 +91,7 @@ final class ChatSocketClient {
 
     func send(roomID: String, content: String) {
         #if DEBUG
-        print("[ChatSocket] send room=\(roomID)")
+        AppLogger.debug("[ChatSocket] send room=\(roomID)")
         #endif
         socket.emit("send", ["room_id": roomID, "content": content])
     }
@@ -99,7 +99,7 @@ final class ChatSocketClient {
     private func emitJoin(roomID: String) {
         guard socket.status == .connected else { return }
         #if DEBUG
-        print("[ChatSocket] join room=\(roomID)")
+        AppLogger.debug("[ChatSocket] join room=\(roomID)")
         #endif
         socket.emit("join", ["room_id": roomID])
     }

@@ -719,20 +719,20 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         if collectionView == categoryCollectionView {
             let category = categories[indexPath.item]
-            print("[Home] category tapped:", category.title)
+            AppLogger.debug("[Home] category tapped: \(category.title)")
         } else if collectionView == bannerCollectionView {
             guard banners.isEmpty == false else { return }
             let banner = banners[indexPath.item % banners.count]
-            print("[Home] banner tapped:", banner.title)
+            AppLogger.debug("[Home] banner tapped: \(banner.title)")
             openBannerIfNeeded(banner)
         } else if collectionView == authorFilterCollectionView {
             if let item = todayAuthor?.filters[indexPath.item] {
-                print("[Home] author filter tapped:", item.title)
+                AppLogger.debug("[Home] author filter tapped: \(item.title)")
                 onAuthorFilterSelected?(item.id)
             }
         } else {
             let item = hotTrends[indexPath.item]
-            print("[Home] hot trend tapped:", item.title)
+            AppLogger.debug("[Home] hot trend tapped: \(item.title)")
             onHotTrendSelected?(item.id)
         }
     }

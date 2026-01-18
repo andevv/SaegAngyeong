@@ -27,7 +27,7 @@ class BaseViewController<ViewModel: ViewModelType>: UIViewController {
 
     deinit {
         #if DEBUG
-        print("[Deinit][VC] \(type(of: self))")
+        AppLogger.debug("[Deinit][VC] \(type(of: self))")
         #endif
     }
 

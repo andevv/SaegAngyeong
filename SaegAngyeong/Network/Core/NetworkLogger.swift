@@ -21,7 +21,7 @@ final class NetworkLogger: EventMonitor {
             guard let data = urlRequest.httpBody else { return "" }
             return String(data: data, encoding: .utf8) ?? "\(data)"
         }()
-        print("➡️ [REQUEST] \(method) \(url)\nHeaders: \(headers)\nBody: \(bodyString)")
+        AppLogger.debug("➡️ [REQUEST] \(method) \(url)\nHeaders: \(headers)\nBody: \(bodyString)")
     }
 
     func request<Value>(_ request: DataRequest, didParseResponse response: DataResponse<Value, AFError>) {
@@ -32,9 +32,9 @@ final class NetworkLogger: EventMonitor {
             return String(data: data, encoding: .utf8) ?? "\(data)"
         }()
         if let error = response.error {
-            print("⛔️ [RESPONSE] \(status) \(url)\nError: \(error)\nBody: \(dataString)")
+            AppLogger.debug("⛔️ [RESPONSE] \(status) \(url)\nError: \(error)\nBody: \(dataString)")
         } else {
-            print("✅ [RESPONSE] \(status) \(url)\nBody: \(dataString)")
+            AppLogger.debug("✅ [RESPONSE] \(status) \(url)\nBody: \(dataString)")
         }
     }
 }

@@ -13,17 +13,16 @@ class ViewController: UIViewController {
         super.viewDidLoad()
         view.backgroundColor = .darkGray
         
-        print(AppConfig.baseURL)
-        print(AppConfig.apiKey)
+        AppLogger.debug("baseURL: \(AppConfig.baseURL)")
+        AppLogger.debug("apiKey: \(AppConfig.apiKey)")
         
         for family in UIFont.familyNames {
-            print("🅵 \(family)")
+            AppLogger.debug("🅵 \(family)")
             for name in UIFont.fontNames(forFamilyName: family) {
-                print("   - \(name)")
+                AppLogger.debug("   - \(name)")
             }
         }
     }
 
 
 }
-

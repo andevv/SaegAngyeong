@@ -417,7 +417,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
 
     private func setupPlayer(url: URL) {
         #if DEBUG
-        print("[Streaming] stream URL: \(url.absoluteString)")
+        AppLogger.debug("[Streaming] stream URL: \(url.absoluteString)")
         #endif
         isControlsVisible = true
         let headersProvider: () -> [String: String] = { [weak self] in
@@ -442,7 +442,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
             switch item.status {
             case .readyToPlay:
                 #if DEBUG
-                print("[Streaming] item ready")
+                AppLogger.debug("[Streaming] item ready")
                 #endif
                 if let pendingSeekTime = self.pendingSeekTime {
                     self.pendingSeekTime = nil
@@ -459,9 +459,9 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
             case .failed:
                 #if DEBUG
                 if let error = item.error as NSError? {
-                    print("[Streaming] player item failed: \(error.domain) \(error.code) \(error.localizedDescription)")
+                    AppLogger.debug("[Streaming] player item failed: \(error.domain) \(error.code) \(error.localizedDescription)")
                 } else {
-                    print("[Streaming] player item failed: unknown")
+                    AppLogger.debug("[Streaming] player item failed: unknown")
                 }
                 #endif
             default:
@@ -503,7 +503,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
             try AVAudioSession.sharedInstance().setActive(true)
         } catch {
             #if DEBUG
-            print("[Streaming] audio session error: \(error)")
+            AppLogger.debug("[Streaming] audio session error: \(error)")
             #endif
         }
         if player.timeControlStatus == .playing {
@@ -730,7 +730,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         #if DEBUG
         let start = CMTimeGetSeconds(range.start)
         let duration = CMTimeGetSeconds(range.duration)
-        print("[Streaming] buffered: \(start) + \(duration)")
+        AppLogger.debug("[Streaming] buffered: \(start) + \(duration)")
         #endif
         let totalDuration = item.duration.seconds
         guard totalDuration.isFinite, totalDuration > 0 else {

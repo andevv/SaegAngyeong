@@ -46,9 +46,9 @@ enum KingfisherHelper {
                 case .none: source = "network"
                 @unknown default: source = "unknown"
                 }
-                print("[KF] \(logLabel ?? "") \(url.absoluteString) -> \(source)")
+                AppLogger.debug("[KF] \(logLabel ?? "") \(url.absoluteString) -> \(source)")
             case .failure(let error):
-                print("[KF][Error] \(logLabel ?? "") \(url.absoluteString) -> \(error)")
+                AppLogger.debug("[KF][Error] \(logLabel ?? "") \(url.absoluteString) -> \(error)")
             }
             #endif
         }

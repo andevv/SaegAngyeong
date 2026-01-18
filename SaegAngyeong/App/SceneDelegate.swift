@@ -86,7 +86,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         }
         networkMonitor?.stop()
         #if DEBUG
-        print("[Deinit][SceneDelegate] \(type(of: self))")
+        AppLogger.debug("[Deinit][SceneDelegate] \(type(of: self))")
         #endif
     }
 
@@ -199,7 +199,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
                   token.isEmpty == false else { return }
             self?.appDependency?.tokenStore.deviceToken = token
             #if DEBUG
-            print("[FCM] Stored device token: \(token)")
+            AppLogger.debug("[FCM] Stored device token: \(token)")
             #endif
             self?.updateDeviceTokenIfNeeded(token)
         }
@@ -249,7 +249,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             .sink { completion in
                 #if DEBUG
                 if case let .failure(error) = completion {
-                    print("[FCM] Failed to update device token: \(error)")
+                    AppLogger.debug("[FCM] Failed to update device token: \(error)")
                 }
                 #endif
             } receiveValue: { _ in }

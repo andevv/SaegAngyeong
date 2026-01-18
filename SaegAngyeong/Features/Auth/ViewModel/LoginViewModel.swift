@@ -45,7 +45,7 @@ final class LoginViewModel: BaseViewModel, ViewModelType {
             .flatMap { [weak self] idToken -> AnyPublisher<AuthSession, DomainError> in
                 guard let self else { return Empty().eraseToAnyPublisher() }
                 self.isLoading.send(true)
-                print("[Login] Apple ID Token:", idToken)
+                AppLogger.debug("[Login] Apple ID Token: \(idToken)")
                 return self.authRepository.loginApple(
                     idToken: idToken,
                     deviceToken: self.deviceTokenProvider()
@@ -57,7 +57,7 @@ final class LoginViewModel: BaseViewModel, ViewModelType {
                     self?.error.send(error)
                 }
             } receiveValue: { session in
-                print("[Login] Apple login success:", session)
+                AppLogger.debug("[Login] Apple login success: \(session)")
                 successSubject.send(session)
             }
             .store(in: &cancellables)

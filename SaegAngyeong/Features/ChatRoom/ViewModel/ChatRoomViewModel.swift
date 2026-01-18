@@ -126,7 +126,7 @@ final class ChatRoomViewModel: BaseViewModel, ViewModelType {
         messageToken = localStore.observeMessages(roomID: roomID) { [weak self] messages in
             guard let self else { return }
             #if DEBUG
-            print("[ChatRoom] Local messages updated: \(messages.count)")
+            AppLogger.debug("[ChatRoom] Local messages updated: \(messages.count)")
             #endif
             self.cachedMessages = messages
             messagesSubject.send(self.mapToViewData(from: messages))
@@ -186,7 +186,7 @@ final class ChatRoomViewModel: BaseViewModel, ViewModelType {
         let cursorDate = localStore.lastMessageCreatedAt(roomID: roomID)
         let cursor = cursorDate.map { formattedCursor(from: $0) }
         #if DEBUG
-        print("[ChatRoom] Sync start room=\(roomID) next=\(cursor ?? "nil")")
+        AppLogger.debug("[ChatRoom] Sync start room=\(roomID) next=\(cursor ?? "nil")")
         #endif
         chatRepository.fetchMessages(roomID: roomID, next: cursor)
             .receive(on: DispatchQueue.main)
@@ -198,12 +198,12 @@ final class ChatRoomViewModel: BaseViewModel, ViewModelType {
                 self?.isLoading.send(false)
                 self?.flushPendingMessages()
                 #if DEBUG
-                print("[ChatRoom] Sync end")
+                AppLogger.debug("[ChatRoom] Sync end")
                 #endif
                 onComplete?()
             } receiveValue: { [weak self] page in
                 #if DEBUG
-                print("[ChatRoom] Sync received: \(page.items.count)")
+                AppLogger.debug("[ChatRoom] Sync received: \(page.items.count)")
                 #endif
                 self?.localStore.save(messages: page.items)
             }
@@ -213,7 +213,7 @@ final class ChatRoomViewModel: BaseViewModel, ViewModelType {
     private func connectSocket() {
         guard let roomID else { return }
         #if DEBUG
-        print("[ChatRoom] Socket connect start room=\(roomID)")
+        AppLogger.debug("[ChatRoom] Socket connect start room=\(roomID)")
         #endif
         socketClient.onMessage = { [weak self] dto in
             self?.handleIncoming(dto)
@@ -240,18 +240,18 @@ final class ChatRoomViewModel: BaseViewModel, ViewModelType {
         )
         if localStore.contains(messageID: message.id) {
             #if DEBUG
-            print("[ChatRoom] Incoming duplicate ignored id=\(message.id)")
+            AppLogger.debug("[ChatRoom] Incoming duplicate ignored id=\(message.id)")
             #endif
             return
         }
         if isSyncing {
             #if DEBUG
-            print("[ChatRoom] Incoming buffered id=\(message.id)")
+            AppLogger.debug("[ChatRoom] Incoming buffered id=\(message.id)")
             #endif
             pendingMessages.append(message)
         } else {
             #if DEBUG
-            print("[ChatRoom] Incoming saved id=\(message.id)")
+            AppLogger.debug("[ChatRoom] Incoming saved id=\(message.id)")
             #endif
             localStore.save(messages: [message])
         }
@@ -262,7 +262,7 @@ final class ChatRoomViewModel: BaseViewModel, ViewModelType {
         let messages = pendingMessages
         pendingMessages.removeAll()
         #if DEBUG
-        print("[ChatRoom] Flush buffered: \(messages.count)")
+        AppLogger.debug("[ChatRoom] Flush buffered: \(messages.count)")
         #endif
         localStore.save(messages: messages)
     }
@@ -271,7 +271,7 @@ final class ChatRoomViewModel: BaseViewModel, ViewModelType {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, let roomID else { return }
         #if DEBUG
-        print("[ChatRoom] Send start room=\(roomID)")
+        AppLogger.debug("[ChatRoom] Send start room=\(roomID)")
         #endif
         let draft = ChatMessageDraft(content: trimmed, fileURLs: [])
         chatRepository.sendMessage(roomID: roomID, draft: draft)
@@ -284,7 +284,7 @@ final class ChatRoomViewModel: BaseViewModel, ViewModelType {
                 guard let self else { return }
                 if !self.localStore.contains(messageID: message.id) {
                     #if DEBUG
-                    print("[ChatRoom] Send saved id=\(message.id)")
+                    AppLogger.debug("[ChatRoom] Send saved id=\(message.id)")
                     #endif
                     self.localStore.save(messages: [message])
                 }
@@ -295,7 +295,7 @@ final class ChatRoomViewModel: BaseViewModel, ViewModelType {
     private func upload(files: [UploadFileData]) {
         guard let roomID, files.isEmpty == false else { return }
         #if DEBUG
-        print("[ChatRoom] Upload files room=\(roomID) count=\(files.count)")
+        AppLogger.debug("[ChatRoom] Upload files room=\(roomID) count=\(files.count)")
         #endif
         let imageMimeTypes: Set<String> = ["image/jpeg", "image/png", "image/gif"]
         let isImageOnly = files.allSatisfy { imageMimeTypes.contains($0.mimeType) }
@@ -317,7 +317,7 @@ final class ChatRoomViewModel: BaseViewModel, ViewModelType {
                 guard let self else { return }
                 if !self.localStore.contains(messageID: message.id) {
                     #if DEBUG
-                    print("[ChatRoom] Upload saved id=\(message.id)")
+                    AppLogger.debug("[ChatRoom] Upload saved id=\(message.id)")
                     #endif
                     self.localStore.save(messages: [message])
                 }

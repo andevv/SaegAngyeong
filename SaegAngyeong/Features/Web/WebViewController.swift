@@ -30,7 +30,7 @@ final class WebViewController: UIViewController, WKScriptMessageHandler {
 
     deinit {
         #if DEBUG
-        print("[Deinit][VC] \(type(of: self))")
+        AppLogger.debug("[Deinit][VC] \(type(of: self))")
         #endif
     }
 
