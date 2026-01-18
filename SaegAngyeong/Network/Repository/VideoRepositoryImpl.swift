@@ -34,7 +34,10 @@ final class VideoRepositoryImpl: VideoRepository {
                 guard let streamURL = self.buildURL(from: dto.streamURL) else {
                     throw DomainError.decoding
                 }
-                let qualities = dto.qualities?.compactMap { self.buildURL(from: $0.url) } ?? []
+                let qualities = dto.qualities?.compactMap { quality -> StreamQuality? in
+                    guard let url = self.buildURL(from: quality.url) else { return nil }
+                    return StreamQuality(label: quality.quality, url: url)
+                } ?? []
                 let subtitles = dto.subtitles?.compactMap { self.buildURL(from: $0.url) } ?? []
                 return StreamInfo(videoID: dto.videoID, streamURL: streamURL, qualities: qualities, subtitles: subtitles)
             }

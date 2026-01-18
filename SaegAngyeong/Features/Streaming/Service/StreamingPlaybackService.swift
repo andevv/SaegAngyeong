@@ -27,13 +27,14 @@ final class StreamingPlaybackService {
     func prepare(
         videoID: String,
         url: URL,
-        headersProvider: @escaping () -> [String: String]
+        headersProvider: @escaping () -> [String: String],
+        force: Bool = false
     ) -> AVPlayerItem {
-        if currentVideoID == videoID, let item = player.currentItem {
+        if force == false, currentVideoID == videoID, let item = player.currentItem {
             currentVideoID = videoID
             return item
         }
-        if let currentURL, currentURL == url, let item = player.currentItem {
+        if force == false, let currentURL, currentURL == url, let item = player.currentItem {
             currentVideoID = videoID
             return item
         }

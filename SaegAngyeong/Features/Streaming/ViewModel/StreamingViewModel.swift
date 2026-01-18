@@ -14,7 +14,7 @@ final class StreamingViewModel: BaseViewModel, ViewModelType {
     }
 
     struct Output {
-        let streamURL: AnyPublisher<URL, Never>
+        let streamInfo: AnyPublisher<StreamInfo, Never>
     }
 
     private let videoID: String
@@ -27,7 +27,7 @@ final class StreamingViewModel: BaseViewModel, ViewModelType {
     }
 
     func transform(input: Input) -> Output {
-        let subject = PassthroughSubject<URL, Never>()
+        let subject = PassthroughSubject<StreamInfo, Never>()
         input.viewDidLoad
             .flatMap { [weak self] _ -> AnyPublisher<StreamInfo, DomainError> in
                 guard let self else { return Empty().eraseToAnyPublisher() }
@@ -41,9 +41,9 @@ final class StreamingViewModel: BaseViewModel, ViewModelType {
                     self?.error.send(error)
                 }
             } receiveValue: { info in
-                subject.send(info.streamURL)
+                subject.send(info)
             }
             .store(in: &cancellables)
-        return Output(streamURL: subject.eraseToAnyPublisher())
+        return Output(streamInfo: subject.eraseToAnyPublisher())
     }
 }

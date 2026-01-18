@@ -24,6 +24,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
     private let liveBadge = UILabel()
     private let playButton = UIButton(type: .system)
     private let fullScreenButton = UIButton(type: .system)
+    private let qualityButton = UIButton(type: .system)
     private let miniPlayButton = UIButton(type: .system)
     private let miniCloseButton = UIButton(type: .system)
     private let playBufferingIndicator = UIActivityIndicatorView(style: .medium)
@@ -35,6 +36,11 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
     private let videoID: String
     private let viewCountText: String
     private let likeCountText: String
+    private var currentStreamInfo: StreamInfo?
+    private var currentQualityLabel = "자동"
+    private var pendingSeekTime: CMTime?
+    private var pendingShouldResume = false
+    private var forceReplaceItem = false
     private var playerLayer: AVPlayerLayer?
     private var itemObservation: NSKeyValueObservation?
     private var timeControlObservation: NSKeyValueObservation?
@@ -91,6 +97,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         updatePlayerLayout(animated: false)
         playerContainer.bringSubviewToFront(playButton)
         playerContainer.bringSubviewToFront(fullScreenButton)
+        playerContainer.bringSubviewToFront(qualityButton)
         playerContainer.bringSubviewToFront(miniPlayButton)
         playerContainer.bringSubviewToFront(miniCloseButton)
     }
@@ -117,6 +124,13 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         fullScreenButton.contentEdgeInsets = UIEdgeInsets(top: 8, left: 8, bottom: 8, right: 8)
         fullScreenButton.layer.cornerRadius = 16
         fullScreenButton.addTarget(self, action: #selector(fullScreenTapped), for: .touchUpInside)
+
+        qualityButton.setImage(UIImage(systemName: "gearshape"), for: .normal)
+        qualityButton.tintColor = .gray15
+        qualityButton.backgroundColor = UIColor.black.withAlphaComponent(0.35)
+        qualityButton.contentEdgeInsets = UIEdgeInsets(top: 6, left: 6, bottom: 6, right: 6)
+        qualityButton.layer.cornerRadius = 16
+        qualityButton.addTarget(self, action: #selector(qualityTapped), for: .touchUpInside)
 
         miniPlayButton.setImage(UIImage(systemName: "play.fill"), for: .normal)
         miniPlayButton.tintColor = .gray15
@@ -186,6 +200,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         view.addSubview(playerContainer)
         playerContainer.addSubview(playButton)
         playerContainer.addSubview(fullScreenButton)
+        playerContainer.addSubview(qualityButton)
         playerContainer.addSubview(miniPlayButton)
         playerContainer.addSubview(miniCloseButton)
         playButton.addSubview(playBufferingIndicator)
@@ -263,6 +278,12 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
             make.width.height.equalTo(28)
         }
 
+        qualityButton.snp.makeConstraints { make in
+            make.top.equalToSuperview().offset(12)
+            make.trailing.equalToSuperview().offset(-12)
+            make.width.height.equalTo(32)
+        }
+
         miniPlayButton.snp.makeConstraints { make in
             make.top.equalToSuperview().offset(8)
             make.leading.equalToSuperview().offset(8)
@@ -293,10 +314,11 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         let input = StreamingViewModel.Input(viewDidLoad: viewDidLoadSubject.eraseToAnyPublisher())
         let output = viewModel.transform(input: input)
 
-        output.streamURL
+        output.streamInfo
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] url in
-                self?.setupPlayer(url: url)
+            .sink { [weak self] info in
+                self?.currentStreamInfo = info
+                self?.setupPlayer(url: info.streamURL)
             }
             .store(in: &cancellables)
 
@@ -323,8 +345,10 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         let item = playbackService.prepare(
             videoID: videoID,
             url: url,
-            headersProvider: headersProvider
+            headersProvider: headersProvider,
+            force: forceReplaceItem
         )
+        forceReplaceItem = false
         itemObservation = item.observe(\.status, options: [.initial, .new]) { [weak self] item, _ in
             guard let self else { return }
             switch item.status {
@@ -332,7 +356,16 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
                 #if DEBUG
                 print("[Streaming] item ready")
                 #endif
-                if self.shouldAutoPlay {
+                if let pendingSeekTime = self.pendingSeekTime {
+                    self.pendingSeekTime = nil
+                    let shouldResume = self.pendingShouldResume
+                    self.pendingShouldResume = false
+                    item.seek(to: pendingSeekTime, toleranceBefore: .zero, toleranceAfter: .zero) { _ in
+                        if shouldResume {
+                            self.player.play()
+                        }
+                    }
+                } else if self.shouldAutoPlay {
                     self.player.play()
                 }
             case .failed:
@@ -424,6 +457,10 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         updatePlayIcons()
     }
 
+    @objc private func qualityTapped() {
+        presentQualitySheet()
+    }
+
     @objc private func handlePlayerPan(_ gesture: UIPanGestureRecognizer) {
         let translation = gesture.translation(in: view)
         let velocity = gesture.velocity(in: view)
@@ -473,6 +510,15 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
                     make.bottom.equalTo(self.timelineSlider.snp.top).offset(-8)
                     make.width.height.equalTo(32)
                 }
+                self.timeLabel.snp.remakeConstraints { make in
+                    make.leading.equalTo(self.timelineSlider.snp.leading)
+                    make.bottom.equalTo(self.timelineSlider.snp.top).offset(-8)
+                }
+                self.qualityButton.snp.remakeConstraints { make in
+                    make.top.equalTo(self.playerContainer.safeAreaLayoutGuide.snp.top).offset(12)
+                    make.trailing.equalTo(self.fullScreenButton.snp.trailing)
+                    make.width.height.equalTo(32)
+                }
                 self.miniPlayButton.isHidden = true
                 self.miniCloseButton.isHidden = true
                 self.view.backgroundColor = .black
@@ -498,6 +544,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
                 self.miniPlayButton.isHidden = false
                 self.miniCloseButton.isHidden = false
                 self.fullScreenButton.isHidden = true
+                self.qualityButton.isHidden = true
                 self.view.backgroundColor = .clear
                 self.navigationController?.setNavigationBarHidden(true, animated: animated)
             } else {
@@ -518,6 +565,15 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
                 self.fullScreenButton.snp.remakeConstraints { make in
                     make.trailing.equalToSuperview().offset(-12)
                     make.bottom.equalToSuperview().offset(-12)
+                    make.width.height.equalTo(32)
+                }
+                self.timeLabel.snp.remakeConstraints { make in
+                    make.leading.equalToSuperview().offset(12)
+                    make.bottom.equalTo(self.timelineSlider.snp.top).offset(-8)
+                }
+                self.qualityButton.snp.remakeConstraints { make in
+                    make.top.equalToSuperview().offset(12)
+                    make.trailing.equalToSuperview().offset(-12)
                     make.width.height.equalTo(32)
                 }
                 self.view.backgroundColor = .black
@@ -642,6 +698,8 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
             playButton.isUserInteractionEnabled = false
             fullScreenButton.isHidden = true
             fullScreenButton.isUserInteractionEnabled = false
+            qualityButton.isHidden = true
+            qualityButton.isUserInteractionEnabled = false
             timelineSlider.isHidden = true
             return
         }
@@ -650,6 +708,8 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         fullScreenButton.isHidden = !isControlsVisible
         fullScreenButton.isUserInteractionEnabled = isControlsVisible
         timeLabel.isHidden = !isControlsVisible
+        qualityButton.isHidden = !isControlsVisible
+        qualityButton.isUserInteractionEnabled = isControlsVisible
         timelineSlider.isHidden = isFullscreen ? !isControlsVisible : false
     }
 
@@ -665,6 +725,41 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
             }
             sliderHeightConstraint = make.height.equalTo(2).constraint
         }
+    }
+
+    private func presentQualitySheet() {
+        guard let info = currentStreamInfo else { return }
+        var options: [String] = ["자동"]
+        options.append(contentsOf: info.qualities.map { $0.label })
+        let sheet = StreamingQualityViewController(options: options, selected: currentQualityLabel)
+        sheet.onSelected = { [weak self] label in
+            self?.applyQuality(label: label)
+        }
+        if let sheetController = sheet.sheetPresentationController {
+            sheetController.detents = [.medium()]
+            sheetController.preferredCornerRadius = 16
+        }
+        present(sheet, animated: true)
+    }
+
+    private func applyQuality(label: String) {
+        guard let info = currentStreamInfo else { return }
+        currentQualityLabel = label
+        let targetURL: URL
+        if label == "자동" {
+            targetURL = info.streamURL
+        } else if let quality = info.qualities.first(where: { $0.label == label }) {
+            targetURL = quality.url
+        } else {
+            return
+        }
+        let currentTime = player.currentTime()
+        let wasPlaying = player.timeControlStatus == .playing
+        pendingSeekTime = currentTime
+        pendingShouldResume = wasPlaying
+        forceReplaceItem = true
+        shouldAutoPlay = wasPlaying
+        setupPlayer(url: targetURL)
     }
 
     private func formatTime(_ seconds: Double) -> String {

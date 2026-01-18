@@ -24,6 +24,11 @@ struct Video {
 struct StreamInfo {
     let videoID: String
     let streamURL: URL
-    let qualities: [URL]
+    let qualities: [StreamQuality]
     let subtitles: [URL]
+}
+
+struct StreamQuality {
+    let label: String
+    let url: URL
 }
