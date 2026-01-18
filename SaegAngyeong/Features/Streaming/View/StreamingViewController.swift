@@ -52,6 +52,11 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
     private var isControlsVisible = false
     private let tokenStore = TokenStore()
     private let controlsTapGesture = UITapGestureRecognizer()
+    private let doubleTapGesture = UITapGestureRecognizer()
+    private let rewindFeedbackView = UIView()
+    private let forwardFeedbackView = UIView()
+    private let rewindFeedbackIcon = UIImageView()
+    private let forwardFeedbackIcon = UIImageView()
     private var playerTopConstraint: Constraint?
     private var playerLeadingConstraint: Constraint?
     private var playerWidthConstraint: Constraint?
@@ -205,6 +210,10 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         playerContainer.addSubview(miniCloseButton)
         playButton.addSubview(playBufferingIndicator)
         miniPlayButton.addSubview(miniBufferingIndicator)
+        playerContainer.addSubview(rewindFeedbackView)
+        playerContainer.addSubview(forwardFeedbackView)
+        rewindFeedbackView.addSubview(rewindFeedbackIcon)
+        forwardFeedbackView.addSubview(forwardFeedbackIcon)
         playerContainer.addSubview(timeLabel)
         view.addSubview(timelineSlider)
         view.addSubview(infoContainer)
@@ -216,10 +225,42 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         controlsTapGesture.addTarget(self, action: #selector(handlePlayerTap))
         controlsTapGesture.cancelsTouchesInView = false
         controlsTapGesture.delegate = self
+
+        doubleTapGesture.addTarget(self, action: #selector(handlePlayerDoubleTap(_:)))
+        doubleTapGesture.numberOfTapsRequired = 2
+        doubleTapGesture.cancelsTouchesInView = false
+        doubleTapGesture.delegate = self
+        controlsTapGesture.require(toFail: doubleTapGesture)
+
         playerContainer.addGestureRecognizer(controlsTapGesture)
+        playerContainer.addGestureRecognizer(doubleTapGesture)
 
         let panGesture = UIPanGestureRecognizer(target: self, action: #selector(handlePlayerPan(_:)))
         playerContainer.addGestureRecognizer(panGesture)
+
+        rewindFeedbackView.alpha = 0
+        rewindFeedbackView.isUserInteractionEnabled = false
+
+        forwardFeedbackView.alpha = 0
+        forwardFeedbackView.isUserInteractionEnabled = false
+
+        rewindFeedbackIcon.image = UIImage(systemName: "gobackward.10")
+        rewindFeedbackIcon.tintColor = .gray15
+        rewindFeedbackIcon.contentMode = .scaleAspectFit
+        rewindFeedbackIcon.layer.shadowColor = UIColor.black.cgColor
+        rewindFeedbackIcon.layer.shadowOpacity = 0.35
+        rewindFeedbackIcon.layer.shadowRadius = 6
+        rewindFeedbackIcon.layer.shadowOffset = CGSize(width: 0, height: 2)
+        rewindFeedbackIcon.layer.masksToBounds = false
+
+        forwardFeedbackIcon.image = UIImage(systemName: "goforward.10")
+        forwardFeedbackIcon.tintColor = .gray15
+        forwardFeedbackIcon.contentMode = .scaleAspectFit
+        forwardFeedbackIcon.layer.shadowColor = UIColor.black.cgColor
+        forwardFeedbackIcon.layer.shadowOpacity = 0.35
+        forwardFeedbackIcon.layer.shadowRadius = 6
+        forwardFeedbackIcon.layer.shadowOffset = CGSize(width: 0, height: 2)
+        forwardFeedbackIcon.layer.masksToBounds = false
     }
 
     override func configureLayout() {
@@ -252,6 +293,28 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
             make.top.equalToSuperview()
             make.leading.equalTo(liveBadge.snp.trailing).offset(8)
             make.trailing.equalToSuperview()
+        }
+
+        rewindFeedbackView.snp.makeConstraints { make in
+            make.centerY.equalToSuperview()
+            make.leading.equalToSuperview().offset(24)
+            make.width.height.equalTo(64)
+        }
+
+        forwardFeedbackView.snp.makeConstraints { make in
+            make.centerY.equalToSuperview()
+            make.trailing.equalToSuperview().offset(-24)
+            make.width.height.equalTo(64)
+        }
+
+        rewindFeedbackIcon.snp.makeConstraints { make in
+            make.center.equalToSuperview()
+            make.width.height.equalTo(28)
+        }
+
+        forwardFeedbackIcon.snp.makeConstraints { make in
+            make.center.equalToSuperview()
+            make.width.height.equalTo(28)
         }
 
         infoSubtitleLabel.snp.makeConstraints { make in
@@ -462,6 +525,15 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         }
         isControlsVisible.toggle()
         updatePlayIcons()
+    }
+
+    @objc private func handlePlayerDoubleTap(_ gesture: UITapGestureRecognizer) {
+        guard isMiniPlayer == false else { return }
+        let location = gesture.location(in: playerContainer)
+        let isLeft = location.x < playerContainer.bounds.midX
+        let offset: Double = isLeft ? -10 : 10
+        seekBy(seconds: offset)
+        showSeekFeedback(isForward: !isLeft)
     }
 
     @objc private func qualityTapped() {
@@ -767,6 +839,30 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         forceReplaceItem = true
         shouldAutoPlay = wasPlaying
         setupPlayer(url: targetURL)
+    }
+
+    private func seekBy(seconds: Double) {
+        let player = player
+        guard let duration = player.currentItem?.duration.seconds, duration.isFinite, duration > 0 else { return }
+        let current = player.currentTime().seconds
+        let target = min(max(0, current + seconds), duration)
+        let targetTime = CMTime(seconds: target, preferredTimescale: 600)
+        player.seek(to: targetTime, toleranceBefore: .zero, toleranceAfter: .zero)
+    }
+
+    private func showSeekFeedback(isForward: Bool) {
+        let targetView = isForward ? forwardFeedbackView : rewindFeedbackView
+        targetView.layer.removeAllAnimations()
+        targetView.alpha = 0
+        targetView.transform = CGAffineTransform(scaleX: 0.85, y: 0.85)
+        UIView.animate(withDuration: 0.12, delay: 0, options: [.curveEaseOut]) {
+            targetView.alpha = 1
+            targetView.transform = .identity
+        } completion: { _ in
+            UIView.animate(withDuration: 0.25, delay: 0.2, options: [.curveEaseIn]) {
+                targetView.alpha = 0
+            }
+        }
     }
 
     private func formatTime(_ seconds: Double) -> String {
