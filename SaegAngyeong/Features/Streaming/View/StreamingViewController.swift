@@ -51,6 +51,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
     private var isFullscreen = false
     private var isControlsVisible = false
     private var currentPlaybackRate: Float = 1.0
+    private var playbackSettingsOverlay: StreamingPlaybackSettingsOverlayView?
     private let tokenStore = TokenStore()
     private let controlsTapGesture = UITapGestureRecognizer()
     private let doubleTapGesture = UITapGestureRecognizer()
@@ -554,7 +555,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
     }
 
     @objc private func qualityTapped() {
-        presentPlaybackSettingsSheet()
+        presentPlaybackSettingsOverlay()
     }
 
     @objc private func handlePlayerPan(_ gesture: UIPanGestureRecognizer) {
@@ -842,33 +843,41 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         }
     }
 
-    private func presentPlaybackSettingsSheet() {
-        let speedOptions: [StreamingPlaybackSpeedOption] = [
-            StreamingPlaybackSpeedOption(label: "0.5배속", rate: 0.5),
-            StreamingPlaybackSpeedOption(label: "1배속", rate: 1.0),
-            StreamingPlaybackSpeedOption(label: "2배속", rate: 2.0)
+    private func presentPlaybackSettingsOverlay() {
+        if playbackSettingsOverlay != nil { return }
+        let speedOptions: [StreamingPlaybackSettingsOverlayView.SpeedOption] = [
+            StreamingPlaybackSettingsOverlayView.SpeedOption(label: "0.5배속", rate: 0.5),
+            StreamingPlaybackSettingsOverlayView.SpeedOption(label: "1배속", rate: 1.0),
+            StreamingPlaybackSettingsOverlayView.SpeedOption(label: "2배속", rate: 2.0)
         ]
         var qualityOptions: [String] = ["자동"]
         if let info = currentStreamInfo {
             qualityOptions.append(contentsOf: info.qualities.map { $0.label })
         }
-        let sheet = StreamingPlaybackSettingsViewController(
+        let inset: CGFloat = isFullscreen ? 160 : 16
+        let overlay = StreamingPlaybackSettingsOverlayView(
             speedOptions: speedOptions,
             selectedSpeed: currentPlaybackRate,
             qualityOptions: qualityOptions,
-            selectedQuality: currentQualityLabel
+            selectedQuality: currentQualityLabel,
+            horizontalInset: inset
         )
-        sheet.onSpeedSelected = { [weak self] rate in
+        overlay.onSpeedSelected = { [weak self] rate in
             self?.applyPlaybackRate(rate)
         }
-        sheet.onQualitySelected = { [weak self] label in
+        overlay.onQualitySelected = { [weak self] label in
             self?.applyQuality(label: label)
         }
-        if let sheetController = sheet.sheetPresentationController {
-            sheetController.detents = [.medium()]
-            sheetController.preferredCornerRadius = 16
+        overlay.onDismiss = { [weak self] in
+            self?.playbackSettingsOverlay?.removeFromSuperview()
+            self?.playbackSettingsOverlay = nil
         }
-        present(sheet, animated: true)
+        view.addSubview(overlay)
+        overlay.snp.makeConstraints { make in
+            make.edges.equalToSuperview()
+        }
+        playbackSettingsOverlay = overlay
+        overlay.present(animated: true)
     }
 
     private func applyQuality(label: String) {

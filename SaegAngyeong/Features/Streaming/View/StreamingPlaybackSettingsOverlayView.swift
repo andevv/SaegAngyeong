@@ -1,5 +1,5 @@
 //
-//  StreamingPlaybackSettingsViewController.swift
+//  StreamingPlaybackSettingsOverlayView.swift
 //  SaegAngyeong
 //
 //  Created by andev on 1/18/26.
@@ -8,69 +8,98 @@
 import UIKit
 import SnapKit
 
-struct StreamingPlaybackSpeedOption {
-    let label: String
-    let rate: Float
-}
+final class StreamingPlaybackSettingsOverlayView: UIView {
+    struct SpeedOption {
+        let label: String
+        let rate: Float
+    }
 
-final class StreamingPlaybackSettingsViewController: UIViewController {
-    private let speedOptions: [StreamingPlaybackSpeedOption]
+    private let speedOptions: [SpeedOption]
     private var selectedSpeed: Float
     private let qualityOptions: [String]
     private var selectedQuality: String
+    private let horizontalInset: CGFloat
 
-    private let tableView = UITableView(frame: .zero, style: .plain)
+    private let dimView = UIView()
+    private let containerView = UIView()
     private let titleLabel = UILabel()
+    private let tableView = UITableView(frame: .zero, style: .plain)
 
     var onSpeedSelected: ((Float) -> Void)?
     var onQualitySelected: ((String) -> Void)?
+    var onDismiss: (() -> Void)?
 
     init(
-        speedOptions: [StreamingPlaybackSpeedOption],
+        speedOptions: [SpeedOption],
         selectedSpeed: Float,
         qualityOptions: [String],
-        selectedQuality: String
+        selectedQuality: String,
+        horizontalInset: CGFloat = 16
     ) {
         self.speedOptions = speedOptions
         self.selectedSpeed = selectedSpeed
         self.qualityOptions = qualityOptions
         self.selectedQuality = selectedQuality
-        super.init(nibName: nil, bundle: nil)
-        modalPresentationStyle = .pageSheet
+        self.horizontalInset = horizontalInset
+        super.init(frame: .zero)
+        configureUI()
+        configureLayout()
     }
 
     @available(*, unavailable)
     required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
+        fatalError("init(coder:) is not supported")
     }
 
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        view.backgroundColor = .blackTurquoise
-        view.layer.cornerRadius = 16
-        view.layer.cornerCurve = .continuous
-        view.clipsToBounds = true
+    private func configureUI() {
+        backgroundColor = .clear
+
+        dimView.backgroundColor = UIColor.black.withAlphaComponent(0.55)
+        dimView.alpha = 0
+        let dismissTap = UITapGestureRecognizer(target: self, action: #selector(didTapDim))
+        dimView.addGestureRecognizer(dismissTap)
+
+        containerView.backgroundColor = .blackTurquoise
+        containerView.layer.cornerRadius = 16
+        containerView.layer.cornerCurve = .continuous
+        containerView.clipsToBounds = true
 
         titleLabel.text = "재생 설정"
         titleLabel.font = .pretendard(.medium, size: 14)
         titleLabel.textColor = .gray60
         titleLabel.textAlignment = .center
 
-        tableView.backgroundColor = .clear
+        tableView.backgroundColor = .blackTurquoise
         tableView.separatorStyle = .singleLine
         tableView.separatorColor = UIColor.white.withAlphaComponent(0.06)
         tableView.rowHeight = 48
         tableView.dataSource = self
         tableView.delegate = self
+        tableView.bounces = true
+        tableView.alwaysBounceVertical = false
         tableView.alwaysBounceHorizontal = false
         tableView.showsHorizontalScrollIndicator = false
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: "PlaybackSettingsCell")
 
-        view.addSubview(titleLabel)
-        view.addSubview(tableView)
+        addSubview(dimView)
+        addSubview(containerView)
+        containerView.addSubview(titleLabel)
+        containerView.addSubview(tableView)
+    }
+
+    private func configureLayout() {
+        dimView.snp.makeConstraints { make in
+            make.edges.equalToSuperview()
+        }
+
+        containerView.snp.makeConstraints { make in
+            make.leading.trailing.equalToSuperview().inset(horizontalInset)
+            make.bottom.equalTo(safeAreaLayoutGuide).offset(-16)
+            make.height.equalTo(320)
+        }
 
         titleLabel.snp.makeConstraints { make in
-            make.top.equalTo(view.safeAreaLayoutGuide).offset(12)
+            make.top.equalToSuperview().offset(12)
             make.leading.trailing.equalToSuperview().inset(16)
         }
 
@@ -79,9 +108,42 @@ final class StreamingPlaybackSettingsViewController: UIViewController {
             make.leading.trailing.bottom.equalToSuperview()
         }
     }
+
+    func present(animated: Bool) {
+        if animated {
+            containerView.transform = CGAffineTransform(translationX: 0, y: 40)
+            UIView.animate(withDuration: 0.22, delay: 0, options: [.curveEaseOut]) {
+                self.dimView.alpha = 1
+                self.containerView.transform = .identity
+            }
+        } else {
+            dimView.alpha = 1
+            containerView.transform = .identity
+        }
+    }
+
+    func dismiss(animated: Bool) {
+        let animations = {
+            self.dimView.alpha = 0
+            self.containerView.transform = CGAffineTransform(translationX: 0, y: 40)
+        }
+        let completion: (Bool) -> Void = { _ in
+            self.onDismiss?()
+        }
+        if animated {
+            UIView.animate(withDuration: 0.2, delay: 0, options: [.curveEaseIn], animations: animations, completion: completion)
+        } else {
+            animations()
+            completion(true)
+        }
+    }
+
+    @objc private func didTapDim() {
+        dismiss(animated: true)
+    }
 }
 
-extension StreamingPlaybackSettingsViewController: UITableViewDataSource, UITableViewDelegate {
+extension StreamingPlaybackSettingsOverlayView: UITableViewDataSource, UITableViewDelegate {
     func numberOfSections(in tableView: UITableView) -> Int {
         2
     }
@@ -114,7 +176,9 @@ extension StreamingPlaybackSettingsViewController: UITableViewDataSource, UITabl
         cell.textLabel?.font = .pretendard(.regular, size: 14)
         cell.textLabel?.textColor = .gray30
         cell.tintColor = .brightTurquoise
-
+        let selectedBackground = UIView()
+        selectedBackground.backgroundColor = UIColor.white.withAlphaComponent(0.04)
+        cell.selectedBackgroundView = selectedBackground
         if indexPath.section == 0 {
             let option = speedOptions[indexPath.row]
             cell.textLabel?.text = option.label
