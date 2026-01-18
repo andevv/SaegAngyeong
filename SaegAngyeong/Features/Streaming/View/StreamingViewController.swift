@@ -325,6 +325,13 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         infoTitleLabel.text = playbackService.currentTitle ?? "Streaming"
         infoSubtitleLabel.text = "실시간 스트리밍 중"
         infoMetaLabel.text = "\(viewCountText) · \(likeCountText)"
+
+        NotificationCenter.default.publisher(for: .networkRetryRequested)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.viewDidLoadSubject.send(())
+            }
+            .store(in: &cancellables)
     }
 
     private func setupPlayer(url: URL) {

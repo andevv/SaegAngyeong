@@ -87,6 +87,13 @@ final class StreamingListViewController: BaseViewController<StreamingListViewMod
                 }
             }
             .store(in: &cancellables)
+
+        NotificationCenter.default.publisher(for: .networkRetryRequested)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.refreshSubject.send(())
+            }
+            .store(in: &cancellables)
     }
 
     @objc private func handleRefresh() {

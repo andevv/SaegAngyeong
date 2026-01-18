@@ -373,6 +373,13 @@ final class FilterDetailViewController: BaseViewController<FilterDetailViewModel
                 self?.presentError(error)
             }
             .store(in: &cancellables)
+
+        NotificationCenter.default.publisher(for: .networkRetryRequested)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.refreshSubject.send(())
+            }
+            .store(in: &cancellables)
     }
 
     private func apply(_ viewData: FilterDetailViewData) {
