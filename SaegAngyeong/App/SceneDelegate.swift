@@ -8,12 +8,15 @@
 import UIKit
 import iamport_ios
 import Combine
+import Network
 
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     
     var window: UIWindow?
     var authCoordinator: AuthCoordinator?
     private var appDependency: AppDependency?
+    private var networkMonitor: NetworkStatusMonitor?
+    private weak var networkAlert: UIAlertController?
     private var fcmTokenObserver: NSObjectProtocol?
     private var chatRoomObserver: NSObjectProtocol?
     private var lastChatRoute: (roomID: String, date: Date)?
@@ -30,6 +33,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         self.authCoordinator = coordinator
         self.appDependency = dependency
         self.window = window
+        startNetworkMonitor()
         registerFCMTokenObserver()
         registerChatRoomObserver()
 
@@ -79,9 +83,74 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         if let observer = chatRoomObserver {
             NotificationCenter.default.removeObserver(observer)
         }
+        networkMonitor?.stop()
         #if DEBUG
         print("[Deinit][SceneDelegate] \(type(of: self))")
         #endif
+    }
+
+    private func startNetworkMonitor() {
+        let monitor = NetworkStatusMonitor()
+        monitor.onStatusChange = { [weak self] status in
+            self?.handleNetworkStatusChange(status)
+        }
+        monitor.start()
+        networkMonitor = monitor
+    }
+
+    private func handleNetworkStatusChange(_ status: Network.NWPath.Status) {
+        switch status {
+        case .unsatisfied:
+            presentNetworkAlertIfNeeded()
+        case .satisfied:
+            dismissNetworkAlertIfNeeded()
+        case .requiresConnection:
+            presentNetworkAlertIfNeeded()
+        @unknown default:
+            break
+        }
+    }
+
+    private func presentNetworkAlertIfNeeded() {
+        guard networkAlert?.presentingViewController == nil else { return }
+        guard let root = window?.rootViewController else { return }
+        guard let top = topViewController(from: root) else { return }
+        if top is UIAlertController { return }
+
+        let alert = UIAlertController(
+            title: "네트워크",
+            message: "네트워크 상태가 원활하지 않습니다.",
+            preferredStyle: .alert
+        )
+        let retryAction = UIAlertAction(title: "재시도", style: .default) { [weak self] _ in
+            guard let self else { return }
+            guard self.networkMonitor?.currentStatus == .satisfied else { return }
+            self.dismissNetworkAlertIfNeeded()
+            NotificationCenter.default.post(name: .networkRetryRequested, object: nil)
+        }
+        alert.addAction(retryAction)
+        alert.addAction(UIAlertAction(title: "확인", style: .default))
+        networkAlert = alert
+        top.present(alert, animated: true)
+    }
+
+    private func dismissNetworkAlertIfNeeded() {
+        guard let alert = networkAlert, alert.presentingViewController != nil else { return }
+        alert.dismiss(animated: true)
+        networkAlert = nil
+    }
+
+    private func topViewController(from root: UIViewController) -> UIViewController? {
+        if let presented = root.presentedViewController {
+            return topViewController(from: presented)
+        }
+        if let navigation = root as? UINavigationController, let visible = navigation.visibleViewController {
+            return topViewController(from: visible)
+        }
+        if let tab = root as? UITabBarController, let selected = tab.selectedViewController {
+            return topViewController(from: selected)
+        }
+        return root
     }
 
     private func registerFCMTokenObserver() {

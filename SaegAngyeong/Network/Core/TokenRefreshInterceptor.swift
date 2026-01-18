@@ -15,6 +15,8 @@ final class TokenRefreshInterceptor: RequestInterceptor {
     private let apiKey: String
     private let session: Session
     private let lock = NSLock()
+    private let networkRetryLimit = 2
+    private let networkRetryBaseDelay: TimeInterval = 0.8
 
     private var isRefreshing = false
     private var requestsToRetry: [(RetryResult) -> Void] = []
@@ -51,6 +53,11 @@ final class TokenRefreshInterceptor: RequestInterceptor {
             response.statusCode == 401 || response.statusCode == 419,
             request.request?.url?.path.contains("v1/auth/refresh") == false
         else {
+            if shouldRetryForNetworkError(error), request.retryCount < networkRetryLimit {
+                let delay = networkRetryBaseDelay * pow(2.0, Double(request.retryCount))
+                completion(.retryWithDelay(delay))
+                return
+            }
             if let response = request.response, response.statusCode == 418 {
                 // 리프레시 토큰 만료
                 onForceLogout()
@@ -116,5 +123,21 @@ final class TokenRefreshInterceptor: RequestInterceptor {
         lock.unlock()
 
         completions.forEach { $0(result) }
+    }
+
+    private func shouldRetryForNetworkError(_ error: Error) -> Bool {
+        let urlError = (error as? URLError) ?? (error.asAFError?.underlyingError as? URLError)
+        guard let urlError else { return false }
+        switch urlError.code {
+        case .notConnectedToInternet,
+             .networkConnectionLost,
+             .timedOut,
+             .cannotFindHost,
+             .cannotConnectToHost,
+             .dnsLookupFailed:
+            return true
+        default:
+            return false
+        }
     }
 }
