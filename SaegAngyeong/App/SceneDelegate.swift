@@ -17,6 +17,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     private var appDependency: AppDependency?
     private var networkMonitor: NetworkStatusMonitor?
     private weak var networkAlert: UIAlertController?
+    private weak var networkScreen: NetworkUnavailableViewController?
     private var fcmTokenObserver: NSObjectProtocol?
     private var chatRoomObserver: NSObjectProtocol?
     private var lastChatRoute: (roomID: String, date: Date)?
@@ -101,14 +102,42 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     private func handleNetworkStatusChange(_ status: Network.NWPath.Status) {
         switch status {
         case .unsatisfied:
-            presentNetworkAlertIfNeeded()
+            presentNetworkScreenIfNeeded { [weak self] in
+                self?.presentNetworkAlertIfNeeded()
+            }
         case .satisfied:
-            dismissNetworkAlertIfNeeded()
+            break
         case .requiresConnection:
-            presentNetworkAlertIfNeeded()
+            presentNetworkScreenIfNeeded { [weak self] in
+                self?.presentNetworkAlertIfNeeded()
+            }
         @unknown default:
             break
         }
+    }
+
+    private func presentNetworkScreenIfNeeded(completion: (() -> Void)? = nil) {
+        guard networkScreen?.presentingViewController == nil else {
+            completion?()
+            return
+        }
+        guard let root = window?.rootViewController else { return }
+        guard let top = topViewController(from: root) else { return }
+        let presenter = (top is UIAlertController) ? top.presentingViewController : top
+        guard let presentFrom = presenter else { return }
+        if presentFrom is NetworkUnavailableViewController {
+            completion?()
+            return
+        }
+
+        let screen = NetworkUnavailableViewController()
+        screen.modalPresentationStyle = .fullScreen
+        screen.modalTransitionStyle = .crossDissolve
+        screen.onRetry = { [weak self] in
+            self?.handleNetworkRetryRequested()
+        }
+        networkScreen = screen
+        presentFrom.present(screen, animated: true, completion: completion)
     }
 
     private func presentNetworkAlertIfNeeded() {
@@ -122,22 +151,28 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             message: "네트워크 상태가 원활하지 않습니다.",
             preferredStyle: .alert
         )
-        let retryAction = UIAlertAction(title: "재시도", style: .default) { [weak self] _ in
-            guard let self else { return }
-            guard self.networkMonitor?.currentStatus == .satisfied else { return }
-            self.dismissNetworkAlertIfNeeded()
-            NotificationCenter.default.post(name: .networkRetryRequested, object: nil)
-        }
-        alert.addAction(retryAction)
         alert.addAction(UIAlertAction(title: "확인", style: .default))
         networkAlert = alert
         top.present(alert, animated: true)
+    }
+
+    private func handleNetworkRetryRequested() {
+        guard networkMonitor?.currentStatus == .satisfied else { return }
+        dismissNetworkAlertIfNeeded()
+        dismissNetworkScreenIfNeeded()
+        NotificationCenter.default.post(name: .networkRetryRequested, object: nil)
     }
 
     private func dismissNetworkAlertIfNeeded() {
         guard let alert = networkAlert, alert.presentingViewController != nil else { return }
         alert.dismiss(animated: true)
         networkAlert = nil
+    }
+
+    private func dismissNetworkScreenIfNeeded() {
+        guard let screen = networkScreen, screen.presentingViewController != nil else { return }
+        screen.dismiss(animated: true)
+        networkScreen = nil
     }
 
     private func topViewController(from root: UIViewController) -> UIViewController? {

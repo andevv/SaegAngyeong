@@ -327,6 +327,13 @@ final class MyPageViewController: BaseViewController<MyPageViewModel> {
                 self?.presentLogoutCompleted()
             }
             .store(in: &cancellables)
+
+        NotificationCenter.default.publisher(for: .networkRetryRequested)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.refreshSubject.send(())
+            }
+            .store(in: &cancellables)
     }
 
     private func applyProfile(_ profile: UserProfile?) {

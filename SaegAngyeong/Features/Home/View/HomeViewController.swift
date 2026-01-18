@@ -491,6 +491,13 @@ final class HomeViewController: BaseViewController<HomeViewModel> {
                 self?.presentError(error)
             }
             .store(in: &cancellables)
+
+        NotificationCenter.default.publisher(for: .networkRetryRequested)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.viewDidLoadSubject.send(())
+            }
+            .store(in: &cancellables)
     }
 
     private func apply(author: TodayAuthorViewData) {
