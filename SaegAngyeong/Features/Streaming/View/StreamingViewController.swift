@@ -53,6 +53,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
     private let tokenStore = TokenStore()
     private let controlsTapGesture = UITapGestureRecognizer()
     private let doubleTapGesture = UITapGestureRecognizer()
+    private let bufferProgressView = UIProgressView(progressViewStyle: .bar)
     private let rewindFeedbackView = UIView()
     private let forwardFeedbackView = UIView()
     private let rewindFeedbackIcon = UIImageView()
@@ -105,6 +106,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         playerContainer.bringSubviewToFront(qualityButton)
         playerContainer.bringSubviewToFront(miniPlayButton)
         playerContainer.bringSubviewToFront(miniCloseButton)
+        view.bringSubviewToFront(timelineSlider)
     }
 
     override func configureUI() {
@@ -180,6 +182,13 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         timelineSlider.addTarget(self, action: #selector(timelineValueChanged), for: .valueChanged)
         timelineSlider.addTarget(self, action: #selector(timelineTouchUp), for: [.touchUpInside, .touchUpOutside, .touchCancel])
 
+        bufferProgressView.progressTintColor = UIColor.gray60.withAlphaComponent(0.7)
+        bufferProgressView.trackTintColor = .clear
+        bufferProgressView.progress = 0
+        bufferProgressView.isUserInteractionEnabled = false
+        bufferProgressView.alpha = 0.5
+        bufferProgressView.transform = CGAffineTransform(scaleX: 1, y: 0.5)
+
         infoContainer.backgroundColor = .black
 
         infoTitleLabel.textColor = .gray30
@@ -215,6 +224,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         rewindFeedbackView.addSubview(rewindFeedbackIcon)
         forwardFeedbackView.addSubview(forwardFeedbackIcon)
         playerContainer.addSubview(timeLabel)
+        view.addSubview(bufferProgressView)
         view.addSubview(timelineSlider)
         view.addSubview(infoContainer)
         infoContainer.addSubview(infoTitleLabel)
@@ -275,6 +285,12 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
             timelineTopConstraint = make.top.equalTo(playerContainer.snp.bottom).constraint
             make.leading.trailing.equalTo(playerContainer)
             sliderHeightConstraint = make.height.equalTo(2).constraint
+        }
+
+        bufferProgressView.snp.makeConstraints { make in
+            make.centerY.equalTo(timelineSlider)
+            make.leading.trailing.equalTo(timelineSlider)
+            make.height.equalTo(2)
         }
 
         infoContainer.snp.makeConstraints { make in
@@ -581,6 +597,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
                 self.playerContainer.clipsToBounds = true
                 self.remakeTimelineConstraints(topOffset: -16, horizontalInset: 16, useSafeArea: true)
                 self.timelineSlider.alpha = 1
+                self.bufferProgressView.alpha = 0.5
                 self.timeLabel.alpha = 1
                 self.infoContainer.alpha = 0
                 self.fullScreenButton.isHidden = false
@@ -618,6 +635,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
                 self.playerContainer.clipsToBounds = true
                 self.remakeTimelineConstraints(topOffset: 0, horizontalInset: 0, useSafeArea: false)
                 self.timelineSlider.alpha = 0
+                self.bufferProgressView.alpha = 0
                 self.timeLabel.alpha = 0
                 self.infoContainer.alpha = 0
                 self.miniPlayButton.isHidden = false
@@ -636,6 +654,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
                 self.playerContainer.clipsToBounds = true
                 self.remakeTimelineConstraints(topOffset: 0, horizontalInset: 0, useSafeArea: false)
                 self.timelineSlider.alpha = 1
+                self.bufferProgressView.alpha = 0.5
                 self.timeLabel.alpha = 1
                 self.infoContainer.alpha = 1
                 self.miniPlayButton.isHidden = true
@@ -711,6 +730,14 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         let duration = CMTimeGetSeconds(range.duration)
         print("[Streaming] buffered: \(start) + \(duration)")
         #endif
+        let totalDuration = item.duration.seconds
+        guard totalDuration.isFinite, totalDuration > 0 else {
+            bufferProgressView.progress = 0
+            return
+        }
+        let bufferedSeconds = range.start.seconds + range.duration.seconds
+        let progress = min(max(bufferedSeconds / totalDuration, 0), 1)
+        bufferProgressView.progress = Float(progress)
     }
 
     private func addTimeObserver(to player: AVPlayer) {
@@ -780,6 +807,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
             qualityButton.isHidden = true
             qualityButton.isUserInteractionEnabled = false
             timelineSlider.isHidden = true
+            bufferProgressView.isHidden = true
             return
         }
         playButton.isHidden = !isControlsVisible
@@ -790,6 +818,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         qualityButton.isHidden = !isControlsVisible
         qualityButton.isUserInteractionEnabled = isControlsVisible
         timelineSlider.isHidden = isFullscreen ? !isControlsVisible : false
+        bufferProgressView.isHidden = isFullscreen ? !isControlsVisible : false
     }
 
     private func remakeTimelineConstraints(topOffset: CGFloat, horizontalInset: CGFloat, useSafeArea: Bool) {
@@ -803,6 +832,12 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
                 make.trailing.equalTo(playerContainer).offset(-horizontalInset)
             }
             sliderHeightConstraint = make.height.equalTo(2).constraint
+        }
+
+        bufferProgressView.snp.remakeConstraints { make in
+            make.centerY.equalTo(timelineSlider)
+            make.leading.trailing.equalTo(timelineSlider)
+            make.height.equalTo(2)
         }
     }
 
