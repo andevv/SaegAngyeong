@@ -50,6 +50,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
     private var isMiniPlayer = false
     private var isFullscreen = false
     private var isControlsVisible = false
+    private var currentPlaybackRate: Float = 1.0
     private let tokenStore = TokenStore()
     private let controlsTapGesture = UITapGestureRecognizer()
     private let doubleTapGesture = UITapGestureRecognizer()
@@ -448,11 +449,11 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
                     self.pendingShouldResume = false
                     item.seek(to: pendingSeekTime, toleranceBefore: .zero, toleranceAfter: .zero) { _ in
                         if shouldResume {
-                            self.player.play()
+                            self.playWithCurrentRate()
                         }
                     }
                 } else if self.shouldAutoPlay {
-                    self.player.play()
+                    self.playWithCurrentRate()
                 }
             case .failed:
                 #if DEBUG
@@ -509,7 +510,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
             shouldAutoPlay = false
         } else {
             if player.currentItem?.status == .readyToPlay {
-                player.play()
+                playWithCurrentRate()
             }
         }
         updatePlayIcons()
@@ -553,7 +554,7 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
     }
 
     @objc private func qualityTapped() {
-        presentQualitySheet()
+        presentPlaybackSettingsSheet()
     }
 
     @objc private func handlePlayerPan(_ gesture: UIPanGestureRecognizer) {
@@ -841,12 +842,26 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         }
     }
 
-    private func presentQualitySheet() {
-        guard let info = currentStreamInfo else { return }
-        var options: [String] = ["자동"]
-        options.append(contentsOf: info.qualities.map { $0.label })
-        let sheet = StreamingQualityViewController(options: options, selected: currentQualityLabel)
-        sheet.onSelected = { [weak self] label in
+    private func presentPlaybackSettingsSheet() {
+        let speedOptions: [StreamingPlaybackSpeedOption] = [
+            StreamingPlaybackSpeedOption(label: "0.5배속", rate: 0.5),
+            StreamingPlaybackSpeedOption(label: "1배속", rate: 1.0),
+            StreamingPlaybackSpeedOption(label: "2배속", rate: 2.0)
+        ]
+        var qualityOptions: [String] = ["자동"]
+        if let info = currentStreamInfo {
+            qualityOptions.append(contentsOf: info.qualities.map { $0.label })
+        }
+        let sheet = StreamingPlaybackSettingsViewController(
+            speedOptions: speedOptions,
+            selectedSpeed: currentPlaybackRate,
+            qualityOptions: qualityOptions,
+            selectedQuality: currentQualityLabel
+        )
+        sheet.onSpeedSelected = { [weak self] rate in
+            self?.applyPlaybackRate(rate)
+        }
+        sheet.onQualitySelected = { [weak self] label in
             self?.applyQuality(label: label)
         }
         if let sheetController = sheet.sheetPresentationController {
@@ -874,6 +889,23 @@ final class StreamingViewController: BaseViewController<StreamingViewModel> {
         forceReplaceItem = true
         shouldAutoPlay = wasPlaying
         setupPlayer(url: targetURL)
+    }
+
+    private func applyPlaybackRate(_ rate: Float) {
+        currentPlaybackRate = rate
+        if player.timeControlStatus == .playing {
+            player.rate = rate
+        }
+    }
+
+    private func playWithCurrentRate() {
+        let player = player
+        if #available(iOS 10.0, *) {
+            player.playImmediately(atRate: currentPlaybackRate)
+        } else {
+            player.play()
+            player.rate = currentPlaybackRate
+        }
     }
 
     private func seekBy(seconds: Double) {
