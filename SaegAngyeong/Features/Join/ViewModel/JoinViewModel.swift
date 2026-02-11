@@ -29,6 +29,12 @@ final class JoinViewModel: BaseViewModel, ViewModelType {
 
     private let authRepository: AuthRepository
     private let deviceTokenProvider: () -> String?
+    /// 기존에는 `.store(in: &cancellables)`로 구독을 Set에 보관했는데,
+    /// Host 기반 테스트 환경에서 ViewModel deinit 타이밍과 결합될 때
+    /// 런타임 메모리 크래시(pointer being freed...)가 재현됐다.
+    /// 단일 submit 체인만 유지하면 충분하므로 구독을 명시적으로 1개만 보관해
+    /// 해제 경로를 단순화했다.
+    private var submitCancellable: AnyCancellable?
 
     init(
         authRepository: AuthRepository,
@@ -42,13 +48,21 @@ final class JoinViewModel: BaseViewModel, ViewModelType {
     func transform(input: Input) -> Output {
         let successSubject = PassthroughSubject<AuthSession, Never>()
 
-        input.submit
-            .flatMap { [weak self] form -> AnyPublisher<AuthSession, DomainError> in
-                guard let self else { return Empty().eraseToAnyPublisher() }
+        /// 검증 실패를 flatMap 내부에서 Empty로 처리하면 completion/해제 경로가 복잡해진다.
+        /// 먼저 compactMap에서 invalid form을 걸러내고 error만 발행해,
+        /// 네트워크 흐름에는 "유효한 입력"만 들어가도록 분리했다.
+        submitCancellable = input.submit
+            .compactMap { [weak self] form -> JoinForm? in
+                guard let self else { return nil }
                 if let error = self.validate(form: form) {
                     self.error.send(error)
-                    return Empty().eraseToAnyPublisher()
+                    return nil
                 }
+                return form
+            }
+            .flatMap { [weak self] form -> AnyPublisher<AuthSession, DomainError> in
+                /// self가 이미 해제된 경우에는 side effect 없이 종료한다.
+                guard let self else { return Empty().eraseToAnyPublisher() }
                 self.isLoading.send(true)
                 let hashTags = self.parseHashTags(from: form.hashTagsText)
                 return self.authRepository.join(
@@ -63,6 +77,7 @@ final class JoinViewModel: BaseViewModel, ViewModelType {
                 )
             }
             .sink { [weak self] completion in
+                /// 성공/실패 어떤 경로든 로딩 상태를 false로 되돌린다.
                 self?.isLoading.send(false)
                 if case let .failure(error) = completion {
                     self?.error.send(error)
@@ -70,7 +85,6 @@ final class JoinViewModel: BaseViewModel, ViewModelType {
             } receiveValue: { session in
                 successSubject.send(session)
             }
-            .store(in: &cancellables)
 
         return Output(joinSuccess: successSubject.eraseToAnyPublisher())
     }

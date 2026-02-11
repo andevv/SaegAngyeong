@@ -19,6 +19,16 @@
 		FEE034232EE94600008B74AB /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = FEE034222EE94600008B74AB /* FirebaseMessaging */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		FE029CB32F3C382A0024D18A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = FEE033FA2EE9330E008B74AB /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = FEE034012EE9330E008B74AB;
+			remoteInfo = SaegAngyeong;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXCopyFilesBuildPhase section */
 		FE2649652F0CFCEB00096A9E /* Embed Frameworks */ = {
 			isa = PBXCopyFilesBuildPhase;
@@ -34,6 +44,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		FE029CAF2F3C382A0024D18A /* SaegAngyeongTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SaegAngyeongTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		FEE034022EE9330E008B74AB /* SaegAngyeong.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SaegAngyeong.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		FEE0341A2EE9379D008B74AB /* .gitignore */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -51,6 +62,11 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		FE029CB02F3C382A0024D18A /* SaegAngyeongTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = SaegAngyeongTests;
+			sourceTree = "<group>";
+		};
 		FEE034042EE9330E008B74AB /* SaegAngyeong */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -62,6 +78,13 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		FE029CAC2F3C382A0024D18A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		FEE033FF2EE9330E008B74AB /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -85,6 +108,7 @@
 			children = (
 				FEE0341A2EE9379D008B74AB /* .gitignore */,
 				FEE034042EE9330E008B74AB /* SaegAngyeong */,
+				FE029CB02F3C382A0024D18A /* SaegAngyeongTests */,
 				FEE034032EE9330E008B74AB /* Products */,
 			);
 			sourceTree = "<group>";
@@ -93,6 +117,7 @@
 			isa = PBXGroup;
 			children = (
 				FEE034022EE9330E008B74AB /* SaegAngyeong.app */,
+				FE029CAF2F3C382A0024D18A /* SaegAngyeongTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -100,6 +125,29 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		FE029CAE2F3C382A0024D18A /* SaegAngyeongTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FE029CB72F3C382A0024D18A /* Build configuration list for PBXNativeTarget "SaegAngyeongTests" */;
+			buildPhases = (
+				FE029CAB2F3C382A0024D18A /* Sources */,
+				FE029CAC2F3C382A0024D18A /* Frameworks */,
+				FE029CAD2F3C382A0024D18A /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				FE029CB42F3C382A0024D18A /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				FE029CB02F3C382A0024D18A /* SaegAngyeongTests */,
+			);
+			name = SaegAngyeongTests;
+			packageProductDependencies = (
+			);
+			productName = SaegAngyeongTests;
+			productReference = FE029CAF2F3C382A0024D18A /* SaegAngyeongTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		FEE034012EE9330E008B74AB /* SaegAngyeong */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = FEE034152EE9330F008B74AB /* Build configuration list for PBXNativeTarget "SaegAngyeong" */;
@@ -138,9 +186,13 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 2610;
+				LastSwiftUpdateCheck = 2620;
 				LastUpgradeCheck = 2620;
 				TargetAttributes = {
+					FE029CAE2F3C382A0024D18A = {
+						CreatedOnToolsVersion = 26.2;
+						TestTargetID = FEE034012EE9330E008B74AB;
+					};
 					FEE034012EE9330E008B74AB = {
 						CreatedOnToolsVersion = 26.1.1;
 					};
@@ -170,11 +222,19 @@
 			projectRoot = "";
 			targets = (
 				FEE034012EE9330E008B74AB /* SaegAngyeong */,
+				FE029CAE2F3C382A0024D18A /* SaegAngyeongTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		FE029CAD2F3C382A0024D18A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		FEE034002EE9330E008B74AB /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -186,6 +246,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		FE029CAB2F3C382A0024D18A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		FEE033FE2EE9330E008B74AB /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -195,7 +262,67 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		FE029CB42F3C382A0024D18A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = FEE034012EE9330E008B74AB /* SaegAngyeong */;
+			targetProxy = FE029CB32F3C382A0024D18A /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		FE029CB52F3C382A0024D18A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = L3KYP426WW;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.andev.SaegAngyeongTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SaegAngyeong.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/SaegAngyeong";
+			};
+			name = Debug;
+		};
+		FE029CB62F3C382A0024D18A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = L3KYP426WW;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.andev.SaegAngyeongTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SaegAngyeong.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/SaegAngyeong";
+			};
+			name = Release;
+		};
 		FEE034162EE9330F008B74AB /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -404,6 +531,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		FE029CB72F3C382A0024D18A /* Build configuration list for PBXNativeTarget "SaegAngyeongTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FE029CB52F3C382A0024D18A /* Debug */,
+				FE029CB62F3C382A0024D18A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		FEE033FD2EE9330E008B74AB /* Build configuration list for PBXProject "SaegAngyeong" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
